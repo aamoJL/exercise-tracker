@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,15 +28,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
 import com.aamo.exercisetracker.ui.components.SearchTextField
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import kotlinx.serialization.Serializable
+
+@Serializable object Routines
+
+fun NavGraphBuilder.routinesDestination(onAddOrEdit: (Int) -> Unit, onBack: () -> Unit) {
+  composable<Routines> {
+    WeeklyRoutinesScreen(onAddOrEdit = onAddOrEdit, onBack = onBack)
+  }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeeklyRoutinesScreen() {
+fun WeeklyRoutinesScreen(
+  onAddOrEdit: (id: Int) -> Unit, onBack: () -> Unit
+) {
   Scaffold(topBar = {
-    TopAppBar(title = { Text("Weekly routines") }, actions = {
-      IconButton(onClick = { /* TODO: add routine command */ }) {
+    TopAppBar(title = { Text("Weekly Routines") }, navigationIcon = {
+      IconButton(onClick = onBack) {
+        Icon(
+          imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back"
+        )
+      }
+    }, actions = {
+      IconButton(onClick = { onAddOrEdit(0) }) {
         Icon(imageVector = Icons.Filled.Add, contentDescription = "Add")
       }
     })

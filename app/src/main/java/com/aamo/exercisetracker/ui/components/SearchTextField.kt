@@ -21,7 +21,7 @@ fun SearchTextField(
     leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
     trailingIcon = {
       IconButton(onClick = onClear) {
-        Icon(imageVector = Icons.Filled.Clear, contentDescription = null)
+        Icon(imageVector = Icons.Filled.Clear, contentDescription = "Clear")
       }
     },
     modifier = modifier

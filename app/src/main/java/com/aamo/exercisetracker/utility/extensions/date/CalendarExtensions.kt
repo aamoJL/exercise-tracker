@@ -1,18 +1,33 @@
 package com.aamo.exercisetracker.utility.extensions.date
 
+import androidx.annotation.StringRes
+import com.aamo.exercisetracker.R
 import java.util.Calendar
 
-fun Calendar.getLocalDayOfWeek(): Int {
-  return (this.get(Calendar.DAY_OF_WEEK) - this.firstDayOfWeek).mod(7) + 1
+enum class Day(@StringRes val nameResourceKey: Int) {
+  SUNDAY(R.string.sunday),
+  MONDAY(R.string.monday),
+  TUESDAY(R.string.tuesday),
+  WEDNESDAY(R.string.wednesday),
+  THURSDAY(R.string.thursday),
+  FRIDAY(R.string.friday),
+  SATURDAY(R.string.saturday);
+
+  fun getDayNumber(): Int {
+    return Day.entries.indexOf(this) + 1
+  }
+}
+
+fun Calendar.getLocalDayOfWeek(): Day {
+  return Day.entries[(this.get(Calendar.DAY_OF_WEEK) - this.firstDayOfWeek).mod(7)]
 }
 
 /**
  * Returns list of days ordered by the user's locale
  */
-fun Calendar.getLocalListOfDays(): List<String> {
+fun Calendar.getLocalListOfDays(): List<Day> {
   // List of days in the order of the Calendar class
-  val listOfDays =
-    listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+  val listOfDays = Day.entries
   // First day of the week of the user's locale
   val firstDayOfWeekIndex = this.firstDayOfWeek - 1
 

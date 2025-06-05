@@ -18,20 +18,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOfWeek
 import com.aamo.exercisetracker.utility.extensions.date.getLocalListOfDays
 import com.aamo.exercisetracker.utility.extensions.modifier.applyIf
+import kotlinx.serialization.Serializable
 import java.util.Calendar
 import kotlin.math.absoluteValue
 
+@Serializable data class Dailies(val initialDayNumber: Int = 1)
+
+fun NavGraphBuilder.dailiesDestination() {
+  composable<Dailies> { navStack ->
+    DailiesScreen(initialPage = (navStack.toRoute() as Dailies).initialDayNumber - 1)
+  }
+}
+
 @Composable
-fun DailiesScreen(dayNumber: Int = 0) {
-  val currentDayNumber = Calendar.getInstance().getLocalDayOfWeek()
+fun DailiesScreen(initialPage: Int = 0) {
+  val today = Calendar.getInstance().getLocalDayOfWeek()
   val days = Calendar.getInstance().getLocalListOfDays()
-  val pagerState = rememberPagerState(pageCount = { 7 }, initialPage = dayNumber - 1)
+  val pagerState = rememberPagerState(pageCount = { 7 }, initialPage = initialPage)
 
   Scaffold { innerPadding ->
     Surface(modifier = Modifier.padding(innerPadding)) {
@@ -49,7 +62,7 @@ fun DailiesScreen(dayNumber: Int = 0) {
         Card(
           border = BorderStroke(
             2.dp, MaterialTheme.colorScheme.outline
-          ).applyIf(currentDayNumber - 1 == pageIndex /* IS TODAY */),
+          ).applyIf(today.getDayNumber() - 1 == pageIndex /* IS TODAY */),
           modifier = Modifier
             .fillMaxSize()
             .padding(vertical = (32 + 32 * (pageOffset.coerceIn(0f, 1f))).dp)
@@ -59,7 +72,7 @@ fun DailiesScreen(dayNumber: Int = 0) {
               )
             }) {
           Text(
-            days[(pageIndex).mod(7)],
+            text = stringResource(days[(pageIndex).mod(7)].nameResourceKey),
             style = MaterialTheme.typography.headlineLarge,
             textAlign = TextAlign.Center,
             modifier = Modifier
