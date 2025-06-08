@@ -22,28 +22,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
-import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOfWeek
-import com.aamo.exercisetracker.utility.extensions.date.getLocalListOfDays
+import com.aamo.exercisetracker.utility.extensions.date.Day
+import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.modifier.applyIf
-import kotlinx.serialization.Serializable
 import java.util.Calendar
 import kotlin.math.absoluteValue
 
-@Serializable data class Dailies(val initialDayNumber: Int = 1)
-
-fun NavGraphBuilder.dailiesDestination() {
-  composable<Dailies> { navStack ->
-    DailiesScreen(initialPage = (navStack.toRoute() as Dailies).initialDayNumber - 1)
-  }
-}
-
 @Composable
 fun DailiesScreen(initialPage: Int = 0) {
-  val today = Calendar.getInstance().getLocalDayOfWeek()
-  val days = Calendar.getInstance().getLocalListOfDays()
+  val today = Day.getByDayNumber(Calendar.getInstance().get(Calendar.DAY_OF_WEEK))
+  val days = Calendar.getInstance().getLocalDayOrder()
   val pagerState = rememberPagerState(pageCount = { 7 }, initialPage = initialPage)
 
   Scaffold { innerPadding ->

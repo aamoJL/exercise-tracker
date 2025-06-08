@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.routines
+package com.aamo.exercisetracker.features.routine
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,33 +29,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.SearchTextField
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import kotlinx.serialization.Serializable
 
-@Serializable object Routines
+@Serializable object RoutineListScreen
 
-fun NavGraphBuilder.routinesDestination(onAddOrEdit: (Int) -> Unit, onBack: () -> Unit) {
-  composable<Routines> {
-    WeeklyRoutinesScreen(onAddOrEdit = onAddOrEdit, onBack = onBack)
+fun NavGraphBuilder.routinesListScreen(
+  onBack: () -> Unit, onAddRoutine: (id: Int) -> Unit, onSelectRoutine: (id: Int) -> Unit
+) {
+  composable<RoutineListScreen> {
+    RoutineListScreen(
+      onBack = onBack, onAddRoutine = onAddRoutine, onSelectRoutine = onSelectRoutine
+    )
   }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeeklyRoutinesScreen(
-  onAddOrEdit: (id: Int) -> Unit, onBack: () -> Unit
+fun RoutineListScreen(
+  onBack: () -> Unit, onAddRoutine: (id: Int) -> Unit, onSelectRoutine: (id: Int) -> Unit
 ) {
   Scaffold(topBar = {
     TopAppBar(title = { Text("Weekly Routines") }, navigationIcon = {
-      IconButton(onClick = onBack) {
-        Icon(
-          imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back"
-        )
-      }
+      BackNavigationIconButton(onBack = onBack)
     }, actions = {
-      IconButton(onClick = { onAddOrEdit(0) }) {
-        Icon(imageVector = Icons.Filled.Add, contentDescription = "Add")
+      IconButton(onClick = { onAddRoutine(0) }) {
+        Icon(imageVector = Icons.Filled.Add, contentDescription = "Add routine")
       }
     })
   }, modifier = Modifier.imePadding()) { innerPadding ->
@@ -86,7 +86,7 @@ fun WeeklyRoutinesScreen(
             ListItem(
               colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
               headlineContent = {
-                Text(text = "Headline $item", fontWeight = FontWeight.Bold)
+                Text(text = "Routine Headline $item", fontWeight = FontWeight.Bold)
               },
               supportingContent = {
                 Text("Supporting")
@@ -100,7 +100,7 @@ fun WeeklyRoutinesScreen(
               trailingContent = {
                 Text("Trailing")
               },
-              modifier = Modifier.clickable { /* TODO: item click command */ })
+              modifier = Modifier.clickable { onSelectRoutine(item) })
           }
         }
       }

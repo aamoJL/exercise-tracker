@@ -11,16 +11,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.aamo.exercisetracker.features.dailies.Dailies
-import com.aamo.exercisetracker.features.dailies.dailiesDestination
-import com.aamo.exercisetracker.features.home.Home
-import com.aamo.exercisetracker.features.home.homeDestination
-import com.aamo.exercisetracker.features.routines.EditRoutine
-import com.aamo.exercisetracker.features.routines.Routines
-import com.aamo.exercisetracker.features.routines.editRoutineDestination
-import com.aamo.exercisetracker.features.routines.routinesDestination
+import com.aamo.exercisetracker.features.dailies.dailiesPage
+import com.aamo.exercisetracker.features.dailies.toDailiesPage
+import com.aamo.exercisetracker.features.home.HomePage
+import com.aamo.exercisetracker.features.home.homePage
+import com.aamo.exercisetracker.features.routine.routineListPage
+import com.aamo.exercisetracker.features.routine.routinePage
+import com.aamo.exercisetracker.features.routine.toRoutinePage
+import com.aamo.exercisetracker.features.routine.toRoutinesPage
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
-import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOfWeek
 import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
@@ -33,22 +32,26 @@ class MainActivity : ComponentActivity() {
 
       ExerciseTrackerTheme {
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
-          NavHost(navController = navController, startDestination = Home) {
-            homeDestination(
-              onTodayClick = {
-              navController.navigate(
-                route = Dailies(Calendar.getInstance().getLocalDayOfWeek().getDayNumber())
-              )
+          NavHost(navController = navController, startDestination = HomePage) {
+            homePage(
+              onSelectDaily = {
+              navController.toDailiesPage(Calendar.getInstance().get(Calendar.DAY_OF_WEEK))
             },
-              onWeeklyClick = { navController.navigate(route = Routines) },
-              onMonthlyClick = { /* TODO: monthly click command */ })
-            dailiesDestination()
-            routinesDestination(
-              onAddOrEdit = { navController.navigate(route = EditRoutine(0)) },
-              onBack = { navController.popBackStack() })
-            editRoutineDestination(
-              onBack = { navController.popBackStack() },
-              onSave = { /* TODO: save routine command */ })
+              onSelectWeekly = { navController.toRoutinesPage() },
+              onSelectMonthly = { /* TODO: monthly click command */ })
+            dailiesPage()
+            routineListPage(
+              navController = navController,
+              onBack = { navController.navigateUp() },
+              onSelectRoutine = { id ->
+                navController.toRoutinePage(id)
+              })
+            routinePage(
+              navController = navController,
+              onBack = { navController.navigateUp() },
+              onSelectExercise = {
+                /* TODO: exercise select command */
+              })
           }
         }
       }

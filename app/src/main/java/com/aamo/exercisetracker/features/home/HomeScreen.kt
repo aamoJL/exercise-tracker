@@ -18,24 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
 import com.aamo.exercisetracker.R
-import kotlinx.serialization.Serializable
-
-@Serializable object Home
-
-fun NavGraphBuilder.homeDestination(
-  onTodayClick: () -> Unit,
-  onWeeklyClick: () -> Unit,
-  onMonthlyClick: () -> Unit,
-) {
-  composable<Home> {
-    HomeScreen(
-      onTodayClick = onTodayClick, onWeeklyClick = onWeeklyClick, onMonthlyClick = onMonthlyClick
-    )
-  }
-}
 
 @Composable
 fun HomeScreen(

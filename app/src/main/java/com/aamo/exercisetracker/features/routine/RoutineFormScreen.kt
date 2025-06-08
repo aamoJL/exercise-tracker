@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.routines
+package com.aamo.exercisetracker.features.routine
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -42,52 +39,52 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
+import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.date.Day
-import com.aamo.exercisetracker.utility.extensions.date.getLocalListOfDays
+import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import kotlinx.serialization.Serializable
 import java.util.Calendar
 
-@Serializable data class EditRoutine(val id: Int)
+@Serializable data class RoutineFormScreen(val id: Int)
+private data class DaySelection(val day: Day, var selected: Boolean)
 
-fun NavGraphBuilder.editRoutineDestination(onBack: () -> Unit, onSave: () -> Unit) {
-  composable<EditRoutine> { navStack ->
-    EditRoutineScreen(
-      id = (navStack.toRoute() as EditRoutine).id, onBack = onBack, onSave = onSave
+fun NavGraphBuilder.routineFormScreen(onBack: () -> Unit, onSave: () -> Unit) {
+  composable<RoutineFormScreen> { navStack ->
+    val args: RoutineFormScreen = navStack.toRoute()
+    RoutineFormScreen(
+      id = args.id, onBack = onBack, onSave = onSave
     )
   }
 }
 
-private data class DaySelection(val day: Day, var selected: Boolean)
+fun NavController.toRoutineFormScreen(id: Int) {
+  this.navigate(RoutineFormScreen(id))
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditRoutineScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
+fun RoutineFormScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
   val focusManager = LocalFocusManager.current
 
-  var routineName: String by remember { mutableStateOf(String.EMPTY) }
-  var restMinutes: String by remember { mutableStateOf(String.EMPTY) }
+  var routineName by remember { mutableStateOf(String.EMPTY) }
+  var restMinutes by remember { mutableStateOf(String.EMPTY) }
   var daySelections = remember {
     mutableStateListOf<DaySelection>().apply {
       addAll(
-        Calendar.getInstance().getLocalListOfDays()
-          .map { DaySelection(day = it, selected = false) })
+        Calendar.getInstance().getLocalDayOrder().map { DaySelection(day = it, selected = false) })
     }
   }
 
   Scaffold(topBar = {
     TopAppBar(
       title = { Text(text = if (id == 0) "New Routine" else "Edit Routine") },
-      navigationIcon = {
-        IconButton(onClick = onBack) {
-          Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back"
-          )
-        }
-      },
+      navigationIcon = { BackNavigationIconButton(onBack = onBack) },
       actions = {
         IconButton(onClick = onSave) {
           Icon(
@@ -106,10 +103,7 @@ fun EditRoutineScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
         value = routineName,
         label = { Text("Name") },
         shape = RectangleShape,
-        colors = TextFieldDefaults.colors(
-          focusedContainerColor = Color.Transparent,
-          unfocusedContainerColor = Color.Transparent,
-        ),
+        colors = borderlessTextFieldColors(),
         onValueChange = { routineName = it },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth()
@@ -118,10 +112,7 @@ fun EditRoutineScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
         value = restMinutes.toString(),
         label = { Text("Rest time") },
         shape = RectangleShape,
-        colors = TextFieldDefaults.colors(
-          focusedContainerColor = Color.Transparent,
-          unfocusedContainerColor = Color.Transparent,
-        ),
+        colors = borderlessTextFieldColors(),
         onValueChange = { if (it.isDigitsOnly()) restMinutes = it },
         suffix = { Text("minutes") },
         keyboardOptions = KeyboardOptions(

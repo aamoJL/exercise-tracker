@@ -13,19 +13,28 @@ enum class Day(@StringRes val nameResourceKey: Int) {
   FRIDAY(R.string.friday),
   SATURDAY(R.string.saturday);
 
+  /**
+   * Returns the number of the Day object
+   */
   fun getDayNumber(): Int {
     return Day.entries.indexOf(this) + 1
   }
-}
 
-fun Calendar.getLocalDayOfWeek(): Day {
-  return Day.entries[(this.get(Calendar.DAY_OF_WEEK) - this.firstDayOfWeek).mod(7)]
+  companion object {
+    /**
+     * Returns the Day class object of the given day number,
+     * Sunday being the day number 1
+     */
+    fun getByDayNumber(dayNumber: Int): Day {
+      return Day.entries[dayNumber - 1]
+    }
+  }
 }
 
 /**
  * Returns list of days ordered by the user's locale
  */
-fun Calendar.getLocalListOfDays(): List<Day> {
+fun Calendar.getLocalDayOrder(): List<Day> {
   // List of days in the order of the Calendar class
   val listOfDays = Day.entries
   // First day of the week of the user's locale

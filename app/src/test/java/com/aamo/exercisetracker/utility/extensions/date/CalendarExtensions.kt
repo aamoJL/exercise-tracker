@@ -5,65 +5,35 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Calendar
 
-class CalendarExtensionsTests {
+class DayTests {
   @Test
-  fun `getLocalDayOfWeek returns converted day number`() {
-    Calendar.getInstance().let { calendar ->
-      calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY).let {
-        calendar.firstDayOfWeek = Calendar.MONDAY
-        assertEquals(7, calendar.getLocalDayOfWeek())
-      }
-
-      calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY).let {
-        calendar.firstDayOfWeek = Calendar.WEDNESDAY
-        assertEquals(6, calendar.getLocalDayOfWeek())
-      }
-
-      calendar.set(Calendar.DAY_OF_WEEK, Calendar.THURSDAY).let {
-        calendar.firstDayOfWeek = Calendar.MONDAY
-        assertEquals(4, calendar.getLocalDayOfWeek())
-      }
-
-      calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY).let {
-        calendar.firstDayOfWeek = Calendar.SATURDAY
-        assertEquals(2, calendar.getLocalDayOfWeek())
-      }
-
-      calendar.set(Calendar.DAY_OF_WEEK, Calendar.WEDNESDAY).let {
-        calendar.firstDayOfWeek = Calendar.WEDNESDAY
-        assertEquals(1, calendar.getLocalDayOfWeek())
-      }
+  fun `getDayNumber returns correct number`() {
+    Day.entries.forEachIndexed { i, entry ->
+      assertEquals(i + 1, entry.getDayNumber())
     }
   }
 
   @Test
-  fun `getLocalListOfDays returns ordered list of days`() {
+  fun `getByDayNumber returns correct day`() {
+    (1..7).forEach { i ->
+      assertEquals(Day.entries[i - 1], Day.getByDayNumber(i))
+    }
+  }
+}
+
+class CalendarExtensionsTests {
+  @Test
+  fun `getLocalDayOrder returns ordered list of days`() {
     Calendar.getInstance().let { calendar ->
       calendar.let {
-        calendar.firstDayOfWeek = Calendar.MONDAY
+        (1..7).forEach { dayNumber ->
+          calendar.firstDayOfWeek = dayNumber
 
-        assertArrayEquals(
-          arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
-          calendar.getLocalListOfDays().toTypedArray()
-        )
-      }
-
-      calendar.let {
-        calendar.firstDayOfWeek = Calendar.SUNDAY
-
-        assertArrayEquals(
-          arrayOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"),
-          calendar.getLocalListOfDays().toTypedArray()
-        )
-      }
-
-      calendar.let {
-        calendar.firstDayOfWeek = Calendar.WEDNESDAY
-
-        assertArrayEquals(
-          arrayOf("Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday"),
-          calendar.getLocalListOfDays().toTypedArray()
-        )
+          assertArrayEquals(
+            (0..6).map { (it + calendar.firstDayOfWeek - 1).mod(7) + 1 }.toTypedArray(),
+            calendar.getLocalDayOrder().map { it.getDayNumber() }.toTypedArray()
+          )
+        }
       }
     }
   }
