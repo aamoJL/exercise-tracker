@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -75,6 +77,8 @@ fun NavController.toExerciseFormScreen(id: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseFormScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
+  val focusManager = LocalFocusManager.current
+
   var exerciseName by remember { mutableStateOf(String.EMPTY) }
   var repUnit by remember { mutableStateOf("reps") }
   var sets = remember { mutableStateListOf<Set>(Set(key = 0, value = String.EMPTY)) }
@@ -137,7 +141,7 @@ fun ExerciseFormScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
                 else -> {}
               }
             }
-            
+
             SwipeToDismissBox(
               state = dismissState,
               enableDismissFromStartToEnd = true,
@@ -164,8 +168,11 @@ fun ExerciseFormScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
                 },
                 suffix = { Text(repUnit) },
                 keyboardOptions = KeyboardOptions(
-                  keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
+                  keyboardType = KeyboardType.Number,
+                  imeAction = if (i < sets.count() - 1) ImeAction.Next else ImeAction.Done
                 ),
+                keyboardActions = KeyboardActions(
+                  onDone = { focusManager.clearFocus() }),
                 modifier = Modifier.fillMaxWidth()
               )
             }

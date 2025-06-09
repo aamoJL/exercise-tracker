@@ -13,6 +13,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.aamo.exercisetracker.features.dailies.dailiesPage
 import com.aamo.exercisetracker.features.dailies.toDailiesPage
+import com.aamo.exercisetracker.features.exercise.exercisePage
+import com.aamo.exercisetracker.features.exercise.toExercisePage
 import com.aamo.exercisetracker.features.home.HomePage
 import com.aamo.exercisetracker.features.home.homePage
 import com.aamo.exercisetracker.features.routine.routineListPage
@@ -43,15 +45,12 @@ class MainActivity : ComponentActivity() {
             routineListPage(
               navController = navController,
               onBack = { navController.navigateUp() },
-              onSelectRoutine = { id ->
-                navController.toRoutinePage(id)
-              })
+              onSelectRoutine = { id -> navController.toRoutinePage(id) })
             routinePage(
               navController = navController,
               onBack = { navController.navigateUp() },
-              onSelectExercise = {
-                /* TODO: exercise select command */
-              })
+              onSelectExercise = { id -> navController.toExercisePage(id) })
+            exercisePage(onBack = { navController.navigateUp() })
           }
         }
       }
