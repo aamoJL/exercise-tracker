@@ -9,10 +9,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 
 @Composable
 fun SearchTextField(
-  value: String, onValueChange: (String) -> Unit, onClear: () -> Unit, modifier: Modifier = Modifier
+  value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier
 ) {
   OutlinedTextField(
     value = value,
@@ -20,8 +21,10 @@ fun SearchTextField(
     placeholder = { Text("Search...") },
     leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
     trailingIcon = {
-      IconButton(onClick = onClear) {
-        Icon(imageVector = Icons.Filled.Clear, contentDescription = "Clear")
+      if (value.isNotEmpty()) {
+        IconButton(onClick = { onValueChange(String.EMPTY) }) {
+          Icon(imageVector = Icons.Filled.Clear, contentDescription = "Clear")
+        }
       }
     },
     modifier = modifier

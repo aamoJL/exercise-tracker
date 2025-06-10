@@ -39,7 +39,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
-import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
@@ -61,10 +60,6 @@ fun NavGraphBuilder.routineFormScreen(onBack: () -> Unit, onSave: () -> Unit) {
       id = args.id, onBack = onBack, onSave = onSave
     )
   }
-}
-
-fun NavController.toRoutineFormScreen(id: Int) {
-  this.navigate(RoutineFormScreen(id))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

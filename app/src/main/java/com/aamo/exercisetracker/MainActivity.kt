@@ -11,18 +11,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.aamo.exercisetracker.features.dailies.dailiesPage
-import com.aamo.exercisetracker.features.dailies.toDailiesPage
+import com.aamo.exercisetracker.features.exercise.ExercisePage
 import com.aamo.exercisetracker.features.exercise.exercisePage
-import com.aamo.exercisetracker.features.exercise.toExercisePage
 import com.aamo.exercisetracker.features.home.HomePage
 import com.aamo.exercisetracker.features.home.homePage
-import com.aamo.exercisetracker.features.routine.routineListPage
 import com.aamo.exercisetracker.features.routine.routinePage
-import com.aamo.exercisetracker.features.routine.toRoutinePage
-import com.aamo.exercisetracker.features.routine.toRoutinesPage
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
-import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
   @OptIn(ExperimentalMaterial3Api::class)
@@ -35,22 +29,12 @@ class MainActivity : ComponentActivity() {
       ExerciseTrackerTheme {
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
           NavHost(navController = navController, startDestination = HomePage) {
-            homePage(
-              onSelectDaily = {
-              navController.toDailiesPage(Calendar.getInstance().get(Calendar.DAY_OF_WEEK))
-            },
-              onSelectWeekly = { navController.toRoutinesPage() },
-              onSelectMonthly = { /* TODO: monthly click command */ })
-            dailiesPage()
-            routineListPage(
-              navController = navController,
-              onBack = { navController.navigateUp() },
-              onSelectRoutine = { id -> navController.toRoutinePage(id) })
+            homePage(navController = navController)
             routinePage(
               navController = navController,
               onBack = { navController.navigateUp() },
-              onSelectExercise = { id -> navController.toExercisePage(id) })
-            exercisePage(onBack = { navController.navigateUp() })
+              onSelectExercise = { id -> navController.navigate(ExercisePage(id = id)) })
+            exercisePage(navController = navController, onBack = { navController.navigateUp() })
           }
         }
       }

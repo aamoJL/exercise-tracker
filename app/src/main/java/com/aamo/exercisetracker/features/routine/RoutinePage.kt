@@ -19,13 +19,13 @@ fun NavGraphBuilder.routinePage(
       onBack = onBack,
       onAddExercise = { navController.toExerciseFormScreen(0) },
       onSelectExercise = onSelectExercise,
+      onEdit = { id -> navController.navigate(RoutineFormScreen(id)) },
     )
     exerciseFormScreen(onBack = onBack, onSave = {
       /* TODO: exercise save command */
     })
+    routineFormScreen(onBack = onBack, onSave = {
+      /* TODO: Routine save command */
+    })
   }
-}
-
-fun NavController.toRoutinePage(id: Int) {
-  this.navigate(RoutinePage(id = id))
 }

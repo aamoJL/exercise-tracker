@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,26 +32,37 @@ import kotlinx.serialization.Serializable
 @Serializable data class RoutineScreen(val id: Int = 0)
 
 fun NavGraphBuilder.routineScreen(
-  onBack: () -> Unit, onAddExercise: () -> Unit, onSelectExercise: (Int) -> Unit
+  onBack: () -> Unit,
+  onAddExercise: () -> Unit,
+  onSelectExercise: (Int) -> Unit,
+  onEdit: (id: Int) -> Unit
 ) {
   composable<RoutineScreen> { navStack ->
     val id: Int = navStack.toRoute<RoutineScreen>().id
 
     RoutineScreen(
-      onBack = onBack, onAddExercise = onAddExercise, onSelectExercise = onSelectExercise
-    )
+      onBack = onBack,
+      onAddExercise = onAddExercise,
+      onSelectExercise = onSelectExercise,
+      onEdit = { onEdit(id) })
   }
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun RoutineScreen(
-  onBack: () -> Unit, onAddExercise: () -> Unit, onSelectExercise: (id: Int) -> Unit
+  onBack: () -> Unit,
+  onAddExercise: () -> Unit,
+  onSelectExercise: (id: Int) -> Unit,
+  onEdit: () -> Unit
 ) {
   Scaffold(topBar = {
     TopAppBar(title = { Text("Routine") }, navigationIcon = {
       BackNavigationIconButton(onBack = onBack)
     }, actions = {
+      IconButton(onClick = onEdit) {
+        Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit routine")
+      }
       IconButton(onClick = onAddExercise) {
         Icon(imageVector = Icons.Filled.Add, contentDescription = "Add exercise")
       }
