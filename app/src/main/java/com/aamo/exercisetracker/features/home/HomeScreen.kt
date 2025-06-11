@@ -1,5 +1,6 @@
 package com.aamo.exercisetracker.features.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
@@ -16,32 +17,40 @@ import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
+import com.aamo.exercisetracker.utility.extensions.date.today
 import java.util.Calendar
+import kotlin.reflect.KClass
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(mainNavController: NavController) {
   val homeNavController = rememberNavController()
-  var selectedNavBarIndex by rememberSaveable { mutableIntStateOf(0) }
+  val navStack = homeNavController.currentBackStackEntryAsState().value
+
+  BackHandler(enabled = !navStack.destinationEquals(DailiesScreen::class)) {
+    // Navigate back to the dailies tab, if pressed back on any other tab
+    homeNavController.navigate(route = DailiesScreen(Calendar.getInstance().today())) {
+      popUpTo(homeNavController.graph.id) { inclusive = true }
+    }
+  }
 
   Column {
     NavHost(
       navController = homeNavController,
-      startDestination = DailiesScreen(Calendar.getInstance().get(Calendar.DAY_OF_WEEK)),
+      startDestination = DailiesScreen(Calendar.getInstance().today()),
       modifier = Modifier.weight(1f)
     ) {
       composable<DailiesScreen> { stack ->
@@ -61,36 +70,38 @@ fun HomeScreen(mainNavController: NavController) {
     if (!WindowInsets.isImeVisible) {
       BottomAppBar {
         NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
-          NavigationBarItem(selected = selectedNavBarIndex == 0, onClick = {
-            if (selectedNavBarIndex != 0) {
-              selectedNavBarIndex = 0
-              homeNavController.popBackStack()
-              homeNavController.navigate(
-                route = DailiesScreen(
-                  Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-                )
-              )
+          NavigationBarItem(selected = navStack.destinationEquals(DailiesScreen::class), onClick = {
+            if (!navStack.destinationEquals(DailiesScreen::class)) {
+              homeNavController.navigate(route = DailiesScreen(Calendar.getInstance().today())) {
+                popUpTo(homeNavController.graph.id) { inclusive = true }
+              }
             }
           }, icon = {
             Icon(
               imageVector = Icons.Filled.DateRange, contentDescription = "Dailies tab"
             )
           }, label = { Text("Dailies") })
-          NavigationBarItem(selected = selectedNavBarIndex == 1, onClick = {
-            if (selectedNavBarIndex != 1) {
-              selectedNavBarIndex = 1
-              homeNavController.popBackStack()
-              homeNavController.navigate(route = RoutineListScreen) {
-
+          NavigationBarItem(
+            selected = navStack.destinationEquals(RoutineListScreen::class),
+            onClick = {
+              if (!navStack.destinationEquals(RoutineListScreen::class)) {
+                homeNavController.navigate(route = RoutineListScreen) {
+                  popUpTo(homeNavController.graph.id) { inclusive = true }
+                }
               }
-            }
-          }, icon = {
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Routines tab"
-            )
-          }, label = { Text("Routines") })
+            },
+            icon = {
+              Icon(
+                imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Routines tab"
+              )
+            },
+            label = { Text("Routines") })
         }
       }
     }
   }
+}
+
+private fun <T : Any> NavBackStackEntry?.destinationEquals(route: KClass<T>): Boolean {
+  return this?.destination?.hasRoute(route) == true
 }

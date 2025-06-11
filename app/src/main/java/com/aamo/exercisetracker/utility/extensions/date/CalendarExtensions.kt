@@ -49,3 +49,7 @@ fun Calendar.getLocalDayOrder(): List<Day> {
 
   return beforeLocalFistDay.plus(afterLocalFirstDay)
 }
+
+fun Calendar.today(): Int {
+  return this.get(Calendar.DAY_OF_WEEK)
+}
