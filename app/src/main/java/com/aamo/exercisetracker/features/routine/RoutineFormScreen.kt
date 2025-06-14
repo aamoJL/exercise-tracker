@@ -50,7 +50,8 @@ import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import kotlinx.serialization.Serializable
 import java.util.Calendar
 
-@Serializable data class RoutineFormScreen(val id: Int)
+@Serializable
+data class RoutineFormScreen(val id: Int)
 private data class DaySelection(val day: Day, var selected: Boolean)
 
 fun NavGraphBuilder.routineFormScreen(onBack: () -> Unit, onSave: () -> Unit) {
@@ -105,7 +106,7 @@ fun RoutineFormScreen(id: Int, onBack: () -> Unit, onSave: () -> Unit) {
       )
       TextField(
         value = restMinutes.toString(),
-        label = { Text("Rest time") },
+        label = { Text("Rest duration") },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
         onValueChange = { if (it.isDigitsOnly()) restMinutes = it },

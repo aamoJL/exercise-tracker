@@ -3,6 +3,8 @@ plugins {
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
   kotlin("plugin.serialization") version "2.0.21"
+  alias(libs.plugins.room)
+  alias(libs.plugins.google.devtools.ksp)
 }
 
 android {
@@ -42,10 +44,12 @@ android {
   buildFeatures {
     compose = true
   }
+  room {
+    schemaDirectory("$projectDir/schemas")
+  }
 }
 
 dependencies {
-
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
@@ -57,7 +61,11 @@ dependencies {
   implementation(libs.androidx.navigation.compose.android)
   // JSON serialization library, works with the Kotlin serialization plugin
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.testing.android)
+  ksp(libs.androidx.room.compiler)
   testImplementation(libs.junit)
+  testImplementation(libs.androidx.room.testing)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(platform(libs.androidx.compose.bom))
