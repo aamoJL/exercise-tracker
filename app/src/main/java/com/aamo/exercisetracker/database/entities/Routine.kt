@@ -22,7 +22,7 @@ data class Routine(
 )
 
 @Entity(
-  tableName = "routine_schedule", foreignKeys = [ForeignKey(
+  tableName = "routine_schedules", foreignKeys = [ForeignKey(
     entity = Routine::class,
     parentColumns = ["id"],
     childColumns = ["routine_id"],
@@ -32,13 +32,13 @@ data class Routine(
 data class RoutineSchedule(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "routine_id") val routineId: Long,
-  @ColumnInfo(name = "sunday") val sunday: Boolean,
-  @ColumnInfo(name = "monday") val monday: Boolean,
-  @ColumnInfo(name = "tuesday") val tuesday: Boolean,
-  @ColumnInfo(name = "wednesday") val wednesday: Boolean,
-  @ColumnInfo(name = "thursday") val thursday: Boolean,
-  @ColumnInfo(name = "friday") val friday: Boolean,
-  @ColumnInfo(name = "saturday") val saturday: Boolean,
+  @ColumnInfo(name = "sunday") val sunday: Boolean = false,
+  @ColumnInfo(name = "monday") val monday: Boolean = false,
+  @ColumnInfo(name = "tuesday") val tuesday: Boolean = false,
+  @ColumnInfo(name = "wednesday") val wednesday: Boolean = false,
+  @ColumnInfo(name = "thursday") val thursday: Boolean = false,
+  @ColumnInfo(name = "friday") val friday: Boolean = false,
+  @ColumnInfo(name = "saturday") val saturday: Boolean = false,
 )
 
 data class RoutineWithSchedule(
@@ -48,42 +48,63 @@ data class RoutineWithSchedule(
 
 @Dao
 interface RoutineDao {
-  @Query("SELECT * FROM routine_schedule WHERE routine_id = :routineId")
-  suspend fun getRoutineScheduleByRoutineId(routineId: Long): RoutineSchedule?
+  @Query("SELECT * FROM routines WHERE id = :routineId")
+  suspend fun getRoutine(routineId: Long): Routine?
+
+  @Query("SELECT * FROM routine_schedules WHERE id = :scheduleId")
+  suspend fun getSchedule(scheduleId: Long): RoutineSchedule?
+
+  @Query("SELECT * FROM routine_schedules WHERE routine_id = :routineId")
+  suspend fun getScheduleByRoutineId(routineId: Long): RoutineSchedule?
+
+  @Query("SELECT * FROM routine_schedules")
+  suspend fun getSchedules(): List<RoutineSchedule>
+
+  @Query("SELECT * FROM routines WHERE id = :routineId")
+  suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule
 
   /**
-   * Returns id on insertion, -1 on update
+   * @return id on insertion, -1 on update
    */
   @Upsert
   suspend fun upsert(routine: Routine): Long
 
   /**
-   * Returns id on insertion, -1 on update
+   * @return id on insertion, -1 on update
    */
   @Upsert
   suspend fun upsert(schedule: RoutineSchedule): Long
 
+  /**
+   * @return routine ID and schedule ID as a pair
+   */
   @Transaction
-  suspend fun upsert(routineWithSchedule: RoutineWithSchedule) {
+  suspend fun upsert(routineWithSchedule: RoutineWithSchedule): Pair<Long, Long?> {
     val (routine, schedule) = routineWithSchedule
 
-    upsert(routine).let {
-      val routineId = upsertReturnToId(returnValue = it, oldId = routine.id)
+    // Upsert routine
+    val routineId = upsertReturnValueOrOldId(returnValue = upsert(routine), oldId = routine.id)
+    var scheduleId = schedule?.id
 
-      getRoutineScheduleByRoutineId(routineId)?.let { existingSchedule ->
-        if (schedule == null) {
-          delete(existingSchedule)
-          return // Delete schedule
-        }
+    getScheduleByRoutineId(routineId)?.let { existingSchedule ->
+      // Schedule exists
+      scheduleId = if (schedule != null) existingSchedule.id else null
 
-        upsert(schedule.copy(id = existingSchedule.id, routineId = existingSchedule.routineId))
-        return // Update existing schedule
-      }
-
-      if (schedule != null) {
-        upsert(schedule.copy(id = 0L, routineId = routineId)) // Insert new schedule
+      if (schedule == null) {
+        // Delete old schedule if current is null
+        delete(existingSchedule)
       }
     }
+
+    if (schedule != null && scheduleId != null) {
+      // Upsert schedule
+      scheduleId = upsertReturnValueOrOldId(
+        returnValue = upsert(schedule.copy(id = scheduleId, routineId = routineId)),
+        oldId = routine.id
+      )
+    }
+
+    return Pair(routineId, scheduleId)
   }
 
   @Delete
@@ -93,9 +114,9 @@ interface RoutineDao {
   suspend fun delete(routineSchedule: RoutineSchedule)
 
   /**
-   * Returns the new id from upsert if the value is not -1, otherwise returns old id
+   * @return the new id from upsert if the value is not -1, otherwise returns old id
    */
-  private fun upsertReturnToId(returnValue: Long, oldId: Long): Long {
+  private fun upsertReturnValueOrOldId(returnValue: Long, oldId: Long): Long {
     return if (returnValue == -1L) oldId else returnValue
   }
 }

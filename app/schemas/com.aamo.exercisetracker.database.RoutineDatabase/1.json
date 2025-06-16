@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "dc12495bd42c63952ebc7e2217d38760",
+    "identityHash": "051248afef7f14a019d2657783e36bfb",
     "entities": [
       {
         "tableName": "routines",
@@ -35,7 +35,7 @@
         }
       },
       {
-        "tableName": "routine_schedule",
+        "tableName": "routine_schedules",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `routine_id` INTEGER NOT NULL, `sunday` INTEGER NOT NULL, `monday` INTEGER NOT NULL, `tuesday` INTEGER NOT NULL, `wednesday` INTEGER NOT NULL, `thursday` INTEGER NOT NULL, `friday` INTEGER NOT NULL, `saturday` INTEGER NOT NULL, FOREIGN KEY(`routine_id`) REFERENCES `routines`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
@@ -101,13 +101,13 @@
         },
         "indices": [
           {
-            "name": "index_routine_schedule_routine_id",
+            "name": "index_routine_schedules_routine_id",
             "unique": true,
             "columnNames": [
               "routine_id"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_routine_schedule_routine_id` ON `${TABLE_NAME}` (`routine_id`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_routine_schedules_routine_id` ON `${TABLE_NAME}` (`routine_id`)"
           }
         ],
         "foreignKeys": [
@@ -127,7 +127,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'dc12495bd42c63952ebc7e2217d38760')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '051248afef7f14a019d2657783e36bfb')"
     ]
   }
 }
