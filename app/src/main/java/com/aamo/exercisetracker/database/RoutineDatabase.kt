@@ -28,10 +28,10 @@ abstract class RoutineDatabase : RoomDatabase() {
 
     private var Instance: RoutineDatabase? = null
 
-    fun getDatabase(context: Context): RoutineDatabase {
+    fun getDatabase(applicationContext: Context): RoutineDatabase {
       return Instance ?: synchronized(this) {
         Room.databaseBuilder(
-          context = context, klass = RoutineDatabase::class.java, name = DATABASE_NAME
+          context = applicationContext, klass = RoutineDatabase::class.java, name = DATABASE_NAME
         ).build()
       }
     }

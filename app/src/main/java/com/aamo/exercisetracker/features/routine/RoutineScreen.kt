@@ -29,16 +29,17 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import kotlinx.serialization.Serializable
 
-@Serializable data class RoutineScreen(val id: Int = 0)
+@Serializable
+data class RoutineScreen(val id: Long = 0L)
 
 fun NavGraphBuilder.routineScreen(
   onBack: () -> Unit,
   onAddExercise: () -> Unit,
   onSelectExercise: (Int) -> Unit,
-  onEdit: (id: Int) -> Unit
+  onEdit: (id: Long) -> Unit
 ) {
   composable<RoutineScreen> { navStack ->
-    val id: Int = navStack.toRoute<RoutineScreen>().id
+    val id: Long = navStack.toRoute<RoutineScreen>().id
 
     RoutineScreen(
       onBack = onBack,

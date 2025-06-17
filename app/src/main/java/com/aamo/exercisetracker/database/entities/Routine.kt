@@ -12,13 +12,15 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 @Entity(tableName = "routines")
 data class Routine(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "name") val name: String,
-  @ColumnInfo(name = "rest_duration") val restDuration: Duration,
+  @ColumnInfo(name = "rest_duration") val restDuration: Duration = 0.minutes,
 )
 
 @Entity(
@@ -61,7 +63,11 @@ interface RoutineDao {
   suspend fun getSchedules(): List<RoutineSchedule>
 
   @Query("SELECT * FROM routines WHERE id = :routineId")
-  suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule
+  suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule?
+
+  @Transaction
+  @Query("SELECT * FROM routines")
+  fun getRoutinesWithScheduleFlow(): Flow<List<RoutineWithSchedule>>
 
   /**
    * @return id on insertion, -1 on update

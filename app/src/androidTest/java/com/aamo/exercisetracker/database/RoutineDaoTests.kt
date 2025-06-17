@@ -129,7 +129,7 @@ class RoutineDaoTests {
       schedule = schedule.copy(id = sId, routineId = rId)
 
       // Get
-      dao.getRoutineWithSchedule(routine.id).also { (dbRoutine, dbSchedule) ->
+      checkNotNull(dao.getRoutineWithSchedule(routine.id)).also { (dbRoutine, dbSchedule) ->
         checkNotNull(dbSchedule)
         assertEquals(routine, dbRoutine)
         assertEquals(schedule, dbSchedule)
@@ -144,11 +144,11 @@ class RoutineDaoTests {
             assertEquals(schedule.id, uSId)
 
             // Get
-            dao.getRoutineWithSchedule(routine.id).also { (uDbRoutine, uDbSchedule) ->
-              checkNotNull(uDbSchedule)
-              assertEquals(routine, uDbRoutine)
-              assertEquals(schedule, uDbSchedule)
-            }
+            checkNotNull(dao.getRoutineWithSchedule(routine.id)).also { (uDbRoutine, uDbSchedule) ->
+                checkNotNull(uDbSchedule)
+                assertEquals(routine, uDbRoutine)
+                assertEquals(schedule, uDbSchedule)
+              }
           }
       }
     }
