@@ -28,6 +28,8 @@ fun NavGraphBuilder.routinePage(
           inclusive = true
         }
       }
+    }, onDelete = {
+      navController.popBackStack<RoutinePage>(inclusive = true)
     })
   }
 }

@@ -113,6 +113,13 @@ interface RoutineDao {
     return Pair(routineId, scheduleId)
   }
 
+  @Transaction
+  suspend fun upsertAndGet(routineWithSchedule: RoutineWithSchedule): RoutineWithSchedule? {
+    upsert(routineWithSchedule).let {
+      return getRoutineWithSchedule(it.first)
+    }
+  }
+
   @Delete
   suspend fun delete(routine: Routine)
 
