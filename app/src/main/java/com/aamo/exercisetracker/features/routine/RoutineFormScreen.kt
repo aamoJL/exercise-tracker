@@ -1,10 +1,8 @@
 package com.aamo.exercisetracker.features.routine
 
 import android.content.Context
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +19,6 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,14 +30,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.RectangleShape
@@ -48,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
@@ -66,11 +62,13 @@ import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.RoutineFormViewModel.RoutineFormUiState
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -88,23 +86,9 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
     val schedule: RoutineSchedule = RoutineSchedule(routineId = 0L),
     val savingState: SavingState = SavingState(SavingState.State.NONE),
     val deleted: Boolean = false,
-  ) {
-    data class SavingState(
-      val state: State,
-      val msg: String = String.EMPTY,
-      val canSave: Boolean = false,
-      val unsavedChanges: Boolean = false
-    ) {
-      enum class State {
-        NONE,
-        SAVING,
-        SAVED,
-        ERROR,
-      }
-    }
-  }
+  )
 
-  private var database: RoutineDatabase = RoutineDatabase.getDatabase(context)
+  private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
 
   private val _uiState = MutableStateFlow(RoutineFormUiState())
   var uiState = _uiState.asStateFlow()
@@ -112,12 +96,13 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
   init {
     viewModelScope.launch {
       database.routineDao().getRoutineWithSchedule(routineId)?.let { rws ->
-        update(
+        _uiState.update {
           RoutineFormUiState(
             routine = rws.routine,
-            schedule = rws.schedule ?: RoutineSchedule(routineId = rws.routine.id)
+            schedule = rws.schedule ?: RoutineSchedule(routineId = rws.routine.id),
+            savingState = it.savingState.copy(canSave = canSave(it))
           )
-        )
+        }
       }
     }
   }
@@ -132,10 +117,6 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
     }
   }
 
-  fun canSave(uiState: RoutineFormUiState): Boolean {
-    return uiState.routine.name.isNotEmpty()
-  }
-
   /**
    * Saves the routine to the database
    */
@@ -145,29 +126,29 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
     val routine = _uiState.value.routine
     val schedule = _uiState.value.schedule
 
-    update(_uiState.value.copy(savingState = RoutineFormUiState.SavingState(RoutineFormUiState.SavingState.State.SAVING)))
+    _uiState.update { it.copy(savingState = SavingState(SavingState.State.SAVING)) }
 
     viewModelScope.launch {
       database.routineDao().runCatching {
         checkNotNull(upsertAndGet(RoutineWithSchedule(routine = routine, schedule = schedule)))
       }.onSuccess { result ->
-        update(
-          _uiState.value.copy(
-            savingState = RoutineFormUiState.SavingState(
-              state = RoutineFormUiState.SavingState.State.SAVED, unsavedChanges = false
+        _uiState.update {
+          it.copy(
+            routine = result.routine,
+            schedule = result.schedule ?: schedule,
+            savingState = SavingState(
+              state = SavingState.State.SAVED, unsavedChanges = false
             )
           )
-        )
+        }
       }.onFailure { error ->
-        Log.d("error", error.message.toString())
-        update(
-          _uiState.value.copy(
-            savingState = RoutineFormUiState.SavingState(
-              state = RoutineFormUiState.SavingState.State.ERROR,
-              msg = error.message ?: String.EMPTY
+        _uiState.update {
+          it.copy(
+            savingState = SavingState(
+              state = SavingState.State.ERROR, msg = error.message ?: String.EMPTY
             )
           )
-        )
+        }
       }
     }
   }
@@ -182,9 +163,14 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
       database.routineDao().runCatching {
         delete(_uiState.value.routine)
       }.onSuccess {
-        update(_uiState.value.copy(deleted = true))
+        _uiState.update { it.copy(deleted = true) }
       }
     }
+  }
+
+  private fun canSave(uiState: RoutineFormUiState): Boolean {
+    if (uiState.savingState.state == SavingState.State.SAVING) return false
+    return uiState.routine.name.isNotEmpty()
   }
 }
 
@@ -199,12 +185,15 @@ fun NavGraphBuilder.routineFormScreen(
     })
     val uiState by viewmodel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState) {
-      if (uiState.savingState.state == RoutineFormUiState.SavingState.State.SAVED) {
-        onSuccess(uiState.routine.id)
-      }
-      else if (uiState.deleted) {
+    LaunchedEffect(uiState.deleted) {
+      if (uiState.deleted) {
         onDelete()
+      }
+    }
+
+    LaunchedEffect(uiState.savingState.state) {
+      if (uiState.savingState.state == SavingState.State.SAVED) {
+        onSuccess(uiState.routine.id)
       }
     }
 
@@ -268,18 +257,12 @@ fun RoutineFormScreen(
             Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete routine")
           }
         }
-        Box(
-          contentAlignment = Alignment.Center, modifier = Modifier.minimumInteractiveComponentSize()
+        LoadingIconButton(
+          onClick = onSave,
+          isLoading = uiState.savingState.state == SavingState.State.SAVING,
+          enabled = uiState.savingState.canSave
         ) {
-          if (uiState.savingState.state == RoutineFormUiState.SavingState.State.SAVING) {
-            CircularProgressIndicator(
-              color = MaterialTheme.colorScheme.secondary,
-              trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-          }
-          IconButton(onClick = onSave, enabled = uiState.savingState.canSave) {
-            Icon(imageVector = Icons.Filled.Done, contentDescription = "Save routine")
-          }
+          Icon(imageVector = Icons.Filled.Done, contentDescription = "Save routine")
         }
       })
   }, modifier = Modifier.imePadding()) { innerPadding ->
@@ -295,7 +278,10 @@ fun RoutineFormScreen(
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
         onValueChange = { onStateChanged(uiState.copy(routine = routine.copy(name = it))) },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(
+          imeAction = ImeAction.Next,
+          capitalization = KeyboardCapitalization.Sentences
+        ),
         modifier = Modifier.fillMaxWidth()
       )
       TextField(

@@ -1,18 +1,12 @@
 package com.aamo.exercisetracker.database.entities
 
 import androidx.room.ColumnInfo
-import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import androidx.room.Query
 import androidx.room.Relation
-import androidx.room.Transaction
-import androidx.room.Upsert
-import kotlinx.coroutines.flow.Flow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
@@ -45,91 +39,12 @@ data class RoutineSchedule(
 
 data class RoutineWithSchedule(
   @Embedded val routine: Routine,
-  @Relation(parentColumn = "id", entityColumn = "routine_id") val schedule: RoutineSchedule?
+  @Relation(entity = RoutineSchedule::class, parentColumn = "id", entityColumn = "routine_id")
+  val schedule: RoutineSchedule?
 )
 
-@Dao
-interface RoutineDao {
-  @Query("SELECT * FROM routines WHERE id = :routineId")
-  suspend fun getRoutine(routineId: Long): Routine?
-
-  @Query("SELECT * FROM routine_schedules WHERE id = :scheduleId")
-  suspend fun getSchedule(scheduleId: Long): RoutineSchedule?
-
-  @Query("SELECT * FROM routine_schedules WHERE routine_id = :routineId")
-  suspend fun getScheduleByRoutineId(routineId: Long): RoutineSchedule?
-
-  @Query("SELECT * FROM routine_schedules")
-  suspend fun getSchedules(): List<RoutineSchedule>
-
-  @Query("SELECT * FROM routines WHERE id = :routineId")
-  suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule?
-
-  @Transaction
-  @Query("SELECT * FROM routines")
-  fun getRoutinesWithScheduleFlow(): Flow<List<RoutineWithSchedule>>
-
-  /**
-   * @return id on insertion, -1 on update
-   */
-  @Upsert
-  suspend fun upsert(routine: Routine): Long
-
-  /**
-   * @return id on insertion, -1 on update
-   */
-  @Upsert
-  suspend fun upsert(schedule: RoutineSchedule): Long
-
-  /**
-   * @return routine ID and schedule ID as a pair
-   */
-  @Transaction
-  suspend fun upsert(routineWithSchedule: RoutineWithSchedule): Pair<Long, Long?> {
-    val (routine, schedule) = routineWithSchedule
-
-    // Upsert routine
-    val routineId = upsertReturnValueOrOldId(returnValue = upsert(routine), oldId = routine.id)
-    var scheduleId = schedule?.id
-
-    getScheduleByRoutineId(routineId)?.let { existingSchedule ->
-      // Schedule exists
-      scheduleId = if (schedule != null) existingSchedule.id else null
-
-      if (schedule == null) {
-        // Delete old schedule if current is null
-        delete(existingSchedule)
-      }
-    }
-
-    if (schedule != null && scheduleId != null) {
-      // Upsert schedule
-      scheduleId = upsertReturnValueOrOldId(
-        returnValue = upsert(schedule.copy(id = scheduleId, routineId = routineId)),
-        oldId = routine.id
-      )
-    }
-
-    return Pair(routineId, scheduleId)
-  }
-
-  @Transaction
-  suspend fun upsertAndGet(routineWithSchedule: RoutineWithSchedule): RoutineWithSchedule? {
-    upsert(routineWithSchedule).let {
-      return getRoutineWithSchedule(it.first)
-    }
-  }
-
-  @Delete
-  suspend fun delete(routine: Routine)
-
-  @Delete
-  suspend fun delete(routineSchedule: RoutineSchedule)
-
-  /**
-   * @return the new id from upsert if the value is not -1, otherwise returns old id
-   */
-  private fun upsertReturnValueOrOldId(returnValue: Long, oldId: Long): Long {
-    return if (returnValue == -1L) oldId else returnValue
-  }
-}
+data class RoutineWithExercises(
+  @Embedded val routine: Routine, @Relation(
+    entity = Exercise::class, parentColumn = "id", entityColumn = "routine_id"
+  ) val exercises: List<Exercise>
+)

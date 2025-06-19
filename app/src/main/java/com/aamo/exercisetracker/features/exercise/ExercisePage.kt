@@ -5,15 +5,18 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.navigation
 import kotlinx.serialization.Serializable
 
-@Serializable data class ExercisePage(val id: Int)
+@Serializable
+data class ExercisePage(val id: Long)
 
 fun NavGraphBuilder.exercisePage(navController: NavController, onBack: () -> Unit) {
   navigation<ExercisePage>(startDestination = ExerciseScreen()) {
     exerciseScreen(onBack = onBack, onEdit = { id ->
-      navController.toExerciseFormScreen(id)
+      navController.navigate(EditExerciseFormScreen(id))
     })
-    exerciseFormScreen(onBack = onBack, onSave = {
-      /* TODO: Exercise save command */
+    editExerciseFormScreen(onBack = onBack, onSaved = {
+      navController.popBackStack()
+    }, onDeleted = {
+      navController.popBackStack<ExercisePage>(inclusive = true)
     })
   }
 }

@@ -50,11 +50,12 @@ import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
-@Serializable data class ExerciseScreen(val id: Int = 0)
+@Serializable
+data class ExerciseScreen(val id: Long = 0)
 
-fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Int) -> Unit) {
+fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Unit) {
   composable<ExerciseScreen> { navStack ->
-    val id: Int = navStack.toRoute<ExerciseScreen>().id
+    val (id) = navStack.toRoute<ExerciseScreen>()
 
     ExerciseScreen(onBack = onBack, onEdit = { onEdit(id) })
   }

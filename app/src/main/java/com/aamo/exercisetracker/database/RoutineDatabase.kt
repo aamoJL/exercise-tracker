@@ -6,13 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.aamo.exercisetracker.database.converters.DurationConverter
+import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 
 @Database(
   version = RoutineDatabase.Properties.VERSION,
-  entities = [Routine::class, RoutineSchedule::class],
+  entities = [Routine::class, RoutineSchedule::class, Exercise::class, ExerciseSet::class],
   autoMigrations = [],
 )
 @TypeConverters(DurationConverter::class)
