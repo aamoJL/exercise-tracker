@@ -279,8 +279,7 @@ fun RoutineFormScreen(
         colors = borderlessTextFieldColors(),
         onValueChange = { onStateChanged(uiState.copy(routine = routine.copy(name = it))) },
         keyboardOptions = KeyboardOptions(
-          imeAction = ImeAction.Next,
-          capitalization = KeyboardCapitalization.Sentences
+          imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
         ),
         modifier = Modifier.fillMaxWidth()
       )
@@ -330,7 +329,7 @@ fun RoutineFormScreen(
                   checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                   contentColor = MaterialTheme.colorScheme.outline,
                 ),
-                checked = isScheduleDaySelected(schedule = schedule, day = day),
+                checked = schedule.isDaySelected(day.getDayNumber()),
                 onCheckedChange = { selection ->
                   onStateChanged(
                     uiState.copy(schedule = setScheduleDaySelection(schedule, day, selection))
@@ -370,18 +369,6 @@ private fun DeleteDialog(
       }
     },
   )
-}
-
-private fun isScheduleDaySelected(schedule: RoutineSchedule, day: Day): Boolean {
-  return when (day) {
-    Day.SUNDAY -> schedule.sunday
-    Day.MONDAY -> schedule.monday
-    Day.TUESDAY -> schedule.tuesday
-    Day.WEDNESDAY -> schedule.wednesday
-    Day.THURSDAY -> schedule.thursday
-    Day.FRIDAY -> schedule.friday
-    Day.SATURDAY -> schedule.saturday
-  }
 }
 
 private fun setScheduleDaySelection(

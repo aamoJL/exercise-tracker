@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RoutineDao {
+  // region GET
   @Query("SELECT * FROM routines WHERE id = :routineId")
   suspend fun getRoutine(routineId: Long): Routine?
 
@@ -35,7 +36,9 @@ interface RoutineDao {
   @Transaction
   @Query("SELECT * FROM exercises WHERE id = :exerciseId")
   suspend fun getExerciseWithSets(exerciseId: Long): ExerciseWithSets?
+  // endregion
 
+  // region UPSERT
   @Upsert
   suspend fun upsert(routine: Routine): Long
 
@@ -114,7 +117,9 @@ interface RoutineDao {
       return getExerciseWithSets(it)
     }
   }
+  // endregion
 
+  // region DELETE
   @Delete
   suspend fun delete(routine: Routine)
 
@@ -126,11 +131,14 @@ interface RoutineDao {
 
   @Delete
   suspend fun delete(exerciseSets: List<ExerciseSet>)
+  // endregion
 
+  // region Helper functions
   /**
    * @return the new id from upsert if the value is not -1, otherwise returns old id
    */
   private fun upsertReturnValueOrOldId(returnValue: Long, oldId: Long): Long {
     return if (returnValue == -1L) oldId else returnValue
   }
+  // endregion
 }

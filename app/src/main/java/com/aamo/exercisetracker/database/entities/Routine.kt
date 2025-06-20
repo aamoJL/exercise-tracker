@@ -35,7 +35,20 @@ data class RoutineSchedule(
   @ColumnInfo(name = "thursday") val thursday: Boolean = false,
   @ColumnInfo(name = "friday") val friday: Boolean = false,
   @ColumnInfo(name = "saturday") val saturday: Boolean = false,
-)
+) {
+  fun isDaySelected(dayNumber: Int): Boolean {
+    return when (dayNumber) {
+      1 -> sunday
+      2 -> monday
+      3 -> tuesday
+      4 -> wednesday
+      5 -> thursday
+      6 -> friday
+      7 -> saturday
+      else -> false
+    }
+  }
+}
 
 data class RoutineWithSchedule(
   @Embedded val routine: Routine,

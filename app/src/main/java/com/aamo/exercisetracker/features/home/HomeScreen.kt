@@ -34,9 +34,8 @@ import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
-import com.aamo.exercisetracker.utility.extensions.date.today
+import com.aamo.exercisetracker.utility.extensions.date.Day
 import kotlinx.coroutines.flow.map
-import java.util.Calendar
 import kotlin.reflect.KClass
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -47,7 +46,7 @@ fun HomeScreen(mainNavController: NavController) {
 
   BackHandler(enabled = !navStack.destinationEquals(DailiesScreen::class)) {
     // Navigate back to the dailies tab, if pressed back on any other tab
-    homeNavController.navigate(route = DailiesScreen(Calendar.getInstance().today())) {
+    homeNavController.navigate(route = DailiesScreen(Day.today())) {
       popUpTo(homeNavController.graph.id) { inclusive = true }
     }
   }
@@ -55,12 +54,13 @@ fun HomeScreen(mainNavController: NavController) {
   Column {
     NavHost(
       navController = homeNavController,
-      startDestination = DailiesScreen(Calendar.getInstance().today()),
+      startDestination = DailiesScreen(Day.today()),
       modifier = Modifier.weight(1f)
     ) {
       composable<DailiesScreen> { stack ->
         DailiesScreen(
-          initialPage = stack.toRoute<DailiesScreen>().initialDayNumber - 1,
+          initialDay = stack.toRoute<DailiesScreen>().initialDay,
+          onRoutineSelected = { id -> mainNavController.navigate(RoutinePage(id = id)) },
           modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
         )
       }
@@ -83,7 +83,7 @@ fun HomeScreen(mainNavController: NavController) {
         NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
           NavigationBarItem(selected = navStack.destinationEquals(DailiesScreen::class), onClick = {
             if (!navStack.destinationEquals(DailiesScreen::class)) {
-              homeNavController.navigate(route = DailiesScreen(Calendar.getInstance().today())) {
+              homeNavController.navigate(route = DailiesScreen(Day.today())) {
                 popUpTo(homeNavController.graph.id) { inclusive = true }
               }
             }

@@ -28,6 +28,10 @@ enum class Day(@StringRes val nameResourceKey: Int) {
     fun getByDayNumber(dayNumber: Int): Day {
       return Day.entries[dayNumber - 1]
     }
+
+    fun today(): Day {
+      return entries.elementAt(Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1)
+    }
   }
 }
 
@@ -48,8 +52,4 @@ fun Calendar.getLocalDayOrder(): List<Day> {
   val beforeLocalFistDay = listOfDays.slice(firstDayOfWeekIndex..listOfDays.count() - 1)
 
   return beforeLocalFistDay.plus(afterLocalFirstDay)
-}
-
-fun Calendar.today(): Int {
-  return this.get(Calendar.DAY_OF_WEEK)
 }
