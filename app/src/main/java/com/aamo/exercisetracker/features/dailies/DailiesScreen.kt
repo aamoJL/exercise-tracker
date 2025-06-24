@@ -12,14 +12,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +36,8 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.applyIf
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.serialization.Serializable
 import java.util.Calendar
 import kotlin.math.absoluteValue
@@ -41,6 +45,7 @@ import kotlin.math.absoluteValue
 @Serializable
 data class DailiesScreen(val initialDay: Day)
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun DailiesScreen(
   initialDay: Day, onRoutineSelected: (routineId: Long) -> Unit, modifier: Modifier = Modifier
@@ -50,8 +55,9 @@ fun DailiesScreen(
   val pagerState = rememberPagerState(pageCount = { 7 }, initialPage = days.indexOf(initialDay))
 
   val routines by RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
-    .getRoutinesWithScheduleFlow().map { it.filter { it.schedule != null } }
-    .collectAsStateWithLifecycle(initialValue = emptyList())
+    .getRoutinesWithScheduleFlow().mapLatest { list ->
+      list.filter { it.schedule != null }
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
 
   Surface(modifier = modifier) {
     HorizontalPager(
@@ -61,20 +67,19 @@ fun DailiesScreen(
       contentPadding = PaddingValues(horizontal = 24.dp),
       modifier = Modifier.fillMaxHeight()
     ) { pageIndex ->
-      val isToday = days[pageIndex] == today
+      val isToday = remember { days[pageIndex] == today }
+      val dayRoutines by remember(routines) {
+        mutableStateOf(routines.filter { it.schedule?.isDaySelected(days[pageIndex].getDayNumber()) == true }
+          .map { it.routine })
+      }
+
       val pageOffset =
         ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
-      val dayRoutines = routines.filter {
-        it.schedule?.isDaySelected(
-          days.elementAt(pageIndex).getDayNumber()
-        ) == true
-      }.map { it.routine }
 
       Card(
-        colors = CardDefaults.cardColors(
-          containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        border = applyIf(
+          isToday, BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         ),
-        border = applyIf(isToday, BorderStroke(2.dp, MaterialTheme.colorScheme.outline)),
         modifier = Modifier
           .fillMaxSize()
           .padding(vertical = (16 + 32 * (pageOffset.coerceIn(0f, 1f))).dp)
@@ -92,23 +97,23 @@ fun DailiesScreen(
             .padding(vertical = 28.dp)
         )
         LazyColumn(
-          verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(8.dp)
+          verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)
         ) {
           items(dayRoutines) { routine ->
-            OutlinedCard(
+            ElevatedCard(
               enabled = pagerState.currentPage == pageIndex,
               onClick = { onRoutineSelected(routine.id) },
-              border = CardDefaults.outlinedCardBorder(enabled = true),
+              shape = RoundedCornerShape(8.dp),
               colors = CardDefaults.outlinedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.secondary,
+                disabledContainerColor = MaterialTheme.colorScheme.secondary
               ),
               modifier = Modifier.fillMaxWidth()
             ) {
               Text(
                 text = routine.name,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 28.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
               )
             }
           }

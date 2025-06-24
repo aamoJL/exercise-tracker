@@ -1,6 +1,5 @@
 package com.aamo.exercisetracker.features.home
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,9 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -35,21 +32,15 @@ import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
 import com.aamo.exercisetracker.utility.extensions.date.Day
+import com.aamo.exercisetracker.utility.extensions.general.onFalse
+import com.aamo.exercisetracker.utility.extensions.navigation.destinationEquals
 import kotlinx.coroutines.flow.map
-import kotlin.reflect.KClass
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(mainNavController: NavController) {
   val homeNavController = rememberNavController()
   val navStack = homeNavController.currentBackStackEntryAsState().value
-
-  BackHandler(enabled = !navStack.destinationEquals(DailiesScreen::class)) {
-    // Navigate back to the dailies tab, if pressed back on any other tab
-    homeNavController.navigate(route = DailiesScreen(Day.today())) {
-      popUpTo(homeNavController.graph.id) { inclusive = true }
-    }
-  }
 
   Column {
     NavHost(
@@ -82,10 +73,9 @@ fun HomeScreen(mainNavController: NavController) {
       BottomAppBar {
         NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
           NavigationBarItem(selected = navStack.destinationEquals(DailiesScreen::class), onClick = {
-            if (!navStack.destinationEquals(DailiesScreen::class)) {
-              homeNavController.navigate(route = DailiesScreen(Day.today())) {
-                popUpTo(homeNavController.graph.id) { inclusive = true }
-              }
+            navStack.destinationEquals(DailiesScreen::class).onFalse {
+              homeNavController.popBackStack(route = DailiesScreen::class, inclusive = false)
+                .onFalse { homeNavController.navigate(route = DailiesScreen(Day.today())) }
             }
           }, icon = {
             Icon(
@@ -95,9 +85,9 @@ fun HomeScreen(mainNavController: NavController) {
           NavigationBarItem(
             selected = navStack.destinationEquals(RoutineListScreen::class),
             onClick = {
-              if (!navStack.destinationEquals(RoutineListScreen::class)) {
+              navStack.destinationEquals(RoutineListScreen::class).onFalse {
                 homeNavController.navigate(route = RoutineListScreen) {
-                  popUpTo(homeNavController.graph.id) { inclusive = true }
+                  popUpTo(DailiesScreen::class) { inclusive = false }
                 }
               }
             },
@@ -111,8 +101,4 @@ fun HomeScreen(mainNavController: NavController) {
       }
     }
   }
-}
-
-private fun <T : Any> NavBackStackEntry?.destinationEquals(route: KClass<T>): Boolean {
-  return this?.destination?.hasRoute(route) == true
 }

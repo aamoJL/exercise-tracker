@@ -39,6 +39,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,7 +56,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -68,7 +68,6 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.RoutineDao
-import com.aamo.exercisetracker.features.exercise.ExerciseFormViewModel.ExerciseFormUiState
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.FormList
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
@@ -76,9 +75,7 @@ import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -91,56 +88,42 @@ data class AddExerciseFormScreen(val routineId: Long)
 class ExerciseFormViewModel(
   context: Context, fetchData: (suspend (RoutineDao) -> ExerciseWithSets?)?
 ) : ViewModel() {
-  data class ExerciseFormUiState(
-    val exercise: Exercise = Exercise(),
+  class UiState(onModelChanged: () -> Unit) {
+    val exercise = ViewModelState(Exercise()).onChange { onModelChanged() }
     /**
      * Pair or exercise set and its list key
      */
-    val sets: List<Pair<Int, ExerciseSet>> = listOf(Pair(0, ExerciseSet())),
-    val savingState: SavingState = SavingState(SavingState.State.NONE),
-    val deleted: Boolean = false,
-    val nextSetKey: Int = 1
-  )
+    val sets = ViewModelState(listOf(Pair(0, ExerciseSet()))).onChange { onModelChanged() }
+    var savingState by mutableStateOf(SavingState())
+    var deleted by mutableStateOf(false)
+    var nextSetKey by mutableIntStateOf(1)
+  }
 
   private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
 
-  private val _uiState = MutableStateFlow(ExerciseFormUiState())
-  var uiState = _uiState.asStateFlow()
+  val uiState = UiState(onModelChanged = { onModelChanged() })
 
   init {
     viewModelScope.launch {
       if (fetchData != null) {
         fetchData(database.routineDao())?.let { ews ->
-          var nextKey = _uiState.value.nextSetKey
-          var updatedUiState = ExerciseFormUiState(
-            exercise = ews.exercise, sets = ews.sets.map { set ->
-              Pair(nextKey, set).also { nextKey++ }
-            }, savingState = _uiState.value.savingState.copy(canSave = false)
-          ).copy(nextSetKey = nextKey)
-
-          _uiState.update { updatedUiState }
+          var nextKey = uiState.nextSetKey
+          uiState.exercise.update(ews.exercise)
+          uiState.sets.update(ews.sets.map { set -> Pair(nextKey, set).also { nextKey++ } })
+          uiState.savingState = SavingState(canSave = canSave())
+          uiState.nextSetKey = nextKey
         }
       }
     }
   }
 
-  fun update(uiState: ExerciseFormUiState) {
-    _uiState.update {
-      uiState.copy(
-        savingState = uiState.savingState.copy(
-          unsavedChanges = true, canSave = canSave(uiState)
-        )
-      )
-    }
-  }
-
   fun save() {
-    if (!canSave(_uiState.value)) return
+    if (!canSave()) return
 
-    val exercise = _uiState.value.exercise
-    val sets = _uiState.value.sets
+    val exercise = uiState.exercise.value
+    val sets = uiState.sets.value
 
-    _uiState.update { it.copy(savingState = SavingState(SavingState.State.SAVING)) }
+    uiState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
       database.routineDao().runCatching {
@@ -148,38 +131,46 @@ class ExerciseFormViewModel(
           upsertAndGet(ExerciseWithSets(exercise = exercise, sets = sets.map { it.second }))
         )
       }.onSuccess { result ->
-        var nextKey = _uiState.value.nextSetKey
+        var nextKey = uiState.nextSetKey
 
-        _uiState.update {
-          it.copy(
-            exercise = result.exercise, sets = result.sets.map { set ->
-              Pair(nextKey, set).also { nextKey++ }
-            }, savingState = SavingState(state = SavingState.State.SAVED, unsavedChanges = false)
-          ).copy(nextSetKey = nextKey)
-        }
-      }.onFailure { error -> }
-    }
-  }
-
-  fun delete() {
-    if (_uiState.value.exercise.id == 0L) return
-
-    viewModelScope.launch {
-      database.routineDao().runCatching {
-        delete(_uiState.value.exercise)
-      }.onSuccess {
-        _uiState.update { it.copy(deleted = true) }
+        uiState.exercise.update(result.exercise)
+        uiState.sets.update(result.sets.map { set -> Pair(nextKey, set).also { nextKey++ } })
+        uiState.apply { savingState = savingState.getAsSaved(canSave()) }
+        uiState.nextSetKey = nextKey
+      }.onFailure { error ->
+        uiState.apply { savingState = savingState.getAsError(error = Error(error)) }
       }
     }
   }
 
-  private fun canSave(uiState: ExerciseFormUiState): Boolean {
-    if (uiState.exercise.routineId == 0L) return false
+  /**
+   * Deletes the exercise from the database
+   */
+  fun delete() {
+    if (uiState.exercise.value.id == 0L) return
+
+    viewModelScope.launch {
+      database.routineDao().runCatching {
+        delete(uiState.exercise.value)
+      }.onSuccess {
+        uiState.deleted = true
+      }
+    }
+  }
+
+  private fun canSave(): Boolean {
+    if (uiState.exercise.value.routineId == 0L) return false
     if (uiState.savingState.state == SavingState.State.SAVING) return false
-    if (uiState.sets.any { it.second.value == 0 }) return false
-    if (uiState.exercise.name.isEmpty()) return false
-    if (uiState.sets.isEmpty()) return false
+    if (uiState.sets.value.any { it.second.value == 0 }) return false
+    if (uiState.exercise.value.name.isEmpty()) return false
+    if (uiState.sets.value.isEmpty()) return false
     return true
+  }
+
+  private fun onModelChanged() {
+    uiState.savingState = uiState.savingState.copy(
+      unsavedChanges = true, canSave = canSave()
+    )
   }
 }
 
@@ -219,13 +210,12 @@ private fun Screen(
   val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
     initializer { ExerciseFormViewModel(context = context, fetchData = fetchData) }
   })
-  val uiState by viewmodel.uiState.collectAsStateWithLifecycle()
+  val uiState = viewmodel.uiState
 
   UiStateEffects(uiState = uiState, onDeleted = onDeleted, onSaved = onSaved)
 
   ExerciseFormScreen(
     uiState = uiState,
-    onStateChanged = { viewmodel.update(it) },
     onBack = onBack,
     onSave = { viewmodel.save() },
     onDelete = { viewmodel.delete() })
@@ -234,15 +224,17 @@ private fun Screen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseFormScreen(
-  uiState: ExerciseFormUiState,
-  onStateChanged: (ExerciseFormUiState) -> Unit,
+  uiState: ExerciseFormViewModel.UiState,
   onBack: () -> Unit,
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
   val focusManager = LocalFocusManager.current
-  val exercise = uiState.exercise
-  val sets = uiState.sets
+  val exercise = remember(uiState.exercise) { uiState.exercise }
+  val sets = remember(uiState.sets) { uiState.sets }
+  val unsavedChanges =
+    remember(uiState.savingState.unsavedChanges) { uiState.savingState.unsavedChanges }
+  val isNew = remember(exercise.value.id) { exercise.value.id == 0L }
 
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
@@ -269,14 +261,14 @@ fun ExerciseFormScreen(
 
   Scaffold(topBar = {
     TopAppBar(
-      title = { Text(text = if (exercise.id == 0L) "New Exercise" else "Edit Exercise") },
+      title = { Text(text = if (isNew) "New Exercise" else "Edit Exercise") },
       navigationIcon = {
         BackNavigationIconButton(onBack = {
-          if (uiState.savingState.unsavedChanges) openUnsavedDialog = true else onBack()
+          if (unsavedChanges) openUnsavedDialog = true else onBack()
         })
       },
       actions = {
-        if (uiState.exercise.id != 0L) {
+        if (!isNew) {
           IconButton(onClick = { openDeleteDialog = true }) {
             Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete exercise")
           }
@@ -297,22 +289,22 @@ fun ExerciseFormScreen(
         .padding(8.dp)
     ) {
       TextField(
-        value = exercise.name,
+        value = exercise.value.name,
         label = { Text("Name") },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { onStateChanged(uiState.copy(exercise = exercise.copy(name = it))) },
+        onValueChange = { exercise.apply { update(value.copy(name = it)) } },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
         ),
         modifier = Modifier.fillMaxWidth()
       )
       TextField(
-        value = exercise.setUnit,
+        value = exercise.value.setUnit,
         label = { Text("Set unit") },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { onStateChanged(uiState.copy(exercise = exercise.copy(setUnit = it))) },
+        onValueChange = { exercise.apply { update(value.copy(setUnit = it)) } },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
         ),
@@ -322,15 +314,13 @@ fun ExerciseFormScreen(
       FormList(
         title = "Sets", onAdd = {
           val nextKey = uiState.nextSetKey
-          onStateChanged(
-            uiState.copy(
-              sets = sets.plus(Pair(nextKey, ExerciseSet())), nextSetKey = nextKey + 1
-            )
-          )
+
+          sets.apply { update(value.plus(Pair(nextKey, ExerciseSet()))) }
+          uiState.nextSetKey = nextKey + 1
         }, modifier = Modifier.fillMaxWidth()
       ) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-          itemsIndexed(items = sets, key = { _, set -> set.first }) { i, set ->
+          itemsIndexed(items = sets.value, key = { _, set -> set.first }) { i, set ->
             val dens = LocalDensity.current
             val dismissState = rememberSwipeToDismissBoxState(
               positionalThreshold = { with(dens) { 70.dp.toPx() } })
@@ -338,7 +328,7 @@ fun ExerciseFormScreen(
 
             LaunchedEffect(dismissState.currentValue) {
               if (dismissState.currentValue == deleteDirection) {
-                onStateChanged(uiState.copy(sets = sets.minus(set)))
+                sets.apply { update(value.minus(set)) }
               }
             }
 
@@ -363,7 +353,7 @@ fun ExerciseFormScreen(
                 placeholder = { Text("amount...") },
                 onValueChange = { value ->
                   if (value.isDigitsOnly()) {
-                    val newSets = sets.toMutableList().also {
+                    val newSets = sets.value.toMutableList().also {
                       it[i] = it[i].copy(
                         second = it[i].second.copy(
                           value = if (value.isEmpty()) 0 else value.toInt()
@@ -371,13 +361,13 @@ fun ExerciseFormScreen(
                       )
                     }
 
-                    onStateChanged(uiState.copy(sets = newSets))
+                    sets.update(newSets)
                   }
                 },
-                suffix = { Text(exercise.setUnit) },
+                suffix = { Text(exercise.value.setUnit) },
                 keyboardOptions = KeyboardOptions(
                   keyboardType = KeyboardType.Number,
-                  imeAction = if (i < sets.count() - 1) ImeAction.Next else ImeAction.Done
+                  imeAction = if (i < sets.value.count() - 1) ImeAction.Next else ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
                   onDone = { focusManager.clearFocus() }),
@@ -393,7 +383,7 @@ fun ExerciseFormScreen(
 
 @Composable
 private fun UiStateEffects(
-  uiState: ExerciseFormUiState, onDeleted: () -> Unit, onSaved: (Long) -> Unit
+  uiState: ExerciseFormViewModel.UiState, onDeleted: () -> Unit, onSaved: (Long) -> Unit
 ) {
   LaunchedEffect(uiState.deleted) {
     if (uiState.deleted) {
@@ -403,7 +393,7 @@ private fun UiStateEffects(
 
   LaunchedEffect(uiState.savingState.state) {
     if (uiState.savingState.state == SavingState.State.SAVED) {
-      onSaved(uiState.exercise.id)
+      onSaved(uiState.exercise.value.id)
     }
   }
 }
