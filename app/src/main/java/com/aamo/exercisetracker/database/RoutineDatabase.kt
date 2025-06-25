@@ -28,13 +28,13 @@ abstract class RoutineDatabase : RoomDatabase() {
   companion object {
     private const val DATABASE_NAME = "routine_database"
 
-    private var Instance: RoutineDatabase? = null
+    @Volatile private var Instance: RoutineDatabase? = null
 
     fun getDatabase(applicationContext: Context): RoutineDatabase {
       return Instance ?: synchronized(this) {
         Room.databaseBuilder(
           context = applicationContext, klass = RoutineDatabase::class.java, name = DATABASE_NAME
-        ).build()
+        ).build().also { Instance = it }
       }
     }
   }

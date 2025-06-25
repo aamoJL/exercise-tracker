@@ -178,7 +178,8 @@ fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long
   composable<AddExerciseFormScreen> { navStack ->
     val (routineId) = navStack.toRoute<AddExerciseFormScreen>()
 
-    Screen(fetchData = { dao ->
+    Screen(
+      fetchData = { dao ->
       ExerciseWithSets(exercise = Exercise(routineId = routineId), sets = listOf(ExerciseSet()))
     }, onBack = onBack, onSaved = onSaved)
   }
