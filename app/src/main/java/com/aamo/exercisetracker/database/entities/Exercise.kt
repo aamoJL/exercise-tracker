@@ -20,7 +20,6 @@ data class Exercise(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "routine_id") val routineId: Long = 0,
   @ColumnInfo(name = "name") val name: String = String.EMPTY,
-  @ColumnInfo(name = "set_unit") val setUnit: String = "reps",
 )
 
 @Entity(
@@ -35,6 +34,7 @@ data class ExerciseSet(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "exercise_id") val exerciseId: Long = 0,
   @ColumnInfo(name = "value") val value: Int = 0,
+  @ColumnInfo(name = "unit") val unit: String = String.EMPTY
 )
 
 data class ExerciseWithSets(

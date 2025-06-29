@@ -97,6 +97,7 @@ class ExerciseFormViewModel(
     var savingState by mutableStateOf(SavingState())
     var deleted by mutableStateOf(false)
     var nextSetKey by mutableIntStateOf(1)
+    var setUnit by mutableStateOf("reps")
   }
 
   private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
@@ -121,7 +122,9 @@ class ExerciseFormViewModel(
     if (!canSave()) return
 
     val exercise = uiState.exercise.value
-    val sets = uiState.sets.value
+    val sets = uiState.sets.value.map { set ->
+      set.copy(second = set.second.copy(unit = uiState.setUnit))
+    }
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
@@ -301,11 +304,11 @@ fun ExerciseFormScreen(
         modifier = Modifier.fillMaxWidth()
       )
       TextField(
-        value = exercise.value.setUnit,
+        value = uiState.setUnit,
         label = { Text("Set unit") },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { exercise.apply { update(value.copy(setUnit = it)) } },
+        onValueChange = { uiState.setUnit = it },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
         ),
@@ -365,7 +368,7 @@ fun ExerciseFormScreen(
                     sets.update(newSets)
                   }
                 },
-                suffix = { Text(exercise.value.setUnit) },
+                suffix = { Text(uiState.setUnit) },
                 keyboardOptions = KeyboardOptions(
                   keyboardType = KeyboardType.Number,
                   imeAction = if (i < sets.value.count() - 1) ImeAction.Next else ImeAction.Done
