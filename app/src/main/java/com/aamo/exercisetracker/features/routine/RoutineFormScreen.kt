@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -37,16 +36,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,16 +66,13 @@ import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
-import kotlin.time.Duration.Companion.minutes
 
 @Serializable
 data class RoutineFormScreen(val id: Long)
 
 class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
   class UiState(onModelChanged: () -> Unit) {
-    val routine = ViewModelState(
-      Routine(name = String.EMPTY, restDuration = 1.minutes)
-    ).onChange { onModelChanged() }
+    val routine = ViewModelState(Routine(name = String.EMPTY)).onChange { onModelChanged() }
     val schedule = ViewModelState(RoutineSchedule(routineId = 0L)).onChange { onModelChanged() }
     var savingState by mutableStateOf(SavingState(SavingState.State.NONE))
     var deleted by mutableStateOf(false)
@@ -190,7 +182,6 @@ fun RoutineFormScreen(
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  val focusManager = LocalFocusManager.current
   val days = remember { Calendar.getInstance().getLocalDayOrder() }
   val routine = remember(uiState.routine) { uiState.routine }
   val schedule = remember(uiState.schedule) { uiState.schedule }
@@ -261,40 +252,6 @@ fun RoutineFormScreen(
         ),
         modifier = Modifier.fillMaxWidth()
       )
-      TextField(
-        value = if (routine.value.restDuration.inWholeMinutes == 0L) String.EMPTY else routine.value.restDuration.inWholeMinutes.toString(),
-        label = { Text("Rest duration") },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        onValueChange = {
-          if (it.isEmpty()) {
-            routine.apply { update(value.copy(restDuration = 0.minutes)) }
-          }
-          else if (it.isDigitsOnly()) {
-            // int can have max 9 digits
-            routine.apply {
-              update(
-                value.copy(
-                  restDuration = it.take(9).toInt().minutes
-                )
-              )
-            }
-          }
-        },
-        suffix = { Text("minutes") },
-        keyboardOptions = KeyboardOptions(
-          keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(onAny = {
-          focusManager.clearFocus()
-        }),
-        modifier = Modifier
-          .fillMaxWidth()
-          .onFocusChanged { state ->
-            if (!state.isFocused && routine.value.restDuration <= 0.minutes) {
-              routine.apply { update(value.copy(restDuration = 1.minutes)) }
-            }
-          })
       Spacer(modifier = Modifier.height(8.dp))
       Card {
         Column(modifier = Modifier.padding(8.dp)) {

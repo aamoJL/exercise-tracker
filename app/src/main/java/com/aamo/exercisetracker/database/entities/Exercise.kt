@@ -7,6 +7,8 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 @Entity(
   tableName = "exercises", foreignKeys = [ForeignKey(
@@ -20,6 +22,7 @@ data class Exercise(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "routine_id") val routineId: Long = 0,
   @ColumnInfo(name = "name") val name: String = String.EMPTY,
+  @ColumnInfo(name = "rest_duration") val restDuration: Duration = 0.minutes,
 )
 
 @Entity(

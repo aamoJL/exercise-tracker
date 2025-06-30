@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
@@ -28,6 +30,16 @@ import com.aamo.exercisetracker.features.routine.routineListScreen
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.navigation.destinationEquals
+import kotlinx.serialization.Serializable
+
+@Serializable
+object HomeScreen
+
+fun NavGraphBuilder.homeScreen(navController: NavController) {
+  composable<HomeScreen> {
+    HomeScreen(mainNavController = navController)
+  }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

@@ -1,14 +1,28 @@
 package com.aamo.exercisetracker.features.home
 
-import androidx.navigation.NavController
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
-import kotlinx.serialization.Serializable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.rememberNavController
+import com.aamo.exercisetracker.features.exercise.ExercisePage
+import com.aamo.exercisetracker.features.exercise.exercisePage
+import com.aamo.exercisetracker.features.routine.routinePage
 
-@Serializable object HomePage
+@Composable
+fun HomePage() {
+  val navController = rememberNavController()
 
-fun NavGraphBuilder.homePage(navController: NavController) {
-  composable<HomePage> {
-    HomeScreen(mainNavController = navController)
+  Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+    NavHost(navController = navController, startDestination = HomeScreen) {
+      homeScreen(navController = navController)
+      routinePage(
+        navController = navController,
+        onBack = { navController.navigateUp() },
+        onSelectExercise = { id -> navController.navigate(ExercisePage(id = id)) })
+      exercisePage(navController = navController, onBack = { navController.navigateUp() })
+    }
   }
 }

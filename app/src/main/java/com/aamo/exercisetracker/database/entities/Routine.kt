@@ -7,14 +7,11 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
 
 @Entity(tableName = "routines")
 data class Routine(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "name") val name: String,
-  @ColumnInfo(name = "rest_duration") val restDuration: Duration = 0.minutes,
 )
 
 @Entity(

@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
@@ -78,6 +79,7 @@ import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration.Companion.minutes
 
 @Serializable
 data class EditExerciseFormScreen(val id: Long)
@@ -89,7 +91,7 @@ class ExerciseFormViewModel(
   context: Context, fetchData: (suspend (RoutineDao) -> ExerciseWithSets?)?
 ) : ViewModel() {
   class UiState(onModelChanged: () -> Unit) {
-    val exercise = ViewModelState(Exercise()).onChange { onModelChanged() }
+    val exercise = ViewModelState(Exercise(restDuration = 1.minutes)).onChange { onModelChanged() }
     /**
      * Pair or exercise set and its list key
      */
@@ -303,6 +305,34 @@ fun ExerciseFormScreen(
         ),
         modifier = Modifier.fillMaxWidth()
       )
+      TextField(
+        value = if (exercise.value.restDuration.inWholeMinutes == 0L) String.EMPTY else exercise.value.restDuration.inWholeMinutes.toString(),
+        label = { Text("Rest duration") },
+        shape = RectangleShape,
+        colors = borderlessTextFieldColors(),
+        onValueChange = {
+          if (it.isEmpty()) {
+            exercise.apply { update(value.copy(restDuration = 0.minutes)) }
+          }
+          else if (it.isDigitsOnly()) {
+            // int can have max 9 digits
+            exercise.apply { update(value.copy(restDuration = it.take(9).toInt().minutes)) }
+          }
+        },
+        suffix = { Text("minutes") },
+        keyboardOptions = KeyboardOptions(
+          keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onAny = {
+          focusManager.clearFocus()
+        }),
+        modifier = Modifier
+          .fillMaxWidth()
+          .onFocusChanged { state ->
+            if (!state.isFocused && exercise.value.restDuration <= 0.minutes) {
+              exercise.apply { update(value.copy(restDuration = 1.minutes)) }
+            }
+          })
       TextField(
         value = uiState.setUnit,
         label = { Text("Set unit") },
