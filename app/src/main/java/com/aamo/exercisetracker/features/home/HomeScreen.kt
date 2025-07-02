@@ -53,10 +53,16 @@ fun HomeScreen(mainNavController: NavController) {
       startDestination = DailiesScreen(Day.today()),
       modifier = Modifier.weight(1f)
     ) {
-      dailiesScreen(onRoutineSelected = { id -> mainNavController.navigate(RoutinePage(id = id)) })
-      routineListScreen(
-        onSelectRoutine = { id -> mainNavController.navigate(RoutinePage(id = id)) },
-        onAddRoutine = { mainNavController.navigate(RoutineFormScreen(id = 0L)) })
+      dailiesScreen(onRoutineSelected = { id ->
+        mainNavController.navigate(RoutinePage(id = id)) {
+          launchSingleTop = true
+        }
+      })
+      routineListScreen(onSelectRoutine = { id ->
+        mainNavController.navigate(RoutinePage(id = id)) {
+          launchSingleTop = true
+        }
+      }, onAddRoutine = { mainNavController.navigate(RoutineFormScreen(id = 0L)) })
     }
 
     // prevents bottom bar to be visible when IME is visible

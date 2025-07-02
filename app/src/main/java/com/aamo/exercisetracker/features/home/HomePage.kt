@@ -21,7 +21,11 @@ fun HomePage() {
       routinePage(
         navController = navController,
         onBack = { navController.navigateUp() },
-        onSelectExercise = { id -> navController.navigate(ExercisePage(id = id)) })
+        onSelectExercise = { id ->
+          navController.navigate(ExercisePage(id = id)) {
+            launchSingleTop = true
+          }
+        })
       exercisePage(navController = navController, onBack = { navController.navigateUp() })
     }
   }

@@ -6,6 +6,13 @@ fun <T> applyIf(condition: Boolean, value: T): T? {
   return if (condition) value else null
 }
 
+fun <T> T.letIf(condition: Boolean, block: (T) -> T): T {
+  return if (condition) {
+    block(this)
+  }
+  else this
+}
+
 fun Boolean.onFalse(block: (Boolean) -> Unit): Boolean {
   if (!this) {
     block(this)
@@ -13,7 +20,14 @@ fun Boolean.onFalse(block: (Boolean) -> Unit): Boolean {
   return this
 }
 
-inline fun <T> T.onNotNull(block: (@NotNull T) -> Unit): T {
+fun Boolean.onTrue(block: (Boolean) -> Unit): Boolean {
+  if (this) {
+    block(this)
+  }
+  return this
+}
+
+inline fun <T> T?.onNotNull(block: (@NotNull T) -> Unit): T? {
   if (this != null) {
     block(this)
   }

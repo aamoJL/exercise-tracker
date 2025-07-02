@@ -1,7 +1,15 @@
 package com.aamo.exercisetracker.features.exercise
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.CountDownTimer
+import android.os.IBinder
 import android.util.Log
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -33,10 +41,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,8 +70,11 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.RoutineDao
+import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
+import com.aamo.exercisetracker.utility.extensions.date.toClockString
+import com.aamo.exercisetracker.utility.extensions.general.applyIf
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import kotlinx.coroutines.launch
@@ -73,10 +87,8 @@ import kotlin.time.Duration.Companion.seconds
 @Serializable
 data class ExerciseScreen(val id: Long = 0)
 
-class ExerciseScreenViewModel(
-  private val exerciseId: Long,
-  private val routineDao: RoutineDao,
-) : ViewModel() {
+class ExerciseScreenViewModel(private val exerciseId: Long, private val routineDao: RoutineDao) :
+        ViewModel() {
   data class SetState(
     val set: ExerciseSet? = null,
     val index: Int = 0,
@@ -86,10 +98,7 @@ class ExerciseScreenViewModel(
   data class RestState(
     val isResting: Boolean = false,
     val restDuration: Duration = 0.milliseconds,
-    val remainingDuration: Duration = 0.milliseconds
   )
-
-  private var restTimer: CountDownTimer? = null
 
   var exercise: ExerciseWithSets? by mutableStateOf(null)
     private set
@@ -114,38 +123,32 @@ class ExerciseScreenViewModel(
     }
   }
 
-  fun setCompleted() {
-    val nextIndex = Math.clamp((setState.index + 1).toLong(), 0, setState.total)
-
-    exercise?.sets?.elementAtOrNull(nextIndex).onNull {
-      setState = setState.copy(set = null, index = nextIndex)
-    }.onNotNull { nextSet ->
-      restState = restState.copy(isResting = true)
-
-      restTimer?.cancel()
-      restTimer = object : CountDownTimer(
-        restState.restDuration.inWholeMilliseconds, 1.seconds.inWholeMilliseconds
-      ) {
-        override fun onTick(millisUntilFinished: Long) {
-          runCatching { checkNotNull(restTimer) }.onFailure {
-            Log.e("asd", it.message.toString())
-          }
-
-          restState = restState.copy(remainingDuration = millisUntilFinished.milliseconds)
-        }
-
-        override fun onFinish() {
-          cancel()
-          restTimer = null
-          restState = restState.copy(isResting = false)
-          setState = setState.copy(set = nextSet, index = nextIndex)
-        }
-      }.start()
+  fun setCompleted(countDownTimerService: CountDownTimerService) {
+    getNextSetState().let { nextSetState ->
+      nextSetState.set.onNull {
+        setState = nextSetState
+      }.onNotNull {
+        countDownTimerService.start(
+          durationMillis = restState.restDuration.inWholeMilliseconds, onFinished = {
+            stopRest(countDownTimerService)
+          })
+        restState = restState.copy(isResting = true)
+      }
     }
   }
 
-  fun stopRest() {
-    restTimer?.onFinish()
+  fun stopRest(countDownTimerService: CountDownTimerService) {
+    countDownTimerService.stop()
+
+    setState = getNextSetState()
+    restState = restState.copy(isResting = false)
+  }
+
+  private fun getNextSetState(): SetState {
+    val nextIndex = Math.clamp((setState.index + 1).toLong(), 0, setState.total)
+    val nextSet = exercise?.sets?.elementAtOrNull(nextIndex)
+
+    return setState.copy(set = nextSet, index = nextIndex)
   }
 }
 
@@ -156,14 +159,39 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     val viewmodel: ExerciseScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseScreenViewModel(
-          exerciseId = id,
-          routineDao = RoutineDatabase.getDatabase(context).routineDao(),
+          exerciseId = id, routineDao = RoutineDatabase.getDatabase(context).routineDao(),
         )
       }
     })
     val exercise = viewmodel.exercise?.exercise
     val setState = viewmodel.setState
     val restState = viewmodel.restState
+
+    var service: CountDownTimerService? by remember { mutableStateOf(null) }
+    val connection = remember {
+      object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+          service = (binder as? CountDownTimerService.BinderHelper)?.getService()
+            ?.apply { title = "Rest Timer" }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+          service = null
+        }
+      }
+    }
+
+    DisposableEffect(Unit) {
+      context.bindService(
+        Intent(context, CountDownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
+      ).onNull {
+        Log.e("asd", "Did not bind")
+      }
+
+      onDispose {
+        context.unbindService(connection)
+      }
+    }
 
     LoadingScreen(enabled = viewmodel.isLoading) {
       if (exercise != null) {
@@ -173,10 +201,8 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
           restState = restState,
           onBack = onBack,
           onEdit = { onEdit(id) },
-          onSetCompleted = {
-            viewmodel.setCompleted()
-          },
-          onStopRest = { viewmodel.stopRest() })
+          onSetCompleted = { service?.let { viewmodel.setCompleted(it) } },
+          onStopRest = { service?.let { viewmodel.stopRest(it) } })
       }
     }
   }
@@ -198,8 +224,6 @@ fun ExerciseScreen(
     confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
   val set = remember(setState.set) { setState.set }
   var showRestSheet by remember { mutableStateOf(false) }
-  //var restProgress by remember { mutableFloatStateOf(0f) } /* TODO: Timer progress */
-  //var exerciseProgress by remember { mutableFloatStateOf(0f) } /* TODO: Exercise progress */
 
   // TODO: back handling, remember also edit
 
@@ -322,8 +346,38 @@ fun RestSheet(
   onDismissRequest: () -> Unit
 ) {
   if (isVisible) {
-    val progress =
-      if (restState.restDuration == 0.seconds) 0f else 1f - (restState.remainingDuration / restState.restDuration).toFloat()
+    var remainingMillis by rememberSaveable(restState.restDuration) { mutableLongStateOf(restState.restDuration.inWholeMilliseconds) }
+    val progress = remember {
+      if (restState.restDuration.inWholeMilliseconds <= 0) Animatable(1f)
+      else Animatable(1f - (remainingMillis.toFloat() / restState.restDuration.inWholeMilliseconds.toFloat()))
+    }
+
+    LaunchedEffect(Unit) {
+      progress.animateTo(
+        targetValue = 1f, animationSpec = tween(
+          durationMillis = remainingMillis.toInt(), easing = LinearEasing
+        )
+      )
+    }
+
+    DisposableEffect(restState.isResting) {
+      var timer: CountDownTimer? = applyIf(
+        condition = restState.isResting,
+        value = object : CountDownTimer(remainingMillis, 1.seconds.inWholeMilliseconds) {
+          override fun onTick(remaining: Long) {
+            remainingMillis = remaining
+          }
+
+          override fun onFinish() {
+            cancel()
+          }
+        }.start()
+      )
+
+      onDispose {
+        timer?.cancel()
+      }
+    }
 
     ModalBottomSheet(
       sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
@@ -346,7 +400,7 @@ fun RestSheet(
             .aspectRatio(1f)
         ) {
           CircularProgressIndicator(
-            progress = { progress },
+            progress = { progress.value },
             strokeWidth = 20.dp,
             gapSize = 0.dp,
             strokeCap = StrokeCap.Butt,
@@ -355,9 +409,7 @@ fun RestSheet(
           Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Rest", style = MaterialTheme.typography.titleMedium)
             Text(
-              text = "${
-                restState.remainingDuration.inWholeMinutes.toString().padStart(2, '0')
-              }:${(restState.remainingDuration.inWholeSeconds % 60).toString().padStart(2, '0')}",
+              text = remainingMillis.milliseconds.toClockString(),
               style = MaterialTheme.typography.displayLarge,
               textAlign = TextAlign.Center
             )

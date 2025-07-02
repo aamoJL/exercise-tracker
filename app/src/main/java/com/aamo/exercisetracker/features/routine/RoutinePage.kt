@@ -35,7 +35,7 @@ fun NavGraphBuilder.routinePage(
       navController.popBackStack<RoutinePage>(inclusive = true)
     })
     addExerciseFormScreen(onBack = onBack, onSaved = { id ->
-      navController.popBackStack()
+      navController.navigateUp()
     })
   }
 }
