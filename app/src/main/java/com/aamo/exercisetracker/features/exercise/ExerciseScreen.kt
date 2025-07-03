@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.CountDownTimer
 import android.os.IBinder
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,6 +40,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -75,8 +78,10 @@ import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.applyIf
+import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
+import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlin.math.min
@@ -108,10 +113,11 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     private set
   var isLoading by mutableStateOf(true)
     private set
+  var inProgress by mutableStateOf(false)
+    private set
 
   init {
     viewModelScope.launch {
-      // TODO: change to flow? so edit will apply
       routineDao.getExerciseWithSets(exerciseId).let {
         exercise = it
         setState = SetState(
@@ -127,7 +133,10 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     getNextSetState().let { nextSetState ->
       nextSetState.set.onNull {
         setState = nextSetState
+        inProgress = false
+        // TODO: save exercise completion to database
       }.onNotNull {
+        inProgress = true
         countDownTimerService.start(
           durationMillis = restState.restDuration.inWholeMilliseconds, onFinished = {
             stopRest(countDownTimerService)
@@ -181,6 +190,26 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
       }
     }
 
+    var openInProgressBackDialog by remember { mutableStateOf(false) }
+    var openInProgressEditDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = viewmodel.inProgress) {
+      openInProgressBackDialog = true
+    }
+
+    if (openInProgressBackDialog) {
+      InProgressDialog(onDismiss = { openInProgressBackDialog = false }, onConfirm = {
+        openInProgressBackDialog = false
+        onBack()
+      })
+    }
+    if (openInProgressEditDialog) {
+      InProgressDialog(onDismiss = { openInProgressEditDialog = false }, onConfirm = {
+        openInProgressEditDialog = false
+        onEdit(id)
+      })
+    }
+
     DisposableEffect(Unit) {
       context.bindService(
         Intent(context, CountDownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
@@ -199,8 +228,12 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
           exercise = exercise,
           setState = setState,
           restState = restState,
-          onBack = onBack,
-          onEdit = { onEdit(id) },
+          onBack = {
+            viewmodel.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
+          },
+          onEdit = {
+            viewmodel.inProgress.onTrue { openInProgressEditDialog = true }.onFalse { onEdit(id) }
+          },
           onSetCompleted = { service?.let { viewmodel.setCompleted(it) } },
           onStopRest = { service?.let { viewmodel.stopRest(it) } })
       }
@@ -224,8 +257,6 @@ fun ExerciseScreen(
     confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
   val set = remember(setState.set) { setState.set }
   var showRestSheet by remember { mutableStateOf(false) }
-
-  // TODO: back handling, remember also edit
 
   LaunchedEffect(restState.isResting) {
     restSheetState.apply {
@@ -425,4 +456,26 @@ fun RestSheet(
       }
     }
   }
+}
+
+@Composable
+private fun InProgressDialog(
+  onDismiss: () -> Unit,
+  onConfirm: () -> Unit,
+) {
+  AlertDialog(
+    title = { Text(text = "Exercise in progress") },
+    text = { Text("Do you want to stop the exercise?") },
+    onDismissRequest = onDismiss,
+    confirmButton = {
+      TextButton(onClick = onConfirm) {
+        Text(text = "Yes")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(text = "Cancel")
+      }
+    },
+  )
 }

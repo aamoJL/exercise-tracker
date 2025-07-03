@@ -50,10 +50,13 @@ import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
@@ -64,20 +67,25 @@ object RoutineListScreen
 class RoutineListScreenViewModel(context: Context) : ViewModel() {
   private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
 
-  private val _routines = MutableStateFlow<List<RoutineWithSchedule>>(emptyList())
-  val routines = _routines.asStateFlow()
+  private val _routines = database.routineDao().getRoutinesWithScheduleFlow()
+    .map { list -> list.sortedBy { it.routine.name } }.also {
+      viewModelScope.launch {
+        it.collect { isLoading = false }
+      }
+    }
 
   var isLoading by mutableStateOf(true)
     private set
 
-  init {
-    viewModelScope.launch {
-      database.routineDao().getRoutinesWithScheduleFlow()
-        .map { list -> list.sortedBy { it.routine.name } }.collect {
-          _routines.value = it
-          isLoading = false
-        }
-    }
+  private var _filterWord = MutableStateFlow("")
+  val filterWord = _filterWord.asStateFlow()
+
+  val filteredRoutines = combine(_routines, filterWord) { routine, word ->
+    routine.filter { it.routine.name.startsWith(prefix = word, ignoreCase = true) }
+  }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = emptyList())
+
+  fun setFilterWord(word: String) {
+    _filterWord.update { word }
   }
 }
 
@@ -89,12 +97,15 @@ fun NavGraphBuilder.routineListScreen(
     val viewmodel: RoutineListScreenViewModel = viewModel(factory = viewModelFactory {
       initializer { RoutineListScreenViewModel(context = context) }
     })
-    val routines by viewmodel.routines.collectAsStateWithLifecycle()
+    val routines by viewmodel.filteredRoutines.collectAsStateWithLifecycle()
+    val filterWord by viewmodel.filterWord.collectAsStateWithLifecycle()
 
     RoutineListScreen(
       routines = routines,
+      filterWord = filterWord,
       isLoading = viewmodel.isLoading,
       onSelectRoutine = onSelectRoutine,
+      onFilterChanged = { viewmodel.setFilterWord(it) },
       onAdd = onAddRoutine
     )
   }
@@ -104,7 +115,9 @@ fun NavGraphBuilder.routineListScreen(
 @Composable
 fun RoutineListScreen(
   routines: List<RoutineWithSchedule>,
+  filterWord: String,
   isLoading: Boolean,
+  onFilterChanged: (String) -> Unit,
   onSelectRoutine: (id: Long) -> Unit,
   onAdd: () -> Unit
 ) {
@@ -114,11 +127,9 @@ fun RoutineListScreen(
         .fillMaxSize()
         .imePadding()
     ) {
-      TopAppBar(title = { Text(String.EMPTY) }, actions = {
+      TopAppBar(title = { null }, actions = {
         SearchTextField(
-          value = String.EMPTY,
-          onValueChange = { /* TODO: value change command */ },
-          modifier = Modifier.height(50.dp)
+          value = filterWord, onValueChange = onFilterChanged, modifier = Modifier.height(50.dp)
         )
         IconButton(onClick = onAdd) {
           Icon(imageVector = Icons.Filled.Add, contentDescription = "Add routine")

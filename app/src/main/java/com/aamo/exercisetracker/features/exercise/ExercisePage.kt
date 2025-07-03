@@ -13,8 +13,11 @@ fun NavGraphBuilder.exercisePage(navController: NavController, onBack: () -> Uni
     exerciseScreen(onBack = onBack, onEdit = { id ->
       navController.navigate(EditExerciseFormScreen(id))
     })
-    editExerciseFormScreen(onBack = onBack, onSaved = {
-      navController.popBackStack()
+    editExerciseFormScreen(onBack = onBack, onSaved = { id ->
+      navController.navigate(ExerciseScreen(id)) {
+        launchSingleTop = true
+        popUpTo<ExerciseScreen> { inclusive = true }
+      }
     }, onDeleted = {
       navController.popBackStack<ExercisePage>(inclusive = true)
     })

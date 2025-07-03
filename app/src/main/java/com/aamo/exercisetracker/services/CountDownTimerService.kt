@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.util.Log
@@ -35,7 +36,6 @@ class CountDownTimerService() : Service() {
 
   override fun onTaskRemoved(rootIntent: Intent?) {
     super.onTaskRemoved(rootIntent)
-    Log.i("asd", "Task removed")
     // Stop this service when the activity has been closed
     //  works only if this service has been started with startService once
     stop()
@@ -50,7 +50,6 @@ class CountDownTimerService() : Service() {
   }
 
   fun stop() {
-    Log.i("asd", "stop")
     timer?.apply {
       cancel()
       purge()
@@ -84,12 +83,13 @@ class CountDownTimerService() : Service() {
   }
 
   private fun vibrate() {
-    // TODO: this does not work when the app is not active
     val vibration = VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
+    val attributes = VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_ALARM).build()
 
     (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator.apply {
       hasVibrator().onTrue {
-        vibrate(vibration)
+        // Vibration without attributes does not work, if the app is on the background
+        vibrate(vibration, attributes)
       }.onFalse { Log.e("asd", "Device does not have a vibrator") }
     }
   }
@@ -135,8 +135,8 @@ class CountDownTimerService() : Service() {
           val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
             description = "desc"
           }
-          // Register the channel with the system.
-          val notificationManager: NotificationManager =
+
+          val notificationManager =
             getSystemService(context, NotificationManager::class.java) as NotificationManager
 
           notificationManager.createNotificationChannel(channel)
