@@ -30,12 +30,24 @@ interface RoutineDao {
   fun getRoutinesWithScheduleFlow(): Flow<List<RoutineWithSchedule>>
 
   @Transaction
+  @Query("SELECT * FROM routines")
+  fun getRoutineWithScheduleAndExerciseProgressesFlow(): Flow<List<RoutineWithScheduleAndExerciseProgresses>>
+
+  @Transaction
   @Query("SELECT * FROM routines WHERE id = :routineId")
   suspend fun getRoutineWithExercises(routineId: Long): RoutineWithExercises?
 
   @Transaction
   @Query("SELECT * FROM exercises WHERE id = :exerciseId")
   suspend fun getExerciseWithSets(exerciseId: Long): ExerciseWithSets?
+
+  @Transaction
+  @Query("SELECT * FROM routines WHERE id = :routineId")
+  fun getRoutineWithExerciseProgressesFlow(routineId: Long): Flow<RoutineWithExerciseProgresses>
+
+  @Transaction
+  @Query("SELECT * FROM exercises WHERE id = :exerciseId")
+  suspend fun getExerciseWithProgressAndSets(exerciseId: Long): ExerciseWithProgressAndSets?
   // endregion
 
   // region UPSERT
@@ -50,6 +62,9 @@ interface RoutineDao {
 
   @Upsert
   suspend fun upsert(exerciseSet: List<ExerciseSet>)
+
+  @Upsert
+  suspend fun upsert(exerciseProgress: ExerciseProgress): Long
 
   /**
    * @return exerciseId

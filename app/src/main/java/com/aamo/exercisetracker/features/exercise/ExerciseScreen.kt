@@ -70,8 +70,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseSet
-import com.aamo.exercisetracker.database.entities.ExerciseWithSets
+import com.aamo.exercisetracker.database.entities.ExerciseWithProgressAndSets
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
@@ -84,6 +85,7 @@ import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.util.Calendar
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -105,7 +107,7 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     val restDuration: Duration = 0.milliseconds,
   )
 
-  var exercise: ExerciseWithSets? by mutableStateOf(null)
+  var exerciseModel: ExerciseWithProgressAndSets? by mutableStateOf(null)
     private set
   var setState by mutableStateOf(SetState())
     private set
@@ -118,8 +120,8 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
 
   init {
     viewModelScope.launch {
-      routineDao.getExerciseWithSets(exerciseId).let {
-        exercise = it
+      routineDao.getExerciseWithProgressAndSets(exerciseId).let {
+        exerciseModel = it
         setState = SetState(
           set = it?.sets?.firstOrNull(), index = 0, total = it?.sets?.size ?: 0
         )
@@ -134,7 +136,17 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
       nextSetState.set.onNull {
         setState = nextSetState
         inProgress = false
-        // TODO: save exercise completion to database
+
+        viewModelScope.launch {
+          exerciseModel?.let { model ->
+            val finishedDate = Calendar.getInstance().time
+            val progress = model.progress?.copy(finishedDate = finishedDate) ?: ExerciseProgress(
+              exerciseId = model.exercise.id, finishedDate = finishedDate
+            )
+
+            routineDao.upsert(progress)
+          }
+        }
       }.onNotNull {
         inProgress = true
         countDownTimerService.start(
@@ -155,7 +167,7 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
 
   private fun getNextSetState(): SetState {
     val nextIndex = Math.clamp((setState.index + 1).toLong(), 0, setState.total)
-    val nextSet = exercise?.sets?.elementAtOrNull(nextIndex)
+    val nextSet = exerciseModel?.sets?.elementAtOrNull(nextIndex)
 
     return setState.copy(set = nextSet, index = nextIndex)
   }
@@ -172,7 +184,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
         )
       }
     })
-    val exercise = viewmodel.exercise?.exercise
+    val exercise = viewmodel.exerciseModel?.exercise
     val setState = viewmodel.setState
     val restState = viewmodel.restState
 

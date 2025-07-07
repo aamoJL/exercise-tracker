@@ -1,9 +1,9 @@
 package com.aamo.exercisetracker.features.dailies
 
-import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,9 +17,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,7 +49,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.database.entities.RoutineDao
+import com.aamo.exercisetracker.database.entities.RoutineWithScheduleAndExerciseProgresses
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
@@ -56,16 +60,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.absoluteValue
 
 @Serializable
 data class DailiesScreen(val initialDay: Day)
 
-class DailiesScreenViewModel(context: Context) : ViewModel() {
-  private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
-
-  private val _routines = MutableStateFlow<List<RoutineWithSchedule>>(emptyList())
+class DailiesScreenViewModel(routineDao: RoutineDao) : ViewModel() {
+  private val _routines =
+    MutableStateFlow<List<RoutineWithScheduleAndExerciseProgresses>>(emptyList())
   val routines = _routines.asStateFlow()
 
   var isLoading by mutableStateOf(true)
@@ -73,7 +78,7 @@ class DailiesScreenViewModel(context: Context) : ViewModel() {
 
   init {
     viewModelScope.launch {
-      database.routineDao().getRoutinesWithScheduleFlow().collect {
+      routineDao.getRoutineWithScheduleAndExerciseProgressesFlow().collect {
         _routines.value = it
         isLoading = false
       }
@@ -85,7 +90,9 @@ fun NavGraphBuilder.dailiesScreen(onRoutineSelected: (Long) -> Unit) {
   composable<DailiesScreen> { stack ->
     val context = LocalContext.current.applicationContext
     val viewmodel: DailiesScreenViewModel = viewModel(factory = viewModelFactory {
-      initializer { DailiesScreenViewModel(context = context) }
+      initializer {
+        DailiesScreenViewModel(routineDao = RoutineDatabase.getDatabase(context).routineDao())
+      }
     })
     val routines by viewmodel.routines.collectAsStateWithLifecycle()
     val initialDay = stack.toRoute<DailiesScreen>().initialDay
@@ -103,14 +110,14 @@ fun NavGraphBuilder.dailiesScreen(onRoutineSelected: (Long) -> Unit) {
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun DailiesScreen(
-  routines: List<RoutineWithSchedule>,
+  routines: List<RoutineWithScheduleAndExerciseProgresses>,
   isLoading: Boolean,
   initialDay: Day,
   onRoutineSelected: (routineId: Long) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val today = Day.today()
   val days = Calendar.getInstance().getLocalDayOrder()
+  val todayIndex = days.indexOf(Day.today())
   val pagerState =
     rememberPagerState(pageCount = { days.size }, initialPage = days.indexOf(initialDay))
 
@@ -122,10 +129,26 @@ fun DailiesScreen(
       contentPadding = PaddingValues(horizontal = 24.dp),
       modifier = Modifier.fillMaxHeight()
     ) { pageIndex ->
-      val isToday = days[pageIndex] == today
+      val isToday = remember { pageIndex == todayIndex }
+      val pageDateMillis = remember {
+        LocalDate.now().atStartOfDay().plusDays((pageIndex - todayIndex).toLong())
+          .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+      }
       val dayRoutines = remember(routines) {
-        routines.filter { it.schedule?.isDaySelected(days[pageIndex].getDayNumber()) == true }
-          .map { it.routine }
+        routines.filter { it.schedule?.isDaySelected(days[pageIndex].getDayNumber()) == true }.map {
+          object {
+            val routine = it.routine
+            val finishedExerciseCount = it.exerciseProgresses.count {
+              it.progress?.finishedDate?.time?.compareTo(pageDateMillis)?.let { it > 0 } == true
+            }
+            val totalExerciseCount = it.exerciseProgresses.size
+          }
+        }.sortedWith(
+          comparator = compareBy(
+            { it.finishedExerciseCount == it.totalExerciseCount },
+            { it.routine.name },
+          )
+        )
       }
 
       val pageOffset =
@@ -151,22 +174,41 @@ fun DailiesScreen(
           LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)
           ) {
-            items(dayRoutines) { routine ->
+            items(dayRoutines, key = { it.routine.id }) { routine ->
+              val isFinished =
+                remember(routine) { routine.finishedExerciseCount == routine.totalExerciseCount }
+
               ElevatedCard(
                 enabled = pagerState.currentPage == pageIndex,
-                onClick = { onRoutineSelected(routine.id) },
+                onClick = { onRoutineSelected(routine.routine.id) },
                 shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.outlinedCardColors(
+                colors = if (isFinished) CardDefaults.elevatedCardColors(
+                  containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                  disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                else CardDefaults.elevatedCardColors(
                   containerColor = MaterialTheme.colorScheme.secondary,
                   disabledContainerColor = MaterialTheme.colorScheme.secondary
                 ),
                 modifier = Modifier.fillMaxWidth()
               ) {
-                Text(
-                  text = routine.name,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-                )
+                Row(
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                ) {
+                  Text(text = routine.routine.name, fontWeight = FontWeight.Bold)
+                  if (isFinished) {
+                    Icon(imageVector = Icons.Filled.Done, contentDescription = "Done")
+                  }
+                  else {
+                    Text(
+                      text = "${routine.finishedExerciseCount}/${routine.totalExerciseCount}",
+                      fontWeight = FontWeight.Normal
+                    )
+                  }
+                }
               }
             }
           }

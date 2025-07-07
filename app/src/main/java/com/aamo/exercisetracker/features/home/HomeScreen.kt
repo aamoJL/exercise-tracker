@@ -54,7 +54,7 @@ fun HomeScreen(mainNavController: NavController) {
       modifier = Modifier.weight(1f)
     ) {
       dailiesScreen(onRoutineSelected = { id ->
-        mainNavController.navigate(RoutinePage(id = id)) {
+        mainNavController.navigate(RoutinePage(id = id, showProgress = true)) {
           launchSingleTop = true
         }
       })

@@ -9,7 +9,7 @@ import com.aamo.exercisetracker.features.exercise.addExerciseFormScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RoutinePage(val id: Long)
+data class RoutinePage(val id: Long, val showProgress: Boolean = false)
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.routinePage(

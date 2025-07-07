@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,30 +23,61 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.database.RoutineDatabase
+import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
 import com.aamo.exercisetracker.database.entities.Routine
-import com.aamo.exercisetracker.database.entities.RoutineWithExercises
+import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.ui.components.LoadingScreen
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Serializable
-data class RoutineScreen(val id: Long = 0L)
+data class RoutineScreen(val id: Long = 0L, val showProgress: Boolean = false)
+
+class RoutineScreenViewModel(routineId: Long, routineDao: RoutineDao) : ViewModel() {
+  private val _exercises = MutableStateFlow<List<ExerciseWithProgress>>(emptyList())
+  val exercises = _exercises.asStateFlow()
+
+  var routine: Routine? by mutableStateOf(null)
+    private set
+  var isLoading by mutableStateOf(true)
+    private set
+
+  init {
+    viewModelScope.launch {
+      routineDao.getRoutineWithExerciseProgressesFlow(routineId).collect { item ->
+        routine = item.routine
+        _exercises.update { item.exerciseProgresses }
+        isLoading = false
+      }
+    }
+  }
+}
 
 fun NavGraphBuilder.routineScreen(
   onBack: () -> Unit,
@@ -53,44 +86,57 @@ fun NavGraphBuilder.routineScreen(
   onEdit: (id: Long) -> Unit
 ) {
   composable<RoutineScreen> { navStack ->
-    val (id: Long) = navStack.toRoute<RoutineScreen>()
-    val scope = rememberCoroutineScope()
+    val (id: Long, showProgress: Boolean) = navStack.toRoute<RoutineScreen>()
     val context = LocalContext.current.applicationContext
-    var routine by remember {
-      mutableStateOf(
-        RoutineWithExercises(routine = Routine(name = String.EMPTY), exercises = emptyList())
-      )
-    }
+    val viewmodel: RoutineScreenViewModel = viewModel(factory = viewModelFactory {
+      initializer {
+        RoutineScreenViewModel(
+          routineId = id, routineDao = RoutineDatabase.getDatabase(context).routineDao()
+        )
+      }
+    })
 
-    LaunchedEffect(true) {
-      scope.launch {
-        runCatching {
-          checkNotNull(
-            RoutineDatabase.getDatabase(context).routineDao().getRoutineWithExercises(id)
-          )
-        }.onSuccess { dbRoutine -> routine = dbRoutine }.onFailure { onBack() }
+    val routine = viewmodel.routine
+    val exercises by viewmodel.exercises.collectAsStateWithLifecycle()
+
+    LoadingScreen(enabled = viewmodel.isLoading) {
+      if (routine != null) {
+        RoutineScreen(
+          routine = routine,
+          exercises = exercises,
+          showProgress = showProgress,
+          onBack = onBack,
+          onAddExercise = onAddExercise,
+          onSelectExercise = onSelectExercise,
+          onEdit = { onEdit(id) })
       }
     }
-
-    RoutineScreen(
-      routine = routine,
-      onBack = onBack,
-      onAddExercise = onAddExercise,
-      onSelectExercise = onSelectExercise,
-      onEdit = { onEdit(id) })
   }
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun RoutineScreen(
-  routine: RoutineWithExercises,
+  routine: Routine,
+  exercises: List<ExerciseWithProgress>,
+  showProgress: Boolean,
   onBack: () -> Unit,
   onAddExercise: (routineId: Long) -> Unit,
   onSelectExercise: (id: Long) -> Unit,
   onEdit: () -> Unit
 ) {
-  val (routine, exercises) = routine
+  val dateMillis = remember {
+    LocalDate.now().atStartOfDay().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+  }
+  val sortedExercises = remember(exercises) {
+    exercises.map {
+      object {
+        val exercise: Exercise = it.exercise
+        val isFinished: Boolean? = if (!showProgress) null
+        else it.progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true
+      }
+    }.sortedBy { it.exercise.name }
+  }
 
   Scaffold(topBar = {
     TopAppBar(title = { Text(routine.name) }, navigationIcon = {
@@ -112,17 +158,26 @@ fun RoutineScreen(
           .padding(8.dp)
           .clip(RoundedCornerShape(8.dp))
       ) {
-        items(exercises) { exercise ->
+        items(sortedExercises, key = { it.exercise.id }) { exercise ->
           Box(
             modifier = Modifier
               .fillMaxWidth()
               .background(color = MaterialTheme.colorScheme.surfaceVariant)
-              .clickable { onSelectExercise(exercise.id) }) {
-            Text(
-              text = exercise.name,
-              fontWeight = FontWeight.Bold,
-              modifier = Modifier.padding(horizontal = 16.dp, vertical = 28.dp)
-            )
+              .clickable { onSelectExercise(exercise.exercise.id) }) {
+            Row(
+              horizontalArrangement = Arrangement.SpaceBetween,
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 28.dp)
+            ) {
+              Text(
+                text = exercise.exercise.name,
+                fontWeight = FontWeight.Bold,
+              )
+              if (exercise.isFinished == true) {
+                Icon(imageVector = Icons.Filled.Done, contentDescription = "Done")
+              }
+            }
           }
         }
       }
