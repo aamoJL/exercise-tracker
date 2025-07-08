@@ -4,14 +4,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.CountDownTimer
 import android.os.IBinder
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
@@ -47,7 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -77,8 +77,8 @@ import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
+import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
-import com.aamo.exercisetracker.utility.extensions.general.applyIf
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
@@ -86,6 +86,7 @@ import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
+import kotlin.concurrent.timer
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -298,7 +299,7 @@ fun ExerciseScreen(
         verticalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.padding(16.dp)
       ) {
-        SetProgress(current = setState.index + 1, total = setState.total)
+        SetProgress(currentSet = setState.index + 1, totalSets = setState.total)
         if (set != null) {
           SetContent(set = set, isResting = restState.isResting, onDone = onSetCompleted)
         }
@@ -317,31 +318,36 @@ fun ExerciseScreen(
 }
 
 @Composable
-fun SetProgress(current: Int, total: Int) {
-  val percent = (current.toFloat() - 1) / total.toFloat()
+fun SetProgress(currentSet: Int, totalSets: Int) {
+  val progress by remember(currentSet) {
+    mutableFloatStateOf((currentSet.toFloat() - 1) / totalSets.toFloat())
+  }
+  val animatedProgress by animateFloatAsState(
+    targetValue = progress, animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+  )
 
   Box(
     contentAlignment = Alignment.Center, modifier = Modifier
       .fillMaxWidth(.7f)
       .aspectRatio(1f)
   ) {
-    /* TODO: Segmented progress indicator */
-    CircularProgressIndicator(
-      progress = { percent },
+    SegmentedCircularProgressIndicator(
+      progress = { animatedProgress },
+      segments = 5,
       strokeWidth = 20.dp,
-      gapSize = 0.dp,
-      strokeCap = StrokeCap.Butt,
+      gapSize = 10.dp,
+      strokeCap = StrokeCap.Round,
       modifier = Modifier.fillMaxSize()
     )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-      if (current > total) {
+      if (currentSet > totalSets) {
         Text("Completed", style = MaterialTheme.typography.titleMedium)
       }
       else {
         Text("Set", style = MaterialTheme.typography.titleMedium)
       }
       Text(
-        text = "${min(current, total)}/$total",
+        text = "${min(currentSet, totalSets)}/$totalSets",
         style = MaterialTheme.typography.displayLarge,
         textAlign = TextAlign.Center
       )
@@ -389,13 +395,17 @@ fun RestSheet(
   onDismissRequest: () -> Unit
 ) {
   if (isVisible) {
-    var remainingMillis by rememberSaveable(restState.restDuration) { mutableLongStateOf(restState.restDuration.inWholeMilliseconds) }
+    val restStartTime = rememberSaveable(restState.isResting) { System.currentTimeMillis() }
+    var clockText by rememberSaveable { mutableStateOf(restState.restDuration.toClockString()) }
     val progress = remember {
       if (restState.restDuration.inWholeMilliseconds <= 0) Animatable(1f)
-      else Animatable(1f - (remainingMillis.toFloat() / restState.restDuration.inWholeMilliseconds.toFloat()))
+      else Animatable(initialValue = ((System.currentTimeMillis() - restStartTime).toFloat() / restState.restDuration.inWholeMilliseconds.toFloat()))
     }
 
     LaunchedEffect(Unit) {
+      val remainingMillis =
+        restState.restDuration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
+
       progress.animateTo(
         targetValue = 1f, animationSpec = tween(
           durationMillis = remainingMillis.toInt(), easing = LinearEasing
@@ -404,21 +414,17 @@ fun RestSheet(
     }
 
     DisposableEffect(restState.isResting) {
-      var timer: CountDownTimer? = applyIf(
-        condition = restState.isResting,
-        value = object : CountDownTimer(remainingMillis, 1.seconds.inWholeMilliseconds) {
-          override fun onTick(remaining: Long) {
-            remainingMillis = remaining
-          }
+      val timer = if (restState.isResting) timer(period = 1.seconds.inWholeMilliseconds) {
+        val remainingMillis =
+          restState.restDuration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
 
-          override fun onFinish() {
-            cancel()
-          }
-        }.start()
-      )
+        clockText = remainingMillis.milliseconds.toClockString()
+      }
+      else null
 
       onDispose {
         timer?.cancel()
+        timer?.purge()
       }
     }
 
@@ -433,7 +439,6 @@ fun RestSheet(
           .fillMaxHeight(.8f)
           .pointerInput(Unit) {
             detectVerticalDragGestures(onVerticalDrag = { change, _ -> change.consume() })
-            detectTapGestures(onPress = {})
           }) {
         Box(
           contentAlignment = Alignment.Center,
@@ -452,7 +457,7 @@ fun RestSheet(
           Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Rest", style = MaterialTheme.typography.titleMedium)
             Text(
-              text = remainingMillis.milliseconds.toClockString(),
+              text = clockText,
               style = MaterialTheme.typography.displayLarge,
               textAlign = TextAlign.Center
             )

@@ -15,7 +15,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.IOException
-import kotlin.time.Duration.Companion.minutes
 
 @RunWith(AndroidJUnit4::class)
 class RoutineDaoTests {
@@ -39,7 +38,7 @@ class RoutineDaoTests {
   @Test
   @Throws(Exception::class)
   fun `get routine`() = runTest {
-    val newRoutine = Routine(id = 0, name = "New routine", 1.minutes)
+    val newRoutine = Routine(id = 0, name = "New routine")
 
     dao.upsert(newRoutine).also { insertId ->
       dao.getRoutine(insertId).also { insertedRoutine ->
@@ -52,7 +51,7 @@ class RoutineDaoTests {
   @Test
   @Throws(Exception::class)
   fun `insert and update routine using upsert`() = runTest {
-    val newRoutine = Routine(id = 0, name = "New routine", 1.minutes)
+    val newRoutine = Routine(id = 0, name = "New routine")
 
     dao.upsert(newRoutine).also { insertId ->
       assert(insertId != -1L)
@@ -62,7 +61,7 @@ class RoutineDaoTests {
         checkNotNull(insertedRoutine)
         assertEquals(newRoutine.copy(id = insertId), insertedRoutine)
 
-        val changedRoutine = insertedRoutine.copy(name = "Changed name", restDuration = 5.minutes)
+        val changedRoutine = insertedRoutine.copy(name = "Changed name")
 
         dao.upsert(changedRoutine).also { updateId ->
           assertEquals(-1L, updateId)
@@ -85,7 +84,7 @@ class RoutineDaoTests {
 
   @Test
   fun `insert and update routine schedule using upsert`() = runTest {
-    val newRoutine = Routine(id = 0, name = "New routine", 1.minutes)
+    val newRoutine = Routine(id = 0, name = "New routine")
 
     dao.upsert(newRoutine).also { routineId ->
       val newSchedule =
@@ -116,7 +115,7 @@ class RoutineDaoTests {
 
   @Test
   fun `insert and update routine with schedule using upsert`() = runTest {
-    var routine = Routine(id = 0, name = "New routine", 1.minutes)
+    var routine = Routine(id = 0, name = "New routine")
     var schedule = RoutineSchedule(id = 0, routineId = 0, sunday = true)
 
     // Insert
@@ -134,7 +133,7 @@ class RoutineDaoTests {
         assertEquals(routine, dbRoutine)
         assertEquals(schedule, dbSchedule)
 
-        routine = routine.copy(name = "Updated name", restDuration = 5.minutes)
+        routine = routine.copy(name = "Updated name")
         schedule = schedule.copy(monday = true, tuesday = true, sunday = false)
 
         // Update
@@ -145,10 +144,10 @@ class RoutineDaoTests {
 
             // Get
             checkNotNull(dao.getRoutineWithSchedule(routine.id)).also { (uDbRoutine, uDbSchedule) ->
-                checkNotNull(uDbSchedule)
-                assertEquals(routine, uDbRoutine)
-                assertEquals(schedule, uDbSchedule)
-              }
+              checkNotNull(uDbSchedule)
+              assertEquals(routine, uDbRoutine)
+              assertEquals(schedule, uDbSchedule)
+            }
           }
       }
     }
@@ -156,7 +155,7 @@ class RoutineDaoTests {
 
   @Test
   fun `get schedule by routine id`() = runTest {
-    val newRoutine = Routine(id = 0, name = "New routine", 1.minutes)
+    val newRoutine = Routine(id = 0, name = "New routine")
 
     dao.upsert(newRoutine).also { routineId ->
       val newSchedule = RoutineSchedule(id = 0, routineId = routineId)
