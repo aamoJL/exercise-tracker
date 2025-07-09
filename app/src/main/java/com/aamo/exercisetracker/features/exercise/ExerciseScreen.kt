@@ -79,6 +79,7 @@ import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
@@ -132,38 +133,53 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     }
   }
 
-  fun setCompleted(countDownTimerService: CountDownTimerService) {
+  fun completeSet(countDownTimerService: CountDownTimerService) {
+    inProgress = true
+
     getNextSetState().let { nextSetState ->
       nextSetState.set.onNull {
+        // Was final set, no resting
         setState = nextSetState
-        inProgress = false
-
-        viewModelScope.launch {
-          exerciseModel?.let { model ->
-            val finishedDate = Calendar.getInstance().time
-            val progress = model.progress?.copy(finishedDate = finishedDate) ?: ExerciseProgress(
-              exerciseId = model.exercise.id, finishedDate = finishedDate
-            )
-
-            routineDao.upsert(progress)
-          }
-        }
       }.onNotNull {
-        inProgress = true
-        countDownTimerService.start(
-          durationMillis = restState.restDuration.inWholeMilliseconds, onFinished = {
-            stopRest(countDownTimerService)
-          })
-        restState = restState.copy(isResting = true)
+        startRest(countDownTimerService = countDownTimerService, onFinished = {
+          setState = nextSetState
+        })
+      }
+    }
+  }
+
+  fun finishExercise(onSaved: () -> Unit) {
+    // Save progress
+    viewModelScope.launch {
+      exerciseModel?.let { model ->
+        val finishedDate = Calendar.getInstance().time
+        val progress = model.progress?.copy(finishedDate = finishedDate) ?: ExerciseProgress(
+          exerciseId = model.exercise.id, finishedDate = finishedDate
+        )
+
+        routineDao.upsert(progress).also {
+          onSaved()
+        }
       }
     }
   }
 
   fun stopRest(countDownTimerService: CountDownTimerService) {
     countDownTimerService.stop()
+  }
 
-    setState = getNextSetState()
-    restState = restState.copy(isResting = false)
+  private fun startRest(countDownTimerService: CountDownTimerService, onFinished: () -> Unit) {
+    if (restState.restDuration <= 0.seconds) {
+      onFinished()
+      return
+    }
+
+    countDownTimerService.start(
+      durationMillis = restState.restDuration.inWholeMilliseconds, onFinished = {
+        onFinished()
+        restState = restState.copy(isResting = false)
+      })
+    restState = restState.copy(isResting = true)
   }
 
   private fun getNextSetState(): SetState {
@@ -237,18 +253,15 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
 
     LoadingScreen(enabled = viewmodel.isLoading) {
       if (exercise != null) {
-        ExerciseScreen(
-          exercise = exercise,
-          setState = setState,
-          restState = restState,
-          onBack = {
-            viewmodel.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
-          },
-          onEdit = {
-            viewmodel.inProgress.onTrue { openInProgressEditDialog = true }.onFalse { onEdit(id) }
-          },
-          onSetCompleted = { service?.let { viewmodel.setCompleted(it) } },
-          onStopRest = { service?.let { viewmodel.stopRest(it) } })
+        ExerciseScreen(exercise = exercise, setState = setState, restState = restState, onBack = {
+          viewmodel.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
+        }, onEdit = {
+          viewmodel.inProgress.onTrue { openInProgressEditDialog = true }.onFalse { onEdit(id) }
+        }, onSetCompleted = { service?.let { viewmodel.completeSet(it) } }, onExerciseFinished = {
+          viewmodel.finishExercise(onSaved = {
+            onBack()
+          })
+        }, onStopRest = { service?.let { viewmodel.stopRest(it) } })
       }
     }
   }
@@ -263,6 +276,7 @@ fun ExerciseScreen(
   onBack: () -> Unit,
   onEdit: () -> Unit,
   onSetCompleted: () -> Unit,
+  onExerciseFinished: () -> Unit,
   onStopRest: () -> Unit,
 ) {
   val restSheetState = rememberModalBottomSheetState(
@@ -300,8 +314,20 @@ fun ExerciseScreen(
         modifier = Modifier.padding(16.dp)
       ) {
         SetProgress(currentSet = setState.index + 1, totalSets = setState.total)
+
         if (set != null) {
           SetContent(set = set, isResting = restState.isResting, onDone = onSetCompleted)
+        }
+        else {
+          Button(
+            shape = CardDefaults.shape,
+            onClick = onExerciseFinished,
+            modifier = Modifier
+              .heightIn(max = 100.dp)
+              .fillMaxSize()
+          ) {
+            Text("Finish", style = MaterialTheme.typography.titleLarge)
+          }
         }
       }
     }
@@ -333,19 +359,17 @@ fun SetProgress(currentSet: Int, totalSets: Int) {
   ) {
     SegmentedCircularProgressIndicator(
       progress = { animatedProgress },
-      segments = 5,
+      segments = totalSets,
       strokeWidth = 20.dp,
       gapSize = 10.dp,
       strokeCap = StrokeCap.Round,
       modifier = Modifier.fillMaxSize()
     )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-      if (currentSet > totalSets) {
-        Text("Completed", style = MaterialTheme.typography.titleMedium)
-      }
-      else {
-        Text("Set", style = MaterialTheme.typography.titleMedium)
-      }
+      Text(
+        text = ifElse(currentSet > totalSets, "Completed", "Set"),
+        style = MaterialTheme.typography.titleMedium
+      )
       Text(
         text = "${min(currentSet, totalSets)}/$totalSets",
         style = MaterialTheme.typography.displayLarge,

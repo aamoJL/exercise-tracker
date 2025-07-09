@@ -6,6 +6,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.navigation
 import com.aamo.exercisetracker.features.exercise.AddExerciseFormScreen
 import com.aamo.exercisetracker.features.exercise.addExerciseFormScreen
+import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -35,7 +36,9 @@ fun NavGraphBuilder.routinePage(
       navController.popBackStack<RoutinePage>(inclusive = true)
     })
     addExerciseFormScreen(onBack = onBack, onSaved = { id ->
-      navController.navigateUp()
+      navController.popBackStack<RoutineScreen>(inclusive = false).onFalse {
+        navController.navigateUp()
+      }
     })
   }
 }

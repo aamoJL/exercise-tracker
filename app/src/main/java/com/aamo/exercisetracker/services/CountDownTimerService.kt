@@ -28,6 +28,7 @@ import kotlin.concurrent.timerTask
 class CountDownTimerService() : Service() {
   private val binder = BinderHelper()
   private var timer: Timer? = null
+  private var onFinished: (() -> Unit)? = null
   var title: String = "Timer"
 
   override fun onBind(p0: Intent?): IBinder? {
@@ -38,7 +39,7 @@ class CountDownTimerService() : Service() {
     super.onTaskRemoved(rootIntent)
     // Stop this service when the activity has been closed
     //  works only if this service has been started with startService once
-    stop()
+    cancel()
     stopSelf()
   }
 
@@ -50,20 +51,26 @@ class CountDownTimerService() : Service() {
   }
 
   fun stop() {
-    timer?.apply {
-      cancel()
-      purge()
+    if (timer != null) {
+      onFinished?.invoke()
     }
+    cancel()
+  }
+
+  fun cancel() {
+    timer?.cancel()
+    timer?.purge()
     timer = null
+    onFinished = null
     removeNotification()
   }
 
   private fun startTimer(durationMillis: Long, onFinished: () -> Unit) {
-    timer?.cancel()
+    cancel()
+    this.onFinished = onFinished
     timer = Timer(true).apply {
       schedule(timerTask {
         vibrate()
-        onFinished()
         stop()
       }, durationMillis)
     }

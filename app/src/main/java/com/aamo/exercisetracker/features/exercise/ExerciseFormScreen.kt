@@ -45,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
@@ -74,6 +73,7 @@ import com.aamo.exercisetracker.ui.components.FormList
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
@@ -92,9 +92,7 @@ class ExerciseFormViewModel(
 ) : ViewModel() {
   class UiState(onModelChanged: () -> Unit) {
     val exercise = ViewModelState(Exercise(restDuration = 1.minutes)).onChange { onModelChanged() }
-    /**
-     * Pair or exercise set and its list key
-     */
+    /** Pair or exercise set and its list key */
     val sets = ViewModelState(listOf(Pair(0, ExerciseSet()))).onChange { onModelChanged() }
     var savingState by mutableStateOf(SavingState())
     var deleted by mutableStateOf(false)
@@ -110,11 +108,14 @@ class ExerciseFormViewModel(
     viewModelScope.launch {
       if (fetchData != null) {
         fetchData(database.routineDao())?.let { ews ->
-          var nextKey = uiState.nextSetKey
-          uiState.exercise.update(ews.exercise)
-          uiState.sets.update(ews.sets.map { set -> Pair(nextKey, set).also { nextKey++ } })
-          uiState.savingState = SavingState(canSave = canSave())
-          uiState.nextSetKey = nextKey
+          uiState.apply {
+            var nextKey = nextSetKey
+            exercise.update(ews.exercise)
+            sets.update(ews.sets.map { set -> Pair(nextKey, set).also { nextKey++ } })
+            savingState = SavingState(canSave = canSave())
+            nextSetKey = nextKey
+            setUnit = ews.sets.firstOrNull()?.unit ?: setUnit
+          }
         }
       }
     }
@@ -307,7 +308,7 @@ fun ExerciseFormScreen(
       )
       TextField(
         value = if (exercise.value.restDuration.inWholeMinutes == 0L) String.EMPTY else exercise.value.restDuration.inWholeMinutes.toString(),
-        label = { Text("Rest duration") },
+        label = { Text("Rest duration (optional)") },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
         onValueChange = {
@@ -315,24 +316,18 @@ fun ExerciseFormScreen(
             exercise.apply { update(value.copy(restDuration = 0.minutes)) }
           }
           else if (it.isDigitsOnly()) {
-            // int can have max 9 digits
-            exercise.apply { update(value.copy(restDuration = it.take(9).toInt().minutes)) }
+            it.take(9).toIntOrNull().onNotNull {
+              // int can have max 9 digits
+              exercise.apply { update(value.copy(restDuration = it.minutes)) }
+            }
           }
         },
         suffix = { Text("minutes") },
         keyboardOptions = KeyboardOptions(
-          keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
+          keyboardType = KeyboardType.Number, imeAction = ImeAction.Next
         ),
-        keyboardActions = KeyboardActions(onAny = {
-          focusManager.clearFocus()
-        }),
-        modifier = Modifier
-          .fillMaxWidth()
-          .onFocusChanged { state ->
-            if (!state.isFocused && exercise.value.restDuration <= 0.minutes) {
-              exercise.apply { update(value.copy(restDuration = 1.minutes)) }
-            }
-          })
+        modifier = Modifier.fillMaxWidth()
+      )
       TextField(
         value = uiState.setUnit,
         label = { Text("Set unit") },
