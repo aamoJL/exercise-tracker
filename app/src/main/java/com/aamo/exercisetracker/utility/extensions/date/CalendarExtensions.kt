@@ -1,9 +1,11 @@
 package com.aamo.exercisetracker.utility.extensions.date
 
+import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import com.aamo.exercisetracker.R
 import java.util.Calendar
 
+@Keep
 enum class Day(@StringRes val nameResourceKey: Int) {
   SUNDAY(R.string.sunday),
   MONDAY(R.string.monday),
