@@ -60,7 +60,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -175,7 +177,9 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     }
 
     countDownTimerService.start(
-      durationMillis = restState.restDuration.inWholeMilliseconds, onFinished = {
+      title = "Rest timer",
+      durationMillis = restState.restDuration.inWholeMilliseconds,
+      onFinished = {
         onFinished()
         restState = restState.copy(isResting = false)
       })
@@ -209,8 +213,11 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     val connection = remember {
       object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-          service = (binder as? CountDownTimerService.BinderHelper)?.getService()
-            ?.apply { title = "Rest Timer" }
+          service = (binder as? CountDownTimerService.BinderHelper)?.getService()?.apply {
+            // Notifications needs to be hidden also here, because the service will be null in
+            //  LifecycleEventEffect ON_RESUME when the configuration changes
+            hideNotification()
+          }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -221,6 +228,16 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
 
     var openInProgressBackDialog by remember { mutableStateOf(false) }
     var openInProgressEditDialog by remember { mutableStateOf(false) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+      service?.hideNotification()
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
+      if (viewmodel.restState.isResting) {
+        service?.showNotification()
+      }
+    }
 
     BackHandler(enabled = viewmodel.inProgress) {
       openInProgressBackDialog = true

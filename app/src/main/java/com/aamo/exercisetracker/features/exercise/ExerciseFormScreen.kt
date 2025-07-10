@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -49,12 +47,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -70,11 +65,10 @@ import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.FormList
+import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
-import com.aamo.exercisetracker.utility.extensions.general.onNotNull
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
@@ -236,7 +230,6 @@ fun ExerciseFormScreen(
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  val focusManager = LocalFocusManager.current
   val exercise = remember(uiState.exercise) { uiState.exercise }
   val sets = remember(uiState.sets) { uiState.sets }
   val unsavedChanges =
@@ -288,7 +281,7 @@ fun ExerciseFormScreen(
           Icon(imageVector = Icons.Filled.Done, contentDescription = "Save exercise")
         }
       })
-  }, modifier = Modifier.imePadding()) { innerPadding ->
+  }) { innerPadding ->
     Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
       modifier = Modifier
@@ -306,26 +299,14 @@ fun ExerciseFormScreen(
         ),
         modifier = Modifier.fillMaxWidth()
       )
-      TextField(
-        value = if (exercise.value.restDuration.inWholeMinutes == 0L) String.EMPTY else exercise.value.restDuration.inWholeMinutes.toString(),
+      IntNumberField(
+        value = exercise.value.restDuration.inWholeMinutes.toInt(),
         label = { Text("Rest duration (optional)") },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = {
-          if (it.isEmpty()) {
-            exercise.apply { update(value.copy(restDuration = 0.minutes)) }
-          }
-          else if (it.isDigitsOnly()) {
-            it.take(9).toIntOrNull().onNotNull {
-              // int can have max 9 digits
-              exercise.apply { update(value.copy(restDuration = it.minutes)) }
-            }
-          }
-        },
+        onValueChange = { exercise.apply { update(value.copy(restDuration = it.minutes)) } },
         suffix = { Text("minutes") },
-        keyboardOptions = KeyboardOptions(
-          keyboardType = KeyboardType.Number, imeAction = ImeAction.Next
-        ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth()
       )
       TextField(
@@ -370,8 +351,8 @@ fun ExerciseFormScreen(
               },
               modifier = Modifier.animateItem()
             ) {
-              TextField(
-                value = if (set.second.value > 0) set.second.value.toString() else String.EMPTY,
+              IntNumberField(
+                value = set.second.value,
                 shape = RectangleShape,
                 colors = TextFieldDefaults.colors(
                   unfocusedIndicatorColor = Color.Transparent,
@@ -381,25 +362,18 @@ fun ExerciseFormScreen(
                 ),
                 placeholder = { Text("amount...") },
                 onValueChange = { value ->
-                  if (value.isDigitsOnly()) {
-                    val newSets = sets.value.toMutableList().also {
-                      it[i] = it[i].copy(
-                        second = it[i].second.copy(
-                          value = if (value.isEmpty()) 0 else value.toInt()
-                        )
+                  sets.update(sets.value.toMutableList().also {
+                    it[i] = it[i].copy(
+                      second = it[i].second.copy(
+                        value = value
                       )
-                    }
-
-                    sets.update(newSets)
-                  }
+                    )
+                  })
                 },
                 suffix = { Text(uiState.setUnit) },
                 keyboardOptions = KeyboardOptions(
-                  keyboardType = KeyboardType.Number,
                   imeAction = if (i < sets.value.count() - 1) ImeAction.Next else ImeAction.Done
                 ),
-                keyboardActions = KeyboardActions(
-                  onDone = { focusManager.clearFocus() }),
                 modifier = Modifier.fillMaxWidth()
               )
             }

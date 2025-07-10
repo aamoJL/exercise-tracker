@@ -26,10 +26,16 @@ import java.util.Timer
 import kotlin.concurrent.timerTask
 
 class CountDownTimerService() : Service() {
+  private data class TimerState(
+    val title: String,
+    val timer: Timer,
+    val onFinished: (() -> Unit),
+    val startTime: Long,
+    val durationMillis: Long,
+  )
+
   private val binder = BinderHelper()
-  private var timer: Timer? = null
-  private var onFinished: (() -> Unit)? = null
-  var title: String = "Timer"
+  private var state: TimerState? = null
 
   override fun onBind(p0: Intent?): IBinder? {
     return binder
@@ -43,40 +49,57 @@ class CountDownTimerService() : Service() {
     stopSelf()
   }
 
-  fun start(durationMillis: Long, onFinished: () -> Unit) {
+  fun start(title: String, durationMillis: Long, onFinished: () -> Unit) {
     if (durationMillis > 0L) {
-      startTimer(durationMillis = durationMillis, onFinished = onFinished)
-      sendNotification(durationMillis)
+      cancel()
+      state = TimerState(
+        title = title,
+        timer = Timer(true).apply {
+          schedule(timerTask {
+            vibrate()
+            stop()
+          }, durationMillis)
+        },
+        onFinished = onFinished,
+        startTime = System.currentTimeMillis(),
+        durationMillis = durationMillis
+      )
     }
   }
 
   fun stop() {
-    if (timer != null) {
-      onFinished?.invoke()
-    }
+    state?.onFinished?.invoke()
     cancel()
   }
 
   fun cancel() {
-    timer?.cancel()
-    timer?.purge()
-    timer = null
-    onFinished = null
-    removeNotification()
+    state?.apply {
+      timer.cancel()
+      timer.purge()
+    }
+    state = null
+
+    hideNotification()
   }
 
-  private fun startTimer(durationMillis: Long, onFinished: () -> Unit) {
-    cancel()
-    this.onFinished = onFinished
-    timer = Timer(true).apply {
-      schedule(timerTask {
-        vibrate()
-        stop()
-      }, durationMillis)
+  fun showNotification() {
+    if (state == null) return
+
+    state?.let {
+      sendNotification(
+        title = it.title,
+        durationMillis = it.durationMillis - (System.currentTimeMillis() - it.startTime)
+      )
     }
   }
 
-  private fun sendNotification(durationMillis: Long) {
+  fun hideNotification() {
+    with(NotificationManagerCompat.from(this)) {
+      cancel(NOTIFICATION_ID)
+    }
+  }
+
+  private fun sendNotification(title: String, durationMillis: Long) {
     var notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle(title)
       .setSmallIcon(ic_lock_idle_alarm).setPriority(NotificationCompat.PRIORITY_LOW)
       .setOnlyAlertOnce(true).setUsesChronometer(true).setChronometerCountDown(true)
@@ -98,12 +121,6 @@ class CountDownTimerService() : Service() {
         // Vibration without attributes does not work, if the app is on the background
         vibrate(vibration, attributes)
       }.onFalse { Log.e("asd", "Device does not have a vibrator") }
-    }
-  }
-
-  private fun removeNotification() {
-    with(NotificationManagerCompat.from(this)) {
-      cancel(NOTIFICATION_ID)
     }
   }
 
