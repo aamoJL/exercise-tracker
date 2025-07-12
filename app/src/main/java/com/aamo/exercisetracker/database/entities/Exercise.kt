@@ -39,8 +39,15 @@ data class ExerciseSet(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "exercise_id") val exerciseId: Long = 0,
   @ColumnInfo(name = "value") val value: Int = 0,
-  @ColumnInfo(name = "unit") val unit: String = String.EMPTY
-)
+  @ColumnInfo(name = "unit") val unit: String = "reps",
+  @ColumnInfo(name = "value_type", defaultValue = "0")
+  val valueType: ValueType = ValueType.REPETITION,
+) {
+  enum class ValueType(val id: Int) {
+    REPETITION(id = 0),
+    COUNTDOWN(id = 1)
+  }
+}
 
 @Entity(
   tableName = "exercise_progress", foreignKeys = [ForeignKey(

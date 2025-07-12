@@ -68,8 +68,11 @@ class CountDownTimerService() : Service() {
   }
 
   fun stop() {
-    state?.onFinished?.invoke()
-    cancel()
+    state?.onFinished.let {
+      // Cancel before invoking so the onFinished can start a new timer
+      cancel()
+      it?.invoke()
+    }
   }
 
   fun cancel() {

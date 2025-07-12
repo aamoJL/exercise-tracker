@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,7 +39,6 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,10 +70,14 @@ import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
+import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 @Serializable
@@ -84,14 +89,47 @@ data class AddExerciseFormScreen(val routineId: Long)
 class ExerciseFormViewModel(
   context: Context, fetchData: (suspend (RoutineDao) -> ExerciseWithSets?)?
 ) : ViewModel() {
-  class UiState(onModelChanged: () -> Unit) {
+  class UiState(private val onModelChanged: () -> Unit) {
     val exercise = ViewModelState(Exercise(restDuration = 1.minutes)).onChange { onModelChanged() }
     /** Pair or exercise set and its list key */
-    val sets = ViewModelState(listOf(Pair(0, ExerciseSet()))).onChange { onModelChanged() }
+    val sets =
+      ViewModelStateList<Pair<Int, ViewModelState<ExerciseSet>>>().onChange { onModelChanged() }
     var savingState by mutableStateOf(SavingState())
     var deleted by mutableStateOf(false)
-    var nextSetKey by mutableIntStateOf(1)
-    var setUnit by mutableStateOf("reps")
+    var setUnit = ViewModelState("reps").onChange {
+      sets.values.forEach { set -> set.second.update(set.second.value.copy(unit = it)) }
+    }
+    var hasTimer = ViewModelState(false).onChange {
+      if (it) {
+        setUnit.update("minutes")
+        sets.values.forEach { set ->
+          set.second.update(set.second.value.copy(valueType = ExerciseSet.ValueType.COUNTDOWN))
+        }
+      }
+      else {
+        sets.values.forEach { set ->
+          set.second.update(set.second.value.copy(valueType = ExerciseSet.ValueType.REPETITION))
+        }
+      }
+    }
+    private var nextSetKey = 0
+
+    fun addSet() {
+      addSet(ExerciseSet())
+    }
+
+    fun addSet(vararg sets: ExerciseSet) {
+      val setMap = sets.map { set ->
+        Pair(nextSetKey, ViewModelState(set).validation { set ->
+          if (set.valueType == ExerciseSet.ValueType.COUNTDOWN && set.value.minutes.inWholeMilliseconds > Int.MAX_VALUE.toLong()) {
+            set.copy(value = Int.MAX_VALUE.milliseconds.inWholeMinutes.toInt())
+          }
+          else set
+        }.onChange { onModelChanged() }).also { nextSetKey++ }
+      }.toTypedArray()
+
+      this.sets.add(*setMap)
+    }
   }
 
   private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
@@ -103,12 +141,19 @@ class ExerciseFormViewModel(
       if (fetchData != null) {
         fetchData(database.routineDao())?.let { ews ->
           uiState.apply {
-            var nextKey = nextSetKey
             exercise.update(ews.exercise)
-            sets.update(ews.sets.map { set -> Pair(nextKey, set).also { nextKey++ } })
+            addSet(*ews.sets.map { set ->
+              if (set.valueType == ExerciseSet.ValueType.COUNTDOWN) {
+                // Set value to minutes, instead of milliseconds
+                set.copy(value = set.value.milliseconds.inWholeMinutes.toInt())
+              }
+              else set
+            }.toTypedArray())
+            ews.sets.firstOrNull().onNotNull {
+              setUnit.update(it.unit)
+              hasTimer.update(it.valueType == ExerciseSet.ValueType.COUNTDOWN)
+            }
             savingState = SavingState(canSave = canSave())
-            nextSetKey = nextKey
-            setUnit = ews.sets.firstOrNull()?.unit ?: setUnit
           }
         }
       }
@@ -119,24 +164,29 @@ class ExerciseFormViewModel(
     if (!canSave()) return
 
     val exercise = uiState.exercise.value
-    val sets = uiState.sets.value.map { set ->
-      set.copy(second = set.second.copy(unit = uiState.setUnit))
-    }
+    val sets = uiState.sets
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
       database.routineDao().runCatching {
         checkNotNull(
-          upsertAndGet(ExerciseWithSets(exercise = exercise, sets = sets.map { it.second }))
+          upsertAndGet(
+            ExerciseWithSets(
+              exercise = exercise, sets = ifElse(
+                condition = uiState.hasTimer.value,
+                onTrue = sets.values.map { it.second.value.copy(value = it.second.value.value.minutes.inWholeMilliseconds.toInt()) },
+                onFalse = sets.values.map { it.second.value })
+            )
+          )
         )
       }.onSuccess { result ->
-        var nextKey = uiState.nextSetKey
-
-        uiState.exercise.update(result.exercise)
-        uiState.sets.update(result.sets.map { set -> Pair(nextKey, set).also { nextKey++ } })
-        uiState.apply { savingState = savingState.getAsSaved(canSave()) }
-        uiState.nextSetKey = nextKey
+        uiState.apply {
+          sets.clear()
+          addSet(*result.sets.toTypedArray())
+          this.exercise.update(result.exercise)
+          savingState = savingState.getAsSaved(canSave())
+        }
       }.onFailure { error ->
         uiState.apply { savingState = savingState.getAsError(error = Error(error)) }
       }
@@ -161,9 +211,9 @@ class ExerciseFormViewModel(
   private fun canSave(): Boolean {
     if (uiState.exercise.value.routineId == 0L) return false
     if (uiState.savingState.state == SavingState.State.SAVING) return false
-    if (uiState.sets.value.any { it.second.value == 0 }) return false
+    if (uiState.sets.values.any { it.second.value.value == 0 }) return false
     if (uiState.exercise.value.name.isEmpty()) return false
-    if (uiState.sets.value.isEmpty()) return false
+    if (uiState.sets.values.isEmpty()) return false
     return true
   }
 
@@ -309,28 +359,32 @@ fun ExerciseFormScreen(
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth()
       )
-      TextField(
-        value = uiState.setUnit,
-        label = { Text("Set unit") },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        onValueChange = { uiState.setUnit = it },
-        keyboardOptions = KeyboardOptions(
-          imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
-        ),
-        modifier = Modifier.fillMaxWidth()
-      )
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("Timer")
+          Checkbox(checked = uiState.hasTimer.value, onCheckedChange = {
+            uiState.hasTimer.update(it)
+          })
+        }
+        TextField(
+          enabled = !uiState.hasTimer.value,
+          value = uiState.setUnit.value,
+          label = { Text("Set unit") },
+          shape = RectangleShape,
+          colors = borderlessTextFieldColors(),
+          onValueChange = { uiState.setUnit.update(it) },
+          keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
+          ),
+          modifier = Modifier.fillMaxWidth()
+        )
+      }
       Spacer(modifier = Modifier.height(8.dp))
       FormList(
-        title = "Sets", onAdd = {
-          val nextKey = uiState.nextSetKey
-
-          sets.apply { update(value.plus(Pair(nextKey, ExerciseSet()))) }
-          uiState.nextSetKey = nextKey + 1
-        }, modifier = Modifier.fillMaxWidth()
+        title = "Sets", onAdd = { uiState.addSet() }, modifier = Modifier.fillMaxWidth()
       ) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-          itemsIndexed(items = sets.value, key = { _, set -> set.first }) { i, set ->
+          itemsIndexed(items = sets.values, key = { _, set -> set.first }) { i, set ->
             val dens = LocalDensity.current
             val dismissState = rememberSwipeToDismissBoxState(
               positionalThreshold = { with(dens) { 70.dp.toPx() } })
@@ -338,7 +392,7 @@ fun ExerciseFormScreen(
 
             LaunchedEffect(dismissState.currentValue) {
               if (dismissState.currentValue == deleteDirection) {
-                sets.apply { update(value.minus(set)) }
+                sets.remove(set)
               }
             }
 
@@ -352,7 +406,7 @@ fun ExerciseFormScreen(
               modifier = Modifier.animateItem()
             ) {
               IntNumberField(
-                value = set.second.value,
+                value = set.second.value.value,
                 shape = RectangleShape,
                 colors = TextFieldDefaults.colors(
                   unfocusedIndicatorColor = Color.Transparent,
@@ -361,18 +415,10 @@ fun ExerciseFormScreen(
                   focusedPlaceholderColor = MaterialTheme.colorScheme.outline
                 ),
                 placeholder = { Text("amount...") },
-                onValueChange = { value ->
-                  sets.update(sets.value.toMutableList().also {
-                    it[i] = it[i].copy(
-                      second = it[i].second.copy(
-                        value = value
-                      )
-                    )
-                  })
-                },
-                suffix = { Text(uiState.setUnit) },
+                onValueChange = { value -> set.second.update(set.second.value.copy(value = value)) },
+                suffix = { Text(uiState.setUnit.value) },
                 keyboardOptions = KeyboardOptions(
-                  imeAction = if (i < sets.value.count() - 1) ImeAction.Next else ImeAction.Done
+                  imeAction = if (i < sets.values.count() - 1) ImeAction.Next else ImeAction.Done
                 ),
                 modifier = Modifier.fillMaxWidth()
               )

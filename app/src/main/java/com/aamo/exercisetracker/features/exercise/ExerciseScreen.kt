@@ -15,6 +15,8 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -86,6 +89,7 @@ import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
+import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
@@ -101,21 +105,34 @@ data class ExerciseScreen(val id: Long = 0)
 class ExerciseScreenViewModel(private val exerciseId: Long, private val routineDao: RoutineDao) :
         ViewModel() {
   data class SetState(
-    val set: ExerciseSet? = null,
+    val sets: List<ExerciseSet> = emptyList(),
     val index: Int = 0,
-    val total: Int = 0,
-  )
+    private val timerActive: Boolean = false,
+  ) {
+    val set: ExerciseSet? = sets.elementAtOrNull(index)
+    val total: Int = sets.size
+    val timer: TimerState = initTimer()
 
-  data class RestState(
-    val isResting: Boolean = false,
-    val restDuration: Duration = 0.milliseconds,
+    private fun initTimer(): TimerState {
+      val hasTimer = set?.valueType?.equals(ExerciseSet.ValueType.COUNTDOWN) == true
+
+      return TimerState(
+        isActive = hasTimer && timerActive,
+        duration = if (hasTimer) set.value.milliseconds else 0.milliseconds
+      )
+    }
+  }
+
+  data class TimerState(
+    val isActive: Boolean = false,
+    val duration: Duration = 0.milliseconds,
   )
 
   var exerciseModel: ExerciseWithProgressAndSets? by mutableStateOf(null)
     private set
   var setState by mutableStateOf(SetState())
     private set
-  var restState by mutableStateOf(RestState())
+  var restState by mutableStateOf(TimerState())
     private set
   var isLoading by mutableStateOf(true)
     private set
@@ -126,31 +143,35 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     viewModelScope.launch {
       routineDao.getExerciseWithProgressAndSets(exerciseId).let {
         exerciseModel = it
-        setState = SetState(
-          set = it?.sets?.firstOrNull(), index = 0, total = it?.sets?.size ?: 0
-        )
-        restState = RestState(restDuration = it?.exercise?.restDuration ?: 0.seconds)
+        setState = SetState(sets = it?.sets ?: emptyList())
+        restState = TimerState(duration = it?.exercise?.restDuration ?: 0.seconds)
         isLoading = false
       }
     }
   }
 
-  fun completeSet(countDownTimerService: CountDownTimerService) {
+  fun startSet(countDownTimerService: CountDownTimerService) {
     inProgress = true
 
-    getNextSetState().let { nextSetState ->
-      nextSetState.set.onNull {
-        // Was final set, no resting
-        setState = nextSetState
-      }.onNotNull {
-        startRest(countDownTimerService = countDownTimerService, onFinished = {
-          setState = nextSetState
+    if (setState.timer.duration > 0.milliseconds) {
+      startTimer(
+        countDownTimerService = countDownTimerService,
+        title = "Set timer",
+        duration = setState.timer.duration,
+        onStart = { setState = setState.copy(timerActive = true) },
+        onFinished = {
+          setState = setState.copy(timerActive = false)
+          finishSet(countDownTimerService)
         })
-      }
+    }
+    else {
+      finishSet(countDownTimerService)
     }
   }
 
   fun finishExercise(onSaved: () -> Unit) {
+    inProgress = false
+
     // Save progress
     viewModelScope.launch {
       exerciseModel?.let { model ->
@@ -166,31 +187,51 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     }
   }
 
-  fun stopRest(countDownTimerService: CountDownTimerService) {
+  fun stopTimer(countDownTimerService: CountDownTimerService) {
     countDownTimerService.stop()
   }
 
-  private fun startRest(countDownTimerService: CountDownTimerService, onFinished: () -> Unit) {
-    if (restState.restDuration <= 0.seconds) {
+  fun cancelSetTimer(countDownTimerService: CountDownTimerService) {
+    countDownTimerService.cancel()
+    setState = setState.copy(timerActive = false)
+  }
+
+  private fun finishSet(countDownTimerService: CountDownTimerService) {
+    setState.copy(index = setState.index + 1, timerActive = false).let { nextSetState ->
+      nextSetState.set.onNull {
+        // Was final set, no resting
+        setState = nextSetState
+      }.onNotNull {
+        startTimer(
+          countDownTimerService = countDownTimerService,
+          title = "Rest timer",
+          duration = restState.duration,
+          onStart = { restState = restState.copy(isActive = true) },
+          onFinished = {
+            restState = restState.copy(isActive = false)
+            setState = nextSetState
+          })
+      }
+    }
+  }
+
+  private fun startTimer(
+    countDownTimerService: CountDownTimerService,
+    title: String,
+    duration: Duration,
+    onStart: () -> Unit,
+    onFinished: () -> Unit
+  ) {
+    if (duration <= 0.seconds) {
       onFinished()
       return
     }
 
     countDownTimerService.start(
-      title = "Rest timer",
-      durationMillis = restState.restDuration.inWholeMilliseconds,
-      onFinished = {
-        onFinished()
-        restState = restState.copy(isResting = false)
-      })
-    restState = restState.copy(isResting = true)
-  }
-
-  private fun getNextSetState(): SetState {
-    val nextIndex = Math.clamp((setState.index + 1).toLong(), 0, setState.total)
-    val nextSet = exerciseModel?.sets?.elementAtOrNull(nextIndex)
-
-    return setState.copy(set = nextSet, index = nextIndex)
+      title = title, durationMillis = duration.inWholeMilliseconds, onFinished = onFinished
+    ).also {
+      onStart()
+    }
   }
 }
 
@@ -234,7 +275,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
-      if (viewmodel.restState.isResting) {
+      if (viewmodel.restState.isActive || viewmodel.setState.timer.isActive) {
         service?.showNotification()
       }
     }
@@ -270,15 +311,22 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
 
     LoadingScreen(enabled = viewmodel.isLoading) {
       if (exercise != null) {
-        ExerciseScreen(exercise = exercise, setState = setState, restState = restState, onBack = {
-          viewmodel.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
-        }, onEdit = {
-          viewmodel.inProgress.onTrue { openInProgressEditDialog = true }.onFalse { onEdit(id) }
-        }, onSetCompleted = { service?.let { viewmodel.completeSet(it) } }, onExerciseFinished = {
-          viewmodel.finishExercise(onSaved = {
-            onBack()
-          })
-        }, onStopRest = { service?.let { viewmodel.stopRest(it) } })
+        ExerciseScreen(
+          exercise = exercise,
+          setState = setState,
+          restState = restState,
+          onBack = {
+            viewmodel.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
+          },
+          onEdit = {
+            viewmodel.inProgress.onTrue { openInProgressEditDialog = true }.onFalse { onEdit(id) }
+          },
+          onStartSet = { service?.let { viewmodel.startSet(it) } },
+          onStopSetTimer = { service?.let { viewmodel.stopTimer(it) } },
+          onCancelSet = { service?.let { viewmodel.cancelSetTimer(it) } },
+          onStopRest = { service?.let { viewmodel.stopTimer(it) } },
+          onFinishExercise = { viewmodel.finishExercise(onSaved = { onBack() }) },
+        )
       }
     }
   }
@@ -289,27 +337,40 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
 fun ExerciseScreen(
   exercise: Exercise,
   setState: ExerciseScreenViewModel.SetState,
-  restState: ExerciseScreenViewModel.RestState,
+  restState: ExerciseScreenViewModel.TimerState,
   onBack: () -> Unit,
   onEdit: () -> Unit,
-  onSetCompleted: () -> Unit,
-  onExerciseFinished: () -> Unit,
+  onStartSet: () -> Unit,
+  onStopSetTimer: () -> Unit,
+  onCancelSet: () -> Unit,
   onStopRest: () -> Unit,
+  onFinishExercise: () -> Unit,
 ) {
   val restSheetState = rememberModalBottomSheetState(
     skipPartiallyExpanded = true,
     confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
-  val set = remember(setState.set) { setState.set }
+  val setTimerSheetState = rememberModalBottomSheetState(
+    skipPartiallyExpanded = true,
+    confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
   var showRestSheet by remember { mutableStateOf(false) }
+  var showSetTimerSheet by remember { mutableStateOf(false) }
 
-  LaunchedEffect(restState.isResting) {
+  LaunchedEffect(restState.isActive) {
     restSheetState.apply {
-      if (restState.isResting) show() else hide()
+      if (restState.isActive) show() else hide()
     }
-
     // sheet state can't be checked with SheetState.currentValue, because confirmValueChange
     //  is always false, so the state will not change when closing the sheet.
-    showRestSheet = restState.isResting
+    showRestSheet = restState.isActive
+  }
+
+  LaunchedEffect(setState.timer.isActive) {
+    setTimerSheetState.apply {
+      if (setState.timer.isActive) show() else hide()
+    }
+    // sheet state can't be checked with SheetState.currentValue, because confirmValueChange
+    //  is always false, so the state will not change when closing the sheet.
+    showSetTimerSheet = setState.timer.isActive
   }
 
   Scaffold(
@@ -332,13 +393,15 @@ fun ExerciseScreen(
       ) {
         SetProgress(currentSet = setState.index + 1, totalSets = setState.total)
 
-        if (set != null) {
-          SetContent(set = set, isResting = restState.isResting, onDone = onSetCompleted)
+        if (setState.set != null) {
+          SetContent(setState = setState, onSubmit = {
+            onStartSet()
+          })
         }
         else {
           Button(
             shape = CardDefaults.shape,
-            onClick = onExerciseFinished,
+            onClick = onFinishExercise,
             modifier = Modifier
               .heightIn(max = 100.dp)
               .fillMaxSize()
@@ -349,14 +412,45 @@ fun ExerciseScreen(
       }
     }
 
-    // Visibility needs to be checked with showRestSheet instead of setState.isResting because the
-    //  sheet closing animation will not work correctly.
-    RestSheet(
+    // Visibility needs to be checked with showRestSheet instead of setState.isResting because
+    //  otherwise the sheet closing animation will not work correctly.
+    TimerSheet(
       isVisible = showRestSheet,
-      restState = restState,
+      timerTitle = "Rest",
+      timerState = restState,
       sheetState = restSheetState,
       onDismissRequest = onStopRest,
-    )
+    ) {
+      Button(
+        onClick = onStopRest, colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.secondary
+        )
+      ) {
+        Text("Stop")
+      }
+    }
+    TimerSheet(
+      isVisible = showSetTimerSheet,
+      timerTitle = "Set timer",
+      timerState = setState.timer,
+      sheetState = setTimerSheetState,
+      onDismissRequest = onCancelSet,
+    ) {
+      Button(
+        onClick = onCancelSet, colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.error
+        ), modifier = Modifier.weight(1f)
+      ) {
+        Text("Cancel")
+      }
+      Button(
+        onClick = onStopSetTimer, colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.secondary
+        ), modifier = Modifier.weight(1f)
+      ) {
+        Text("Finish")
+      }
+    }
   }
 }
 
@@ -401,7 +495,15 @@ fun SetProgress(currentSet: Int, totalSets: Int) {
 }
 
 @Composable
-fun SetContent(set: ExerciseSet, isResting: Boolean, onDone: () -> Unit) {
+fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit) {
+  fun getSetValueString(set: ExerciseSet?): String {
+    return when (set?.valueType) {
+      ExerciseSet.ValueType.COUNTDOWN -> set.value.milliseconds.inWholeMinutes.toString()
+      null -> String.EMPTY
+      else -> set.value.toString()
+    }
+  }
+
   Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
     Card {
       Column(
@@ -411,41 +513,48 @@ fun SetContent(set: ExerciseSet, isResting: Boolean, onDone: () -> Unit) {
           .fillMaxWidth()
       ) {
         Text("Current set", style = MaterialTheme.typography.titleMedium)
-        Text("${set.value} ${set.unit}", style = MaterialTheme.typography.displayMedium)
+        Text(
+          text = "${getSetValueString(setState.set)} ${setState.set?.unit}",
+          style = MaterialTheme.typography.displayMedium
+        )
       }
     }
     Button(
-      enabled = !isResting,
       shape = CardDefaults.shape,
-      onClick = onDone,
+      onClick = onSubmit,
       modifier = Modifier
         .heightIn(max = 100.dp)
         .fillMaxSize()
     ) {
-      Text("Done", style = MaterialTheme.typography.titleLarge)
+      Text(
+        text = ifElse(setState.timer.duration > 0.milliseconds, "Start", "Done"),
+        style = MaterialTheme.typography.titleLarge
+      )
     }
   }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestSheet(
+fun TimerSheet(
   isVisible: Boolean,
-  restState: ExerciseScreenViewModel.RestState,
+  timerTitle: String,
+  timerState: ExerciseScreenViewModel.TimerState,
   sheetState: SheetState,
-  onDismissRequest: () -> Unit
+  onDismissRequest: () -> Unit,
+  content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {
-    val restStartTime = rememberSaveable(restState.isResting) { System.currentTimeMillis() }
-    var clockText by rememberSaveable { mutableStateOf(restState.restDuration.toClockString()) }
+    val restStartTime = rememberSaveable(timerState.isActive) { System.currentTimeMillis() }
+    var clockText by rememberSaveable { mutableStateOf(timerState.duration.toClockString()) }
     val progress = remember {
-      if (restState.restDuration.inWholeMilliseconds <= 0) Animatable(1f)
-      else Animatable(initialValue = ((System.currentTimeMillis() - restStartTime).toFloat() / restState.restDuration.inWholeMilliseconds.toFloat()))
+      if (timerState.duration.inWholeMilliseconds <= 0) Animatable(1f)
+      else Animatable(initialValue = ((System.currentTimeMillis() - restStartTime).toFloat() / timerState.duration.inWholeMilliseconds.toFloat()))
     }
 
     LaunchedEffect(Unit) {
       val remainingMillis =
-        restState.restDuration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
+        timerState.duration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
 
       progress.animateTo(
         targetValue = 1f, animationSpec = tween(
@@ -454,10 +563,10 @@ fun RestSheet(
       )
     }
 
-    DisposableEffect(restState.isResting) {
-      val timer = if (restState.isResting) timer(period = 1.seconds.inWholeMilliseconds) {
+    DisposableEffect(timerState.isActive) {
+      val timer = if (timerState.isActive) timer(period = 1.seconds.inWholeMilliseconds) {
         val remainingMillis =
-          restState.restDuration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
+          timerState.duration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
 
         clockText = remainingMillis.milliseconds.toClockString()
       }
@@ -473,7 +582,6 @@ fun RestSheet(
       sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
     ) {
       Column(
-        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
           .fillMaxWidth()
@@ -482,34 +590,44 @@ fun RestSheet(
             detectVerticalDragGestures(onVerticalDrag = { change, _ -> change.consume() })
           }) {
         Box(
-          contentAlignment = Alignment.Center,
+          contentAlignment = Alignment.BottomCenter,
           modifier = Modifier
-            .fillMaxHeight(.8f)
             .fillMaxWidth(.7f)
-            .aspectRatio(1f)
+            .weight(3f)
         ) {
-          CircularProgressIndicator(
-            progress = { progress.value },
-            strokeWidth = 20.dp,
-            gapSize = 0.dp,
-            strokeCap = StrokeCap.Butt,
-            modifier = Modifier.fillMaxSize()
-          )
-          Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Rest", style = MaterialTheme.typography.titleMedium)
-            Text(
-              text = clockText,
-              style = MaterialTheme.typography.displayLarge,
-              textAlign = TextAlign.Center
+          Box(
+            contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
+          ) {
+            CircularProgressIndicator(
+              progress = { progress.value },
+              strokeWidth = 20.dp,
+              gapSize = 0.dp,
+              strokeCap = StrokeCap.Butt,
+              modifier = Modifier.fillMaxSize()
             )
-            Spacer(Modifier.height(with(LocalDensity.current) {
-              // Centers the text inside the progress indicator
-              MaterialTheme.typography.titleMedium.lineHeight.toDp()
-            }))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text(timerTitle, style = MaterialTheme.typography.titleMedium)
+              Text(
+                text = clockText,
+                style = MaterialTheme.typography.displayLarge,
+                textAlign = TextAlign.Center
+              )
+              Spacer(Modifier.height(with(LocalDensity.current) {
+                // Centers the text inside the progress indicator
+                MaterialTheme.typography.titleMedium.lineHeight.toDp()
+              }))
+            }
           }
         }
-        Button(onClick = onDismissRequest) {
-          Text("Stop")
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+          modifier = Modifier
+            .fillMaxWidth()
+            .weight(2f)
+            .padding(horizontal = 16.dp)
+        ) {
+          content()
         }
       }
     }

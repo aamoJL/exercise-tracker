@@ -9,10 +9,12 @@ class ViewModelState<T>(initValue: T) {
     private set
 
   private var onChange: ((T) -> Unit)? = null
-  private var validationPredicate: ((T) -> Boolean)? = null
+  private var validationPredicate: ((T) -> T?)? = null
 
   fun update(value: T) {
-    if (this.value != value && validationPredicate?.invoke(value) != false) {
+    val value = validationPredicate?.invoke(value) ?: value
+
+    if (this.value != value && value != null) {
       this.value = value
       onChange?.invoke(value)
     }
@@ -29,7 +31,7 @@ class ViewModelState<T>(initValue: T) {
   /**
    * Adds validation predicate to the state
    */
-  fun validation(predicate: (T) -> Boolean): ViewModelState<T> {
+  fun validation(predicate: (T) -> T?): ViewModelState<T> {
     validationPredicate = predicate
     return this
   }
