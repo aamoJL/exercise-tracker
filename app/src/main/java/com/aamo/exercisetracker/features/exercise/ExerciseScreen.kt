@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -61,6 +60,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -73,12 +73,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgressAndSets
-import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
@@ -102,8 +102,13 @@ import kotlin.time.Duration.Companion.seconds
 @Serializable
 data class ExerciseScreen(val id: Long = 0)
 
-class ExerciseScreenViewModel(private val exerciseId: Long, private val routineDao: RoutineDao) :
-        ViewModel() {
+class ExerciseScreenViewModel(
+  private val fetchData: suspend () -> ExerciseWithProgressAndSets?,
+  private val saveData: suspend (ExerciseProgress) -> Unit,
+  private val resourceProvider: ResourceProvider,
+) : ViewModel() {
+  data class ResourceProvider(val setTimerTitle: String, val restTimerTitle: String)
+
   data class SetState(
     val sets: List<ExerciseSet> = emptyList(),
     val index: Int = 0,
@@ -141,7 +146,7 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
 
   init {
     viewModelScope.launch {
-      routineDao.getExerciseWithProgressAndSets(exerciseId).let {
+      fetchData().let {
         exerciseModel = it
         setState = SetState(sets = it?.sets ?: emptyList())
         restState = TimerState(duration = it?.exercise?.restDuration ?: 0.seconds)
@@ -156,7 +161,7 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
     if (setState.timer.duration > 0.milliseconds) {
       startTimer(
         countDownTimerService = countDownTimerService,
-        title = "Set timer",
+        title = resourceProvider.setTimerTitle,
         duration = setState.timer.duration,
         onStart = { setState = setState.copy(timerActive = true) },
         onFinished = {
@@ -180,7 +185,7 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
           exerciseId = model.exercise.id, finishedDate = finishedDate
         )
 
-        routineDao.upsert(progress).also {
+        saveData(progress).also {
           onSaved()
         }
       }
@@ -204,7 +209,7 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
       }.onNotNull {
         startTimer(
           countDownTimerService = countDownTimerService,
-          title = "Rest timer",
+          title = resourceProvider.restTimerTitle,
           duration = restState.duration,
           onStart = { restState = restState.copy(isActive = true) },
           onFinished = {
@@ -238,11 +243,19 @@ class ExerciseScreenViewModel(private val exerciseId: Long, private val routineD
 fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Unit) {
   composable<ExerciseScreen> { navStack ->
     val (id) = navStack.toRoute<ExerciseScreen>()
-    val context = LocalContext.current.applicationContext
+    val context = LocalContext.current
+    val dao = RoutineDatabase.getDatabase(context.applicationContext).routineDao()
+    val resourceProvider = ExerciseScreenViewModel.ResourceProvider(
+      setTimerTitle = stringResource(R.string.title_set_timer),
+      restTimerTitle = stringResource(R.string.title_rest_timer)
+    )
+
     val viewmodel: ExerciseScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseScreenViewModel(
-          exerciseId = id, routineDao = RoutineDatabase.getDatabase(context).routineDao(),
+          fetchData = { dao.getExerciseWithProgressAndSets(id) },
+          saveData = { dao.upsert(it) },
+          resourceProvider = resourceProvider
         )
       }
     })
@@ -298,10 +311,10 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     }
 
     DisposableEffect(Unit) {
-      context.bindService(
-        Intent(context, CountDownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
-      ).onNull {
-        Log.e("asd", "Did not bind")
+      context.apply {
+        bindService(
+          Intent(this, CountDownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
+        )
       }
 
       onDispose {
@@ -377,7 +390,10 @@ fun ExerciseScreen(
     topBar = {
       TopAppBar(title = { Text(exercise.name) }, actions = {
         IconButton(onClick = onEdit) {
-          Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit exercise")
+          Icon(
+            imageVector = Icons.Filled.Edit,
+            contentDescription = stringResource(R.string.cd_edit_exercise)
+          )
         }
       }, navigationIcon = { BackNavigationIconButton(onBack = onBack) })
     }) { innerPadding ->
@@ -406,7 +422,7 @@ fun ExerciseScreen(
               .heightIn(max = 100.dp)
               .fillMaxSize()
           ) {
-            Text("Finish", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.btn_finish), style = MaterialTheme.typography.titleLarge)
           }
         }
       }
@@ -416,7 +432,7 @@ fun ExerciseScreen(
     //  otherwise the sheet closing animation will not work correctly.
     TimerSheet(
       isVisible = showRestSheet,
-      timerTitle = "Rest",
+      timerTitle = stringResource(R.string.title_rest),
       timerState = restState,
       sheetState = restSheetState,
       onDismissRequest = onStopRest,
@@ -426,12 +442,12 @@ fun ExerciseScreen(
           containerColor = MaterialTheme.colorScheme.secondary
         )
       ) {
-        Text("Stop")
+        Text(stringResource(R.string.btn_stop))
       }
     }
     TimerSheet(
       isVisible = showSetTimerSheet,
-      timerTitle = "Set timer",
+      timerTitle = stringResource(R.string.title_set_timer),
       timerState = setState.timer,
       sheetState = setTimerSheetState,
       onDismissRequest = onCancelSet,
@@ -441,14 +457,14 @@ fun ExerciseScreen(
           containerColor = MaterialTheme.colorScheme.error
         ), modifier = Modifier.weight(1f)
       ) {
-        Text("Cancel")
+        Text(stringResource(R.string.btn_cancel))
       }
       Button(
         onClick = onStopSetTimer, colors = ButtonDefaults.buttonColors(
           containerColor = MaterialTheme.colorScheme.secondary
         ), modifier = Modifier.weight(1f)
       ) {
-        Text("Finish")
+        Text(stringResource(R.string.btn_finish))
       }
     }
   }
@@ -478,8 +494,11 @@ fun SetProgress(currentSet: Int, totalSets: Int) {
     )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       Text(
-        text = ifElse(currentSet > totalSets, "Completed", "Set"),
-        style = MaterialTheme.typography.titleMedium
+        text = ifElse(
+          condition = currentSet > totalSets,
+          onTrue = stringResource(R.string.title_completed),
+          onFalse = stringResource(R.string.title_set)
+        ), style = MaterialTheme.typography.titleMedium
       )
       Text(
         text = "${min(currentSet, totalSets)}/$totalSets",
@@ -512,7 +531,10 @@ fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit)
           .padding(24.dp)
           .fillMaxWidth()
       ) {
-        Text("Current set", style = MaterialTheme.typography.titleMedium)
+        Text(
+          text = stringResource(R.string.title_current_set),
+          style = MaterialTheme.typography.titleMedium
+        )
         Text(
           text = "${getSetValueString(setState.set)} ${setState.set?.unit}",
           style = MaterialTheme.typography.displayMedium
@@ -527,8 +549,11 @@ fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit)
         .fillMaxSize()
     ) {
       Text(
-        text = ifElse(setState.timer.duration > 0.milliseconds, "Start", "Done"),
-        style = MaterialTheme.typography.titleLarge
+        text = ifElse(
+          condition = setState.timer.duration > 0.milliseconds,
+          onTrue = stringResource(R.string.btn_start),
+          onFalse = stringResource(R.string.btn_done)
+        ), style = MaterialTheme.typography.titleLarge
       )
     }
   }
@@ -640,17 +665,17 @@ private fun InProgressDialog(
   onConfirm: () -> Unit,
 ) {
   AlertDialog(
-    title = { Text(text = "Exercise in progress") },
-    text = { Text("Do you want to stop the exercise?") },
+    title = { Text(text = stringResource(R.string.dialog_title_exercise_in_progress)) },
+    text = { Text(stringResource(R.string.dialog_text_exercise_in_progress)) },
     onDismissRequest = onDismiss,
     confirmButton = {
       TextButton(onClick = onConfirm) {
-        Text(text = "Yes")
+        Text(text = stringResource(R.string.btn_yes))
       }
     },
     dismissButton = {
       TextButton(onClick = onDismiss) {
-        Text(text = "Cancel")
+        Text(text = stringResource(R.string.btn_cancel))
       }
     },
   )

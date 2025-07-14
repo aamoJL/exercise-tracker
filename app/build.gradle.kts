@@ -1,3 +1,5 @@
+@file:Suppress("HardCodedStringLiteral")
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
@@ -9,11 +11,16 @@ plugins {
 
 android {
   namespace = "com.aamo.exercisetracker"
-  compileSdk = 35
+  compileSdk = 36
+
+  @Suppress("UnstableApiUsage") androidResources {
+    generateLocaleConfig = true
+  }
 
   defaultConfig {
     applicationId = "com.aamo.exercisetracker"
     minSdk = 34
+    //noinspection OldTargetApi
     targetSdk = 35
     versionCode = 1
     versionName = "1.0"

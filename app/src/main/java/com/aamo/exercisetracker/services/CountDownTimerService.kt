@@ -22,6 +22,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat.getSystemService
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
+import com.aamo.exercisetracker.utility.tags.ERROR_TAG
 import java.util.Timer
 import kotlin.concurrent.timerTask
 
@@ -103,7 +104,7 @@ class CountDownTimerService() : Service() {
   }
 
   private fun sendNotification(title: String, durationMillis: Long) {
-    var notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle(title)
+    val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle(title)
       .setSmallIcon(ic_lock_idle_alarm).setPriority(NotificationCompat.PRIORITY_LOW)
       .setOnlyAlertOnce(true).setUsesChronometer(true).setChronometerCountDown(true)
       .setWhen(System.currentTimeMillis() + durationMillis).setOngoing(true)
@@ -115,6 +116,7 @@ class CountDownTimerService() : Service() {
     }
   }
 
+  @Suppress("HardCodedStringLiteral")
   private fun vibrate() {
     val vibration = VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
     val attributes = VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_ALARM).build()
@@ -123,15 +125,18 @@ class CountDownTimerService() : Service() {
       hasVibrator().onTrue {
         // Vibration without attributes does not work, if the app is on the background
         vibrate(vibration, attributes)
-      }.onFalse { Log.e("asd", "Device does not have a vibrator") }
+      }.onFalse {
+        Log.e(ERROR_TAG, "Device does not have a vibrator")
+      }
     }
   }
 
+  @Suppress("HardCodedStringLiteral")
   private fun checkPermission(): Boolean {
     return (ActivityCompat.checkSelfPermission(
       this, Manifest.permission.POST_NOTIFICATIONS
     ) != PackageManager.PERMISSION_DENIED).onFalse {
-      Log.e("asd", "Permission denied")
+      Log.e(ERROR_TAG, "Permission denied")
     }
   }
 
@@ -139,6 +144,7 @@ class CountDownTimerService() : Service() {
     fun getService(): CountDownTimerService = this@CountDownTimerService
   }
 
+  @Suppress("HardCodedStringLiteral")
   companion object {
     const val PERMISSION_CODE: Int = 1
     private const val CHANNEL_ID: String = "CountDownTimer channel"
@@ -157,10 +163,10 @@ class CountDownTimerService() : Service() {
           return@with
         }
         else {
-          val name = "name"
+          val name = CHANNEL_ID
           val importance = NotificationManager.IMPORTANCE_LOW
           val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-            description = "desc"
+            description = "Countdown timer notifications"
           }
 
           val notificationManager =

@@ -1,6 +1,5 @@
 package com.aamo.exercisetracker.features.routine
 
-import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,8 +31,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -50,6 +51,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
@@ -60,9 +62,13 @@ import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import com.aamo.exercisetracker.utility.extensions.general.onFalse
+import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
+import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
@@ -70,25 +76,35 @@ import java.util.Calendar
 @Serializable
 data class RoutineFormScreen(val id: Long)
 
-class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
-  class UiState(onModelChanged: () -> Unit) {
-    val routine = ViewModelState(Routine(name = String.EMPTY)).onChange { onModelChanged() }
-    val schedule = ViewModelState(RoutineSchedule(routineId = 0L)).onChange { onModelChanged() }
+class RoutineFormViewModel(
+  private val fetchData: suspend () -> RoutineWithSchedule?,
+  private val saveData: suspend (name: String, schedule: List<Day>) -> RoutineWithSchedule?,
+  private val deleteData: suspend () -> Boolean
+) : ViewModel() {
+  class UiState(onUnsavedChanges: () -> Unit) {
+    val routineName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
+    val selectedDays = ViewModelStateList<Day>().unique().onChange { onUnsavedChanges() }
+    var isNew by mutableStateOf(false)
     var savingState by mutableStateOf(SavingState(SavingState.State.NONE))
     var deleted by mutableStateOf(false)
   }
 
-  private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
-
-  val uiState = UiState(onModelChanged = { onModelChanged() })
+  val uiState = UiState(onUnsavedChanges = { onUnsavedChanges() })
 
   init {
     viewModelScope.launch {
-      database.routineDao().getRoutineWithSchedule(routineId)?.let { rws ->
-        uiState.routine.update(rws.routine)
-        uiState.schedule.update(rws.schedule ?: RoutineSchedule(routineId = rws.routine.id))
-        uiState.savingState = SavingState(canSave = canSave())
+      fetchData()?.also { result ->
+        uiState.apply {
+          isNew = result.routine.id == 0L
+          routineName.update(result.routine.name)
+          result.schedule?.apply {
+            selectedDays.clear()
+            selectedDays.add(*Day.entries.filter { isDaySelected(it.getDayNumber()) }
+              .toTypedArray())
+          }
+        }
       }
+      uiState.savingState = SavingState(canSave = { canSave() })
     }
   }
 
@@ -98,18 +114,13 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
   fun save() {
     if (!canSave()) return
 
-    val routine = uiState.routine.value
-    val schedule = uiState.schedule.value
-
     uiState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
-      database.routineDao().runCatching {
-        checkNotNull(upsertAndGet(RoutineWithSchedule(routine = routine, schedule = schedule)))
-      }.onSuccess { result ->
-        uiState.routine.update(result.routine)
-        uiState.schedule.update(result.schedule ?: schedule)
-        uiState.apply { savingState = savingState.getAsSaved(canSave()) }
+      runCatching {
+        checkNotNull(saveData(uiState.routineName.value, uiState.selectedDays.values))
+      }.onSuccess { _ ->
+        uiState.apply { savingState = savingState.getAsSaved() }
       }.onFailure { error ->
         uiState.apply { savingState = savingState.getAsError(error = Error(error)) }
       }
@@ -120,49 +131,85 @@ class RoutineFormViewModel(context: Context, routineId: Long) : ViewModel() {
    * Deletes the routine from the database
    */
   fun delete() {
-    if (uiState.routine.value.id == 0L) return
+    if (uiState.isNew) return
 
     viewModelScope.launch {
-      database.routineDao().runCatching {
-        delete(uiState.routine.value)
-      }.onSuccess {
-        uiState.deleted = true
-      }
+      runCatching { deleteData() }.onSuccess { uiState.deleted = it }
     }
   }
 
   private fun canSave(): Boolean {
-    if (uiState.savingState.state == SavingState.State.SAVING) return false
-    return uiState.routine.value.name.isNotEmpty()
+    return when {
+      uiState.savingState.state == SavingState.State.SAVING -> false
+      uiState.routineName.value.isEmpty() -> false
+      else -> true
+    }
   }
 
-  private fun onModelChanged() {
-    uiState.savingState = uiState.savingState.copy(
-      unsavedChanges = true, canSave = canSave()
-    )
+  private fun onUnsavedChanges() {
+    uiState.savingState = uiState.savingState.copy(unsavedChanges = true)
   }
 }
 
 fun NavGraphBuilder.routineFormScreen(
-  onBack: () -> Unit, onSuccess: (id: Long) -> Unit, onDelete: () -> Unit
+  onBack: () -> Unit, onSaved: (id: Long) -> Unit, onDeleted: () -> Unit
 ) {
   composable<RoutineFormScreen> { navStack ->
-    val (id) = navStack.toRoute<RoutineFormScreen>()
-    val context = LocalContext.current.applicationContext
+    var id by rememberSaveable { mutableLongStateOf(navStack.toRoute<RoutineFormScreen>().id) }
+    val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
+
     val viewmodel: RoutineFormViewModel = viewModel(factory = viewModelFactory {
-      initializer { RoutineFormViewModel(context = context, routineId = id) }
+      initializer {
+        RoutineFormViewModel(
+          fetchData = {
+            ifElse(
+              condition = id == 0L,
+              onTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
+              onFalse = dao.getRoutineWithSchedule(id)
+            )
+          },
+          saveData = { name, schedule ->
+            ifElse(
+              condition = id == 0L,
+              onTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
+              onFalse = dao.getRoutineWithSchedule(id)
+            )?.let { rws ->
+              rws.copy(
+                routine = rws.routine.copy(name = name), schedule = rws.schedule.let {
+                  it?.copy() ?: RoutineSchedule(routineId = rws.routine.id)
+                }.copy(
+                  sunday = schedule.contains(Day.SUNDAY),
+                  monday = schedule.contains(Day.MONDAY),
+                  tuesday = schedule.contains(Day.TUESDAY),
+                  wednesday = schedule.contains(Day.WEDNESDAY),
+                  thursday = schedule.contains(Day.THURSDAY),
+                  friday = schedule.contains(Day.FRIDAY),
+                  saturday = schedule.contains(Day.SATURDAY),
+                )
+              )
+            }?.let { routine ->
+              dao.upsertAndGet(routine)?.also { result ->
+                id = result.routine.id
+              }
+            }
+          },
+          deleteData = {
+            dao.getRoutineWithSchedule(id)?.let { dao.delete(it.routine) > 0 } == true
+          },
+        )
+      }
     })
     val uiState = viewmodel.uiState
 
     LaunchedEffect(uiState.deleted) {
       if (uiState.deleted) {
-        onDelete()
+        onDeleted()
       }
     }
 
     LaunchedEffect(uiState.savingState.state) {
       if (uiState.savingState.state == SavingState.State.SAVED) {
-        onSuccess(uiState.routine.value.id)
+        if (id != 0L) onSaved(id)
       }
     }
 
@@ -183,11 +230,8 @@ fun RoutineFormScreen(
   onDelete: () -> Unit,
 ) {
   val days = remember { Calendar.getInstance().getLocalDayOrder() }
-  val routine = remember(uiState.routine) { uiState.routine }
-  val schedule = remember(uiState.schedule) { uiState.schedule }
   val unsavedChanges =
     remember(uiState.savingState.unsavedChanges) { uiState.savingState.unsavedChanges }
-  val isNew = remember(routine.value.id) { routine.value.id == 0L }
 
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
@@ -213,27 +257,38 @@ fun RoutineFormScreen(
   }
 
   Scaffold(topBar = {
-    TopAppBar(
-      title = { Text(text = if (isNew) "New Routine" else "Edit Routine") },
-      navigationIcon = {
-        BackNavigationIconButton(onBack = {
-          if (unsavedChanges) openUnsavedDialog = true else onBack()
-        })
-      },
-      actions = {
-        if (!isNew) {
-          IconButton(onClick = { openDeleteDialog = true }) {
-            Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete routine")
-          }
-        }
-        LoadingIconButton(
-          onClick = onSave,
-          isLoading = uiState.savingState.state == SavingState.State.SAVING,
-          enabled = uiState.savingState.canSave
-        ) {
-          Icon(imageVector = Icons.Filled.Done, contentDescription = "Save routine")
-        }
+    TopAppBar(title = {
+      Text(
+        text = ifElse(
+          condition = uiState.isNew,
+          onTrue = stringResource(R.string.title_new_routine),
+          onFalse = stringResource(R.string.title_edit_routine)
+        )
+      )
+    }, navigationIcon = {
+      BackNavigationIconButton(onBack = {
+        if (unsavedChanges) openUnsavedDialog = true else onBack()
       })
+    }, actions = {
+      if (!uiState.isNew) {
+        IconButton(onClick = { openDeleteDialog = true }) {
+          Icon(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(R.string.cd_delete_routine)
+          )
+        }
+      }
+      LoadingIconButton(
+        onClick = onSave,
+        isLoading = uiState.savingState.state == SavingState.State.SAVING,
+        enabled = uiState.savingState.canSave()
+      ) {
+        Icon(
+          imageVector = Icons.Filled.Done,
+          contentDescription = stringResource(R.string.cd_save_routine)
+        )
+      }
+    })
   }, modifier = Modifier.imePadding()) { innerPadding ->
     Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -242,11 +297,11 @@ fun RoutineFormScreen(
         .padding(8.dp)
     ) {
       TextField(
-        value = routine.value.name,
-        label = { Text("Name") },
+        value = uiState.routineName.value,
+        label = { Text(stringResource(R.string.label_name)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { routine.apply { update(value.copy(name = it)) } },
+        onValueChange = { uiState.routineName.update(it) },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
         ),
@@ -256,7 +311,7 @@ fun RoutineFormScreen(
       Card {
         Column(modifier = Modifier.padding(8.dp)) {
           Text(
-            text = "Days",
+            text = stringResource(R.string.label_schedule),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(8.dp)
           )
@@ -267,9 +322,7 @@ fun RoutineFormScreen(
               .padding(vertical = 8.dp)
           ) {
             items(days) { day ->
-              val isSelected by remember(schedule.value) {
-                mutableStateOf(schedule.value.isDaySelected(day.getDayNumber()))
-              }
+              val isSelected = uiState.selectedDays.values.contains(day)
 
               IconToggleButton(
                 colors = IconButtonDefaults.outlinedIconToggleButtonColors(
@@ -277,10 +330,14 @@ fun RoutineFormScreen(
                   checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                   contentColor = MaterialTheme.colorScheme.outline,
                 ), checked = isSelected, onCheckedChange = { selection ->
-                  schedule.update(schedule.value.setDaySelection(day, selection))
+                  selection.onTrue {
+                    uiState.selectedDays.add(day)
+                  }.onFalse {
+                    uiState.selectedDays.remove(day)
+                  }
                 }, modifier = Modifier
               ) {
-                Text(stringResource(day.nameResourceKey).take(2).toString())
+                Text(stringResource(day.nameResourceKey).take(2))
               }
             }
           }
@@ -296,32 +353,20 @@ private fun DeleteDialog(
   onConfirm: () -> Unit,
 ) {
   AlertDialog(
-    title = { Text(text = "Delete routine?") },
+    title = { Text(text = stringResource(R.string.dialog_title_delete_routine)) },
     onDismissRequest = onDismiss,
     confirmButton = {
       TextButton(
         onClick = onConfirm,
         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
       ) {
-        Text(text = "Delete")
+        Text(text = stringResource(R.string.btn_delete))
       }
     },
     dismissButton = {
       TextButton(onClick = onDismiss) {
-        Text(text = "Cancel")
+        Text(text = stringResource(R.string.btn_cancel))
       }
     },
   )
-}
-
-private fun RoutineSchedule.setDaySelection(day: Day, value: Boolean): RoutineSchedule {
-  return when (day) {
-    Day.SUNDAY -> this.copy(sunday = value)
-    Day.MONDAY -> this.copy(monday = value)
-    Day.TUESDAY -> this.copy(tuesday = value)
-    Day.WEDNESDAY -> this.copy(wednesday = value)
-    Day.THURSDAY -> this.copy(thursday = value)
-    Day.FRIDAY -> this.copy(friday = value)
-    Day.SATURDAY -> this.copy(saturday = value)
-  }
 }

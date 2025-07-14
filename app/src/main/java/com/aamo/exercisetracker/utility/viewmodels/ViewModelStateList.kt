@@ -1,6 +1,7 @@
 package com.aamo.exercisetracker.utility.viewmodels
 
 import androidx.compose.runtime.mutableStateListOf
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 
 class ViewModelStateList<T> {
@@ -11,7 +12,12 @@ class ViewModelStateList<T> {
   val values: List<T> = _values
 
   fun add(vararg items: T) {
-    items.map { item -> validationPredicate?.invoke(item) ?: item }.let {
+    items.mapNotNull { item ->
+      validationPredicate.let {
+        if (it != null) it.invoke(item)
+        else item
+      }
+    }.let {
       _values.addAll(it).onTrue {
         onChange?.invoke()
       }
@@ -40,8 +46,28 @@ class ViewModelStateList<T> {
   /**
    * Adds validation predicate to the state
    */
+  @Suppress("unused", "HardCodedStringLiteral")
   fun validation(predicate: (T) -> T?): ViewModelStateList<T> {
-    validationPredicate = predicate
+    val oldPredicate = validationPredicate
+
+    validationPredicate = if (oldPredicate != null) {
+      { item ->
+        oldPredicate.invoke(item)?.let {
+          predicate(item)
+        }
+      }
+    }
+    else {
+      { item -> predicate(item) }
+    }
+
     return this
+  }
+
+  // TODO: unit test this
+  fun unique(): ViewModelStateList<T> {
+    return validation { item ->
+      ifElse(condition = values.contains(item), onTrue = null, onFalse = item)
+    }
   }
 }

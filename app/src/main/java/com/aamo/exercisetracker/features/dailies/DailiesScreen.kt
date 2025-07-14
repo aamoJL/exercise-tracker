@@ -48,6 +48,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.database.entities.RoutineWithScheduleAndExerciseProgresses
@@ -135,20 +136,21 @@ fun DailiesScreen(
           .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
       }
       val dayRoutines = remember(routines) {
-        routines.filter { it.schedule?.isDaySelected(days[pageIndex].getDayNumber()) == true }.map {
-          object {
-            val routine = it.routine
-            val finishedExerciseCount = it.exerciseProgresses.count {
-              it.progress?.finishedDate?.time?.compareTo(pageDateMillis)?.let { it > 0 } == true
+        routines.filter { it.schedule?.isDaySelected(days[pageIndex].getDayNumber()) == true }
+          .map { (routine, _, progresses) ->
+            object {
+              val routine = routine
+              val finishedExerciseCount = progresses.count { (_, progress) ->
+                progress?.finishedDate?.time?.compareTo(pageDateMillis)?.let { it > 0 } == true
+              }
+              val totalExerciseCount = progresses.size
             }
-            val totalExerciseCount = it.exerciseProgresses.size
-          }
-        }.sortedWith(
-          comparator = compareBy(
-            { it.finishedExerciseCount == it.totalExerciseCount },
-            { it.routine.name },
+          }.sortedWith(
+            comparator = compareBy(
+              { it.finishedExerciseCount == it.totalExerciseCount },
+              { it.routine.name },
+            )
           )
-        )
       }
 
       val pageOffset =
@@ -200,7 +202,10 @@ fun DailiesScreen(
                 ) {
                   Text(text = routine.routine.name, fontWeight = FontWeight.Bold)
                   if (isFinished) {
-                    Icon(imageVector = Icons.Filled.Done, contentDescription = "Done")
+                    Icon(
+                      imageVector = Icons.Filled.Done,
+                      contentDescription = stringResource(R.string.cd_done)
+                    )
                   }
                   else {
                     Text(

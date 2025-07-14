@@ -15,12 +15,14 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.dailies.dailiesScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
@@ -76,9 +78,10 @@ fun HomeScreen(mainNavController: NavController) {
             }
           }, icon = {
             Icon(
-              imageVector = Icons.Filled.DateRange, contentDescription = "Dailies tab"
+              imageVector = Icons.Filled.DateRange,
+              contentDescription = stringResource(R.string.cd_dailies_tab)
             )
-          }, label = { Text("Dailies") })
+          }, label = { Text(stringResource(R.string.label_dailies)) })
           NavigationBarItem(
             selected = navStack.destinationEquals(RoutineListScreen::class),
             onClick = {
@@ -90,10 +93,11 @@ fun HomeScreen(mainNavController: NavController) {
             },
             icon = {
               Icon(
-                imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Routines tab"
+                imageVector = Icons.AutoMirrored.Filled.List,
+                contentDescription = stringResource(R.string.cd_routines_tab)
               )
             },
-            label = { Text("Routines") })
+            label = { Text(stringResource(R.string.label_routines)) })
         }
       }
     }

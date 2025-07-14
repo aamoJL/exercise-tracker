@@ -151,7 +151,7 @@ fun Preview() {
         segments = 5,
         strokeWidth = 20.dp,
         gapSize = 10.dp,
-        strokeCap = StrokeCap.Round,
+        strokeCap = StrokeCap.Butt,
         modifier = Modifier.fillMaxSize()
       )
     }

@@ -2,7 +2,7 @@ package com.aamo.exercisetracker.utility.viewmodels
 
 data class SavingState(
   val state: State = State.NONE,
-  val canSave: Boolean = false,
+  val canSave: () -> Boolean = { true },
   val unsavedChanges: Boolean = false,
   val error: Error? = null
 ) {
@@ -14,11 +14,11 @@ data class SavingState(
   }
 
   fun getAsSaving(): SavingState {
-    return copy(state = State.SAVING, canSave = false, error = null)
+    return copy(state = State.SAVING, error = null)
   }
 
-  fun getAsSaved(canSave: Boolean): SavingState {
-    return copy(state = State.SAVED, canSave = canSave, unsavedChanges = false, error = null)
+  fun getAsSaved(): SavingState {
+    return copy(state = State.SAVED, unsavedChanges = false, error = null)
   }
 
   fun getAsError(error: Error): SavingState {

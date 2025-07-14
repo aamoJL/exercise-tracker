@@ -25,14 +25,14 @@ fun NavGraphBuilder.routinePage(
       onSelectExercise = onSelectExercise,
       onEdit = { id -> navController.navigate(RoutineFormScreen(id = id)) },
     )
-    routineFormScreen(onBack = onBack, onSuccess = { id ->
+    routineFormScreen(onBack = onBack, onSaved = { id ->
       navController.navigate(RoutineScreen(id)) {
         launchSingleTop = true
         popUpTo<RoutineFormScreen> {
           inclusive = true
         }
       }
-    }, onDelete = {
+    }, onDeleted = {
       navController.popBackStack<RoutinePage>(inclusive = true)
     })
     addExerciseFormScreen(onBack = onBack, onSaved = { id ->

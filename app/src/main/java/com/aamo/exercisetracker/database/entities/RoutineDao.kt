@@ -1,3 +1,5 @@
+@file:Suppress("HardCodedStringLiteral")
+
 package com.aamo.exercisetracker.database.entities
 
 import androidx.room.Dao
@@ -22,6 +24,7 @@ interface RoutineDao {
   @Query("SELECT * FROM routine_schedules")
   suspend fun getSchedules(): List<RoutineSchedule>
 
+  @Transaction
   @Query("SELECT * FROM routines WHERE id = :routineId")
   suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule?
 
@@ -136,7 +139,7 @@ interface RoutineDao {
 
   // region DELETE
   @Delete
-  suspend fun delete(routine: Routine)
+  suspend fun delete(routine: Routine): Int
 
   @Delete
   suspend fun delete(routineSchedule: RoutineSchedule)

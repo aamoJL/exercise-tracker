@@ -1,3 +1,5 @@
+@file:Suppress("HardCodedStringLiteral")
+
 package com.aamo.exercisetracker.database
 
 import androidx.room.testing.MigrationTestHelper

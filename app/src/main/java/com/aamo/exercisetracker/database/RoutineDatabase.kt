@@ -19,22 +19,23 @@ import com.aamo.exercisetracker.database.entities.RoutineSchedule
 @Database(
   version = RoutineDatabase.Properties.VERSION,
   entities = [Routine::class, RoutineSchedule::class, Exercise::class, ExerciseSet::class, ExerciseProgress::class],
-  autoMigrations = [AutoMigration(from = 1, to = 2)],
+  autoMigrations = [
+    AutoMigration(from = 1, to = 2),
+    AutoMigration(from = 2, to = 3),
+  ],
 )
 @TypeConverters(
-  DurationConverter::class,
-  DateConverter::class,
-  ExerciseSetValueTypeConverter::class
+  DurationConverter::class, DateConverter::class, ExerciseSetValueTypeConverter::class
 )
 abstract class RoutineDatabase : RoomDatabase() {
   object Properties {
-    const val VERSION = 2
+    const val VERSION = 3
   }
 
   abstract fun routineDao(): RoutineDao
 
   companion object {
-    private const val DATABASE_NAME = "routine_database"
+    @Suppress("HardCodedStringLiteral") private const val DATABASE_NAME = "routine_database"
 
     @Volatile private var Instance: RoutineDatabase? = null
 

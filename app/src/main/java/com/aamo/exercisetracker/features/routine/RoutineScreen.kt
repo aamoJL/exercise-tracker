@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -41,6 +42,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
@@ -48,6 +50,7 @@ import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -129,11 +132,13 @@ fun RoutineScreen(
     LocalDate.now().atStartOfDay().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
   }
   val sortedExercises = remember(exercises) {
-    exercises.map {
+    exercises.map { (exercise, progress) ->
       object {
-        val exercise: Exercise = it.exercise
-        val isFinished: Boolean? = if (!showProgress) null
-        else it.progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true
+        val exercise: Exercise = exercise
+        val isFinished: Boolean? = ifElse(
+          condition = showProgress,
+          onTrue = progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true,
+          onFalse = null)
       }
     }.sortedBy { it.exercise.name }
   }
@@ -143,10 +148,16 @@ fun RoutineScreen(
       BackNavigationIconButton(onBack = onBack)
     }, actions = {
       IconButton(onClick = onEdit) {
-        Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit routine")
+        Icon(
+          imageVector = Icons.Filled.Edit,
+          contentDescription = stringResource(R.string.cd_edit_routine)
+        )
       }
       IconButton(onClick = { onAddExercise(routine.id) }) {
-        Icon(imageVector = Icons.Filled.Add, contentDescription = "Add exercise")
+        Icon(
+          imageVector = Icons.Filled.Add,
+          contentDescription = stringResource(R.string.cd_add_exercise)
+        )
       }
     })
   }) { innerPadding ->
@@ -175,7 +186,10 @@ fun RoutineScreen(
                 fontWeight = FontWeight.Bold,
               )
               if (exercise.isFinished == true) {
-                Icon(imageVector = Icons.Filled.Done, contentDescription = "Done")
+                Icon(
+                  imageVector = Icons.Filled.Done,
+                  contentDescription = stringResource(R.string.cd_done)
+                )
               }
             }
           }

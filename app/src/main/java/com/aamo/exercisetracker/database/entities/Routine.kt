@@ -1,3 +1,5 @@
+@file:Suppress("HardCodedStringLiteral")
+
 package com.aamo.exercisetracker.database.entities
 
 import androidx.room.ColumnInfo

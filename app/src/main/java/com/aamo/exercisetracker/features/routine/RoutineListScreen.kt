@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
@@ -50,6 +51,7 @@ import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -132,7 +134,10 @@ fun RoutineListScreen(
           value = filterWord, onValueChange = onFilterChanged, modifier = Modifier.height(50.dp)
         )
         IconButton(onClick = onAdd) {
-          Icon(imageVector = Icons.Filled.Add, contentDescription = "Add routine")
+          Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(R.string.cd_add_routine)
+          )
         }
       })
       LoadingScreen(enabled = isLoading) {
@@ -190,14 +195,14 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
 
   if (Day.entries.none { dayIsSelected(it, schedule) }) {
     Text(
-      text = "Inactive",
+      text = stringResource(R.string.label_inactive),
       color = MaterialTheme.colorScheme.outline,
       style = MaterialTheme.typography.labelSmall
     )
   }
   else if (Day.entries.all { dayIsSelected(it, schedule) }) {
     Text(
-      text = "Every day",
+      text = stringResource(R.string.label_every_day),
       color = MaterialTheme.colorScheme.secondary,
       style = MaterialTheme.typography.labelSmall
     )
@@ -206,10 +211,11 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       repeat(7) { i ->
         Text(
-          stringResource(dayOrder[i].nameResourceKey).take(2), color = if (dayIsSelected(
-              day = dayOrder[i], schedule = schedule
-            )) MaterialTheme.colorScheme.secondary
-          else MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.labelSmall
+          text = stringResource(dayOrder[i].nameResourceKey).take(2), color = ifElse(
+            condition = dayIsSelected(day = dayOrder[i], schedule = schedule),
+            onTrue = MaterialTheme.colorScheme.secondary,
+            onFalse = MaterialTheme.colorScheme.outline
+          ), style = MaterialTheme.typography.labelSmall
         )
       }
     }

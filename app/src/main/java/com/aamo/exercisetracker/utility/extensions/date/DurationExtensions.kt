@@ -8,13 +8,13 @@ import kotlin.time.Duration
  * Returns duration in 00:00 format
  */
 fun Duration.toClockString(
-  seconds: Boolean = true, minutes: Boolean = true, separatorChar: Char = ':'
+  hasSeconds: Boolean = true, hasMinutes: Boolean = true, separatorChar: Char = ':'
 ): String {
-  return String.EMPTY.letIf(minutes) {
-    it.plus(this.inWholeMinutes.toString().padStart(2, '0'))
-  }.letIf(seconds) {
-    it.letIf(it.isNotEmpty()) {
-      it.plus(separatorChar)
+  return String.EMPTY.letIf(hasMinutes) { text ->
+    text.plus(this.inWholeMinutes.toString().padStart(2, '0'))
+  }.letIf(hasSeconds) { text ->
+    text.letIf(text.isNotEmpty()) { text ->
+      text.plus(separatorChar)
     }.plus((this.inWholeSeconds % 60).toString().padStart(2, '0'))
   }
 }

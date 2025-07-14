@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aamo.exercisetracker.R
 
 @Composable
 fun FormList(
@@ -44,7 +46,7 @@ fun ListTitleBar(title: String, onAddClick: () -> Unit, modifier: Modifier = Mod
         onClick = { onAddClick() }) {
         Icon(
           imageVector = Icons.Filled.Add,
-          contentDescription = "Add new item",
+          contentDescription = stringResource(R.string.cd_add_new_item),
           tint = MaterialTheme.colorScheme.primary
         )
       }

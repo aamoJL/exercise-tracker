@@ -1,9 +1,12 @@
+@file:Suppress("HardCodedStringLiteral")
+
 package com.aamo.exercisetracker.database.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
@@ -18,7 +21,7 @@ import kotlin.time.Duration.Companion.minutes
     parentColumns = ["id"],
     childColumns = ["routine_id"],
     onDelete = ForeignKey.CASCADE
-  )]
+  )], indices = [Index(value = ["routine_id"], unique = false)]
 )
 data class Exercise(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -33,7 +36,7 @@ data class Exercise(
     parentColumns = ["id"],
     childColumns = ["exercise_id"],
     onDelete = ForeignKey.CASCADE
-  )]
+  )], indices = [Index(value = ["exercise_id"], unique = false)]
 )
 data class ExerciseSet(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -55,7 +58,7 @@ data class ExerciseSet(
     parentColumns = ["id"],
     childColumns = ["exercise_id"],
     onDelete = ForeignKey.CASCADE
-  )]
+  )], indices = [Index(value = ["exercise_id"], unique = false)]
 )
 data class ExerciseProgress(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,

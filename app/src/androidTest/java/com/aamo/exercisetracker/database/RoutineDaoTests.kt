@@ -1,3 +1,5 @@
+@file:Suppress("HardCodedStringLiteral")
+
 package com.aamo.exercisetracker.database
 
 import android.database.sqlite.SQLiteConstraintException

@@ -6,14 +6,14 @@ import com.aamo.exercisetracker.R
 import java.util.Calendar
 
 @Keep
-enum class Day(@StringRes val nameResourceKey: Int) {
-  SUNDAY(R.string.sunday),
-  MONDAY(R.string.monday),
-  TUESDAY(R.string.tuesday),
-  WEDNESDAY(R.string.wednesday),
-  THURSDAY(R.string.thursday),
-  FRIDAY(R.string.friday),
-  SATURDAY(R.string.saturday);
+enum class Day(@param:StringRes val nameResourceKey: Int) {
+  SUNDAY(R.string.day_sunday),
+  MONDAY(R.string.day_monday),
+  TUESDAY(R.string.day_tuesday),
+  WEDNESDAY(R.string.day_wednesday),
+  THURSDAY(R.string.day_thursday),
+  FRIDAY(R.string.day_friday),
+  SATURDAY(R.string.day_saturday);
 
   /**
    * Returns the number of the Day object
