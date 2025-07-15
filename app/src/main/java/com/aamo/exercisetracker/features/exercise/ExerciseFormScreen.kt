@@ -71,13 +71,15 @@ import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
-import com.aamo.exercisetracker.utility.extensions.general.onNotNull
+import com.aamo.exercisetracker.utility.extensions.general.letIf
+import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
@@ -88,106 +90,102 @@ data class EditExerciseFormScreen(val id: Long)
 data class AddExerciseFormScreen(val routineId: Long)
 
 class ExerciseFormViewModel(
-  private val fetchData: (suspend () -> ExerciseWithSets?),
-  private val saveData: (suspend (ExerciseWithSets) -> ExerciseWithSets?),
-  private val deleteData: (suspend (Exercise) -> Unit),
-  private val resourceProvider: ResourceProvider,
+  private val fetchData: suspend () -> Model,
+  private val saveData: suspend (Model) -> Boolean,
+  private val deleteData: suspend () -> Boolean,
 ) : ViewModel() {
-  // TODO: how to manage resources in viewmodel?
-  data class ResourceProvider(val minutesDefault: String)
+  data class Model(
+    val exerciseName: String,
+    val restDuration: Duration,
+    val setUnit: String,
+    val setAmounts: List<Int>,
+    val hasTimer: Boolean,
+    val isNew: Boolean,
+  )
 
-  inner class UiState(private val onModelChanged: () -> Unit) {
-    val exercise = ViewModelState(Exercise(restDuration = 1.minutes)).onChange { onModelChanged() }
-    /** Pair or exercise set and its list key */
-    val sets =
-      ViewModelStateList<Pair<Int, ViewModelState<ExerciseSet>>>().onChange { onModelChanged() }
-    var savingState by mutableStateOf(SavingState())
-    var deleted by mutableStateOf(false)
-    var setUnit = ViewModelState(String.EMPTY).onChange {
-      sets.values.forEach { set -> set.second.update(set.second.value.copy(unit = it)) }
+  class UiState() {
+    inner class SetAmount(value: Int = 0) {
+      val amount = ViewModelState(value).validation { validation(it) }
+      val listKey: Int = nextSetKey++
+
+      private fun validation(value: Int): Int {
+        return value.letIf(hasTimer.value) {
+          it.minutes.inWholeMilliseconds.coerceAtMost(Int.MAX_VALUE.toLong()).milliseconds.inWholeMinutes.toInt()
+        }
+      }
     }
+
+    val exerciseName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
+    val restDuration = ViewModelState(0.milliseconds).onChange { onUnsavedChanges() }
+    val setUnit = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
+    val sets = ViewModelStateList<SetAmount>().onChange { onUnsavedChanges() }
     var hasTimer = ViewModelState(false).onChange {
-      if (it) {
-        setUnit.update(resourceProvider.minutesDefault)
-        sets.values.forEach { set ->
-          set.second.update(set.second.value.copy(valueType = ExerciseSet.ValueType.COUNTDOWN))
-        }
-      }
-      else {
-        sets.values.forEach { set ->
-          set.second.update(set.second.value.copy(valueType = ExerciseSet.ValueType.REPETITION))
-        }
-      }
+      // Revalidate set amounts
+      sets.values.forEach { it.amount.update(it.amount.value) }
+      onUnsavedChanges()
     }
-    private var nextSetKey = 0
+    var isNew by mutableStateOf(false)
+    var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
+
+    private var nextSetKey = 0 // Used for set amount list
 
     fun addSet() {
-      addSet(ExerciseSet())
+      sets.add(SetAmount())
     }
 
-    fun addSet(vararg sets: ExerciseSet) {
-      val setMap = sets.map { set ->
-        Pair(nextSetKey, ViewModelState(set).validation { set ->
-          if (set.valueType == ExerciseSet.ValueType.COUNTDOWN && set.value.minutes.inWholeMilliseconds > Int.MAX_VALUE.toLong()) {
-            set.copy(value = Int.MAX_VALUE.milliseconds.inWholeMinutes.toInt())
-          }
-          else set
-        }.onChange { onModelChanged() }).also { nextSetKey++ }
-      }.toTypedArray()
+    private fun onUnsavedChanges() {
+      if (!savingState.unsavedChanges) {
+        savingState = savingState.copy(unsavedChanges = true)
+      }
+    }
 
-      this.sets.add(*setMap)
+    private fun canSave(): Boolean {
+      return when {
+        savingState.state == SavingState.State.SAVING -> false
+        sets.values.isEmpty() -> false
+        sets.values.any { it.amount.value == 0 } -> false
+        else -> true
+      }
     }
   }
 
-  val uiState = UiState(onModelChanged = { onModelChanged() })
+  val uiState = UiState()
 
   init {
     viewModelScope.launch {
-      fetchData()?.let { ews ->
+      fetchData().let { result ->
         uiState.apply {
-          exercise.update(ews.exercise)
-          addSet(*ews.sets.map { set ->
-            if (set.valueType == ExerciseSet.ValueType.COUNTDOWN) {
-              // Set value to minutes, instead of milliseconds
-              set.copy(value = set.value.milliseconds.inWholeMinutes.toInt())
-            }
-            else set
-          }.toTypedArray())
-          ews.sets.firstOrNull().onNotNull {
-            setUnit.update(it.unit)
-            hasTimer.update(it.valueType == ExerciseSet.ValueType.COUNTDOWN)
-          }
+          exerciseName.update(result.exerciseName)
+          restDuration.update(result.restDuration)
+          sets.add(*result.setAmounts.map { SetAmount(it) }.toTypedArray())
+          setUnit.update(result.setUnit)
+          hasTimer.update(result.hasTimer)
+          isNew = result.isNew
+          savingState = savingState.copy(unsavedChanges = false)
         }
       }
-      uiState.savingState = SavingState(canSave = { canSave() })
     }
   }
 
   fun save() {
-    if (!canSave()) return
+    if (!uiState.savingState.canSave()) return
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
       runCatching {
-        checkNotNull(
-          saveData(
-            ExerciseWithSets(
-              exercise = uiState.exercise.value, sets = ifElse(
-                condition = uiState.hasTimer.value,
-                onTrue = uiState.sets.values.map { it.second.value.copy(value = it.second.value.value.minutes.inWholeMilliseconds.toInt()) },
-                onFalse = uiState.sets.values.map { it.second.value })
-            )
+        check(saveData(uiState.let { s ->
+          Model(
+            exerciseName = s.exerciseName.value,
+            restDuration = s.restDuration.value,
+            setUnit = s.setUnit.value,
+            setAmounts = s.sets.values.map { it.amount.value },
+            hasTimer = s.hasTimer.value,
+            isNew = s.isNew
           )
-        )
-      }.onSuccess { result ->
-        uiState.apply {
-          sets.clear().also {
-            addSet(*result.sets.toTypedArray())
-          }
-          exercise.update(result.exercise)
-          savingState = savingState.getAsSaved()
-        }
+        }))
+      }.onSuccess { _ ->
+        uiState.apply { savingState = savingState.getAsSaved() }
       }.onFailure { error ->
         uiState.apply { savingState = savingState.getAsError(error = Error(error)) }
       }
@@ -198,28 +196,11 @@ class ExerciseFormViewModel(
    * Deletes the exercise from the database
    */
   fun delete() {
-    if (uiState.exercise.value.id == 0L) return
+    if (uiState.isNew) return
 
     viewModelScope.launch {
-      runCatching {
-        deleteData(uiState.exercise.value)
-      }.onSuccess {
-        uiState.deleted = true
-      }
+      runCatching { deleteData() }
     }
-  }
-
-  private fun canSave(): Boolean {
-    if (uiState.exercise.value.routineId == 0L) return false
-    if (uiState.savingState.state == SavingState.State.SAVING) return false
-    if (uiState.sets.values.any { it.second.value.value == 0 }) return false
-    if (uiState.exercise.value.name.isEmpty()) return false
-    if (uiState.sets.values.isEmpty()) return false
-    return true
-  }
-
-  private fun onModelChanged() {
-    uiState.savingState = uiState.savingState.copy(unsavedChanges = true)
   }
 }
 
@@ -227,19 +208,50 @@ fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long
   composable<AddExerciseFormScreen> { navStack ->
     val (routineId) = navStack.toRoute<AddExerciseFormScreen>()
     val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
-    val defaultUnit = stringResource(R.string.ph_reps)
+    val setUnitDefault = stringResource(R.string.ph_reps)
+    val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
+      initializer {
+        ExerciseFormViewModel(fetchData = {
+          ExerciseFormViewModel.Model(
+            exerciseName = String.EMPTY,
+            restDuration = 0.milliseconds,
+            setUnit = setUnitDefault,
+            setAmounts = listOf(0),
+            hasTimer = false,
+            isNew = true
+          )
+        }, saveData = { model ->
+          dao.upsert(
+            ExerciseWithSets(
+              exercise = Exercise(
+                routineId = routineId, name = model.exerciseName, restDuration = model.restDuration
+              ), sets = model.setAmounts.map { amount ->
+                ExerciseSet(
+                  value = amount.letIf(model.hasTimer) {
+                    // Change minutes to milliseconds if set has timer
+                    it.minutes.inWholeMilliseconds.toInt()
+                  }, unit = model.setUnit, valueType = ifElse(
+                    condition = model.hasTimer,
+                    ifTrue = ExerciseSet.ValueType.COUNTDOWN,
+                    ifFalse = ExerciseSet.ValueType.REPETITION
+                  )
+                )
+              })
+          ).let { result ->
+            (result > 0).onTrue {
+              onSaved(result)
+            }
+          }
+        }, deleteData = { false })
+      }
+    })
+    val uiState = viewmodel.uiState
 
-    Screen(
-      fetchData = {
-      ExerciseWithSets(
-        exercise = Exercise(routineId = routineId), sets = listOf(ExerciseSet(unit = defaultUnit))
-      )
-    },
-      saveData = { dao.upsertAndGet(it) },
-      deleteData = { dao.delete(it) },
+    ExerciseFormScreen(
+      uiState = uiState,
       onBack = onBack,
-      onSaved = onSaved
-    )
+      onSave = { viewmodel.save() },
+      onDelete = { viewmodel.delete() })
   }
 }
 
@@ -249,49 +261,78 @@ fun NavGraphBuilder.editExerciseFormScreen(
   composable<EditExerciseFormScreen> { navStack ->
     val (exerciseId) = navStack.toRoute<EditExerciseFormScreen>()
     val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
+    val setUnitDefault = stringResource(R.string.ph_reps)
+    val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
+      initializer {
+        ExerciseFormViewModel(fetchData = {
+          (dao.getExerciseWithSets(exerciseId)
+            ?: throw Exception("Failed to fetch data")).let { (exercise, sets) ->
+            ExerciseFormViewModel.Model(
+              exerciseName = exercise.name,
+              restDuration = exercise.restDuration,
+              setUnit = sets.firstOrNull()?.unit ?: setUnitDefault,
+              setAmounts = sets.map { set ->
+                set.value.letIf(set.valueType == ExerciseSet.ValueType.COUNTDOWN) {
+                  // Change milliseconds to minutes, if set has timer
+                  it.milliseconds.inWholeMinutes.toInt()
+                }
+              },
+              hasTimer = (sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN),
+              isNew = exercise.id == 0L
+            )
+          }
+        }, saveData = { model ->
+          (dao.getExerciseWithSets(exerciseId)
+            ?: throw Exception("Failed to fetch data")).let { (exercise, sets) ->
+            dao.upsert(
+              ExerciseWithSets(
+                exercise = exercise.copy(
+                  name = model.exerciseName, restDuration = model.restDuration
+                ), sets = sets.take(model.setAmounts.size).let { list ->
+                  list.toMutableList().apply {
+                    // Add missing sets
+                    repeat(model.setAmounts.size - list.size) { add(ExerciseSet()) }
+                  }.let { list ->
+                    list.mapIndexed { i, item ->
+                      item.copy(
+                        exerciseId = exercise.id,
+                        value = model.setAmounts[i].letIf(model.hasTimer) {
+                          // Change minutes to milliseconds if set has timer
+                          it.minutes.inWholeMilliseconds.toInt()
+                        },
+                        unit = model.setUnit,
+                        valueType = ifElse(
+                          condition = model.hasTimer,
+                          ifTrue = ExerciseSet.ValueType.COUNTDOWN,
+                          ifFalse = ExerciseSet.ValueType.REPETITION
+                        )
+                      )
+                    }
+                  }
+                })
+            ).let { result ->
+              result > 0
+            }.also {
+              onSaved(exerciseId)
+            }
+          }
+        }, deleteData = {
+          dao.getExercise(exerciseId).let { result ->
+            if (result == null) false else dao.delete(result) > 0
+          }.also {
+            if (it) onDeleted()
+          }
+        })
+      }
+    })
+    val uiState = viewmodel.uiState
 
-    Screen(
-      fetchData = { dao.getExerciseWithSets(exerciseId) },
-      saveData = { dao.upsertAndGet(it) },
-      deleteData = { dao.delete(it) },
+    ExerciseFormScreen(
+      uiState = uiState,
       onBack = onBack,
-      onSaved = onSaved,
-      onDeleted = onDeleted,
-    )
+      onSave = { viewmodel.save() },
+      onDelete = { viewmodel.delete() })
   }
-}
-
-@Composable
-private fun Screen(
-  fetchData: suspend () -> ExerciseWithSets?,
-  saveData: suspend (ExerciseWithSets) -> ExerciseWithSets?,
-  deleteData: suspend (Exercise) -> Unit,
-  onBack: () -> Unit,
-  onSaved: (id: Long) -> Unit,
-  onDeleted: () -> Unit = {},
-) {
-  val resourceProvider = ExerciseFormViewModel.ResourceProvider(
-    minutesDefault = stringResource(R.string.ph_minutes),
-  )
-  val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
-    initializer {
-      ExerciseFormViewModel(
-        fetchData = fetchData,
-        saveData = saveData,
-        deleteData = deleteData,
-        resourceProvider = resourceProvider
-      )
-    }
-  })
-  val uiState = viewmodel.uiState
-
-  UiStateEffects(uiState = uiState, onDeleted = onDeleted, onSaved = onSaved)
-
-  ExerciseFormScreen(
-    uiState = uiState,
-    onBack = onBack,
-    onSave = { viewmodel.save() },
-    onDelete = { viewmodel.delete() })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -302,14 +343,17 @@ fun ExerciseFormScreen(
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  val exercise = remember(uiState.exercise) { uiState.exercise }
-  val sets = remember(uiState.sets) { uiState.sets }
-  val unsavedChanges =
-    remember(uiState.savingState.unsavedChanges) { uiState.savingState.unsavedChanges }
-  val isNew = remember(exercise.value.id) { exercise.value.id == 0L }
+  val defaultSetTimerUnit = stringResource(R.string.ph_minutes)
 
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
+
+  LaunchedEffect(uiState.hasTimer.value) {
+    if (uiState.hasTimer.value) {
+      // Set set unit to default timer unit
+      uiState.setUnit.update(defaultSetTimerUnit)
+    }
+  }
 
   if (openUnsavedDialog) {
     UnsavedDialog(
@@ -335,17 +379,17 @@ fun ExerciseFormScreen(
     TopAppBar(title = {
       Text(
         text = ifElse(
-          condition = isNew,
-          onTrue = stringResource(R.string.title_new_exercise),
-          onFalse = stringResource(R.string.title_edit_exercise)
+          condition = uiState.isNew,
+          ifTrue = stringResource(R.string.title_new_exercise),
+          ifFalse = stringResource(R.string.title_edit_exercise)
         )
       )
     }, navigationIcon = {
       BackNavigationIconButton(onBack = {
-        if (unsavedChanges) openUnsavedDialog = true else onBack()
+        if (uiState.savingState.unsavedChanges) openUnsavedDialog = true else onBack()
       })
     }, actions = {
-      if (!isNew) {
+      if (!uiState.isNew) {
         IconButton(onClick = { openDeleteDialog = true }) {
           Icon(
             imageVector = Icons.Filled.Delete,
@@ -372,22 +416,22 @@ fun ExerciseFormScreen(
         .padding(8.dp)
     ) {
       TextField(
-        value = exercise.value.name,
+        value = uiState.exerciseName.value,
         label = { Text(stringResource(R.string.label_name)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { exercise.apply { update(value.copy(name = it)) } },
+        onValueChange = { uiState.exerciseName.update(it) },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
         ),
         modifier = Modifier.fillMaxWidth()
       )
       IntNumberField(
-        value = exercise.value.restDuration.inWholeMinutes.toInt(),
+        value = uiState.restDuration.value.inWholeMinutes.toInt(),
         label = { Text(stringResource(R.string.label_rest_duration_optional)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { exercise.apply { update(value.copy(restDuration = it.minutes)) } },
+        onValueChange = { uiState.restDuration.update(it.minutes) },
         suffix = { Text(stringResource(R.string.suffix_minutes)) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth()
@@ -419,15 +463,16 @@ fun ExerciseFormScreen(
         modifier = Modifier.fillMaxWidth()
       ) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-          itemsIndexed(items = sets.values, key = { _, set -> set.first }) { i, set ->
-            val dens = LocalDensity.current
+          itemsIndexed(
+            items = uiState.sets.values, key = { _, set -> set.listKey }) { i, set ->
+            val density = LocalDensity.current
             val dismissState = rememberSwipeToDismissBoxState(
-              positionalThreshold = { with(dens) { 70.dp.toPx() } })
+              positionalThreshold = { with(density) { 70.dp.toPx() } })
             val deleteDirection = SwipeToDismissBoxValue.StartToEnd
 
             LaunchedEffect(dismissState.currentValue) {
               if (dismissState.currentValue == deleteDirection) {
-                sets.remove(set)
+                uiState.sets.remove(set)
               }
             }
 
@@ -441,7 +486,7 @@ fun ExerciseFormScreen(
               modifier = Modifier.animateItem()
             ) {
               IntNumberField(
-                value = set.second.value.value,
+                value = set.amount.value,
                 shape = RectangleShape,
                 colors = TextFieldDefaults.colors(
                   unfocusedIndicatorColor = Color.Transparent,
@@ -450,10 +495,14 @@ fun ExerciseFormScreen(
                   focusedPlaceholderColor = MaterialTheme.colorScheme.outline
                 ),
                 placeholder = { Text(stringResource(R.string.ph_amount)) },
-                onValueChange = { value -> set.second.update(set.second.value.copy(value = value)) },
+                onValueChange = { set.amount.update(it) },
                 suffix = { Text(uiState.setUnit.value) },
                 keyboardOptions = KeyboardOptions(
-                  imeAction = if (i < sets.values.count() - 1) ImeAction.Next else ImeAction.Done
+                  imeAction = ifElse(
+                    condition = i < uiState.sets.values.count() - 1,
+                    ifTrue = ImeAction.Next,
+                    ifFalse = ImeAction.Done
+                  )
                 ),
                 modifier = Modifier.fillMaxWidth()
               )
@@ -461,23 +510,6 @@ fun ExerciseFormScreen(
           }
         }
       }
-    }
-  }
-}
-
-@Composable
-private fun UiStateEffects(
-  uiState: ExerciseFormViewModel.UiState, onDeleted: () -> Unit, onSaved: (Long) -> Unit
-) {
-  LaunchedEffect(uiState.deleted) {
-    if (uiState.deleted) {
-      onDeleted()
-    }
-  }
-
-  LaunchedEffect(uiState.savingState.state) {
-    if (uiState.savingState.state == SavingState.State.SAVED) {
-      onSaved(uiState.exercise.value.id)
     }
   }
 }

@@ -81,11 +81,11 @@ class RoutineFormViewModel(
   private val saveData: suspend (name: String, schedule: List<Day>) -> RoutineWithSchedule?,
   private val deleteData: suspend () -> Boolean
 ) : ViewModel() {
-  class UiState(onUnsavedChanges: () -> Unit) {
+  inner class UiState(onUnsavedChanges: () -> Unit) {
     val routineName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
     val selectedDays = ViewModelStateList<Day>().unique().onChange { onUnsavedChanges() }
     var isNew by mutableStateOf(false)
-    var savingState by mutableStateOf(SavingState(SavingState.State.NONE))
+    var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
     var deleted by mutableStateOf(false)
   }
 
@@ -102,9 +102,9 @@ class RoutineFormViewModel(
             selectedDays.add(*Day.entries.filter { isDaySelected(it.getDayNumber()) }
               .toTypedArray())
           }
+          savingState = savingState.copy(unsavedChanges = false)
         }
       }
-      uiState.savingState = SavingState(canSave = { canSave() })
     }
   }
 
@@ -147,7 +147,9 @@ class RoutineFormViewModel(
   }
 
   private fun onUnsavedChanges() {
-    uiState.savingState = uiState.savingState.copy(unsavedChanges = true)
+    if (!uiState.savingState.unsavedChanges) {
+      uiState.savingState = uiState.savingState.copy(unsavedChanges = true)
+    }
   }
 }
 
@@ -164,15 +166,15 @@ fun NavGraphBuilder.routineFormScreen(
           fetchData = {
             ifElse(
               condition = id == 0L,
-              onTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
-              onFalse = dao.getRoutineWithSchedule(id)
+              ifTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
+              ifFalse = dao.getRoutineWithSchedule(id)
             )
           },
           saveData = { name, schedule ->
             ifElse(
               condition = id == 0L,
-              onTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
-              onFalse = dao.getRoutineWithSchedule(id)
+              ifTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
+              ifFalse = dao.getRoutineWithSchedule(id)
             )?.let { rws ->
               rws.copy(
                 routine = rws.routine.copy(name = name), schedule = rws.schedule.let {
@@ -261,8 +263,8 @@ fun RoutineFormScreen(
       Text(
         text = ifElse(
           condition = uiState.isNew,
-          onTrue = stringResource(R.string.title_new_routine),
-          onFalse = stringResource(R.string.title_edit_routine)
+          ifTrue = stringResource(R.string.title_new_routine),
+          ifFalse = stringResource(R.string.title_edit_routine)
         )
       )
     }, navigationIcon = {

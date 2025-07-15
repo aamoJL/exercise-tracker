@@ -41,6 +41,6 @@ inline fun <T> T.onNull(block: () -> Unit): T {
   return this
 }
 
-fun <T> ifElse(condition: Boolean, onTrue: T, onFalse: T): T {
-  return if (condition) onTrue else onFalse
+fun <T> ifElse(condition: Boolean, ifTrue: T, ifFalse: T): T {
+  return if (condition) ifTrue else ifFalse
 }

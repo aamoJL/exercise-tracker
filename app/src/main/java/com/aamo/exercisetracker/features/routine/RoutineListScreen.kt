@@ -213,8 +213,8 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
         Text(
           text = stringResource(dayOrder[i].nameResourceKey).take(2), color = ifElse(
             condition = dayIsSelected(day = dayOrder[i], schedule = schedule),
-            onTrue = MaterialTheme.colorScheme.secondary,
-            onFalse = MaterialTheme.colorScheme.outline
+            ifTrue = MaterialTheme.colorScheme.secondary,
+            ifFalse = MaterialTheme.colorScheme.outline
           ), style = MaterialTheme.typography.labelSmall
         )
       }

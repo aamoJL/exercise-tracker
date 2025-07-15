@@ -50,13 +50,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.database.entities.RoutineWithScheduleAndExerciseProgresses
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.applyIf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -69,7 +69,8 @@ import kotlin.math.absoluteValue
 @Serializable
 data class DailiesScreen(val initialDay: Day)
 
-class DailiesScreenViewModel(routineDao: RoutineDao) : ViewModel() {
+class DailiesScreenViewModel(fetchData: () -> Flow<List<RoutineWithScheduleAndExerciseProgresses>>) :
+        ViewModel() {
   private val _routines =
     MutableStateFlow<List<RoutineWithScheduleAndExerciseProgresses>>(emptyList())
   val routines = _routines.asStateFlow()
@@ -79,7 +80,7 @@ class DailiesScreenViewModel(routineDao: RoutineDao) : ViewModel() {
 
   init {
     viewModelScope.launch {
-      routineDao.getRoutineWithScheduleAndExerciseProgressesFlow().collect {
+      fetchData().collect {
         _routines.value = it
         isLoading = false
       }
@@ -89,14 +90,17 @@ class DailiesScreenViewModel(routineDao: RoutineDao) : ViewModel() {
 
 fun NavGraphBuilder.dailiesScreen(onRoutineSelected: (Long) -> Unit) {
   composable<DailiesScreen> { stack ->
+    val initialDay = stack.toRoute<DailiesScreen>().initialDay
     val context = LocalContext.current.applicationContext
     val viewmodel: DailiesScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        DailiesScreenViewModel(routineDao = RoutineDatabase.getDatabase(context).routineDao())
+        DailiesScreenViewModel(fetchData = {
+          RoutineDatabase.getDatabase(context).routineDao()
+            .getRoutineWithScheduleAndExerciseProgressesFlow()
+        })
       }
     })
     val routines by viewmodel.routines.collectAsStateWithLifecycle()
-    val initialDay = stack.toRoute<DailiesScreen>().initialDay
 
     DailiesScreen(
       routines = routines,
@@ -130,7 +134,7 @@ fun DailiesScreen(
       contentPadding = PaddingValues(horizontal = 24.dp),
       modifier = Modifier.fillMaxHeight()
     ) { pageIndex ->
-      val isToday = remember { pageIndex == todayIndex }
+      val isToday = pageIndex == todayIndex
       val pageDateMillis = remember {
         LocalDate.now().atStartOfDay().plusDays((pageIndex - todayIndex).toLong())
           .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -177,8 +181,7 @@ fun DailiesScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)
           ) {
             items(dayRoutines, key = { it.routine.id }) { routine ->
-              val isFinished =
-                remember(routine) { routine.finishedExerciseCount == routine.totalExerciseCount }
+              val isFinished = routine.finishedExerciseCount == routine.totalExerciseCount
 
               ElevatedCard(
                 enabled = pagerState.currentPage == pageIndex,

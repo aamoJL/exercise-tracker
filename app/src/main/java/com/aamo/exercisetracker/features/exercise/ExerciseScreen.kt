@@ -496,8 +496,8 @@ fun SetProgress(currentSet: Int, totalSets: Int) {
       Text(
         text = ifElse(
           condition = currentSet > totalSets,
-          onTrue = stringResource(R.string.title_completed),
-          onFalse = stringResource(R.string.title_set)
+          ifTrue = stringResource(R.string.title_completed),
+          ifFalse = stringResource(R.string.title_set)
         ), style = MaterialTheme.typography.titleMedium
       )
       Text(
@@ -551,8 +551,8 @@ fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit)
       Text(
         text = ifElse(
           condition = setState.timer.duration > 0.milliseconds,
-          onTrue = stringResource(R.string.btn_start),
-          onFalse = stringResource(R.string.btn_done)
+          ifTrue = stringResource(R.string.btn_start),
+          ifFalse = stringResource(R.string.btn_done)
         ), style = MaterialTheme.typography.titleLarge
       )
     }

@@ -12,7 +12,8 @@ class ViewModelState<T>(initValue: T) {
   private var validationPredicate: ((T) -> T?)? = null
 
   fun update(value: T) {
-    val value = validationPredicate?.invoke(value) ?: value
+    val validation = validationPredicate
+    val value = if (validation != null) validation(value) else value
 
     if (this.value != value && value != null) {
       this.value = value

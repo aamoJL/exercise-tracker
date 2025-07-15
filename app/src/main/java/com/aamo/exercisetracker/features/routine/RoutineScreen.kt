@@ -137,8 +137,8 @@ fun RoutineScreen(
         val exercise: Exercise = exercise
         val isFinished: Boolean? = ifElse(
           condition = showProgress,
-          onTrue = progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true,
-          onFalse = null)
+          ifTrue = progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true,
+          ifFalse = null)
       }
     }.sortedBy { it.exercise.name }
   }

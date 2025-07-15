@@ -24,6 +24,9 @@ interface RoutineDao {
   @Query("SELECT * FROM routine_schedules")
   suspend fun getSchedules(): List<RoutineSchedule>
 
+  @Query("SELECT * FROM exercises WHERE id = :exerciseId")
+  suspend fun getExercise(exerciseId: Long): Exercise?
+
   @Transaction
   @Query("SELECT * FROM routines WHERE id = :routineId")
   suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule?
@@ -145,7 +148,7 @@ interface RoutineDao {
   suspend fun delete(routineSchedule: RoutineSchedule)
 
   @Delete
-  suspend fun delete(exercise: Exercise)
+  suspend fun delete(exercise: Exercise): Int
 
   @Delete
   suspend fun delete(exerciseSets: List<ExerciseSet>)

@@ -2,6 +2,7 @@ package com.aamo.exercisetracker.utility.viewmodels
 
 import androidx.compose.runtime.mutableStateListOf
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 
 class ViewModelStateList<T> {
@@ -12,16 +13,20 @@ class ViewModelStateList<T> {
   val values: List<T> = _values
 
   fun add(vararg items: T) {
-    items.mapNotNull { item ->
+    var changed = false
+
+    items.forEach { item ->
       validationPredicate.let {
         if (it != null) it.invoke(item)
         else item
-      }
-    }.let {
-      _values.addAll(it).onTrue {
-        onChange?.invoke()
+      }.onNotNull { item ->
+        _values.add(item).onTrue {
+          changed = true
+        }
       }
     }
+
+    changed.onTrue { onChange?.invoke() }
   }
 
   fun remove(vararg items: T) {
@@ -64,10 +69,9 @@ class ViewModelStateList<T> {
     return this
   }
 
-  // TODO: unit test this
   fun unique(): ViewModelStateList<T> {
     return validation { item ->
-      ifElse(condition = values.contains(item), onTrue = null, onFalse = item)
+      ifElse(condition = _values.contains(item), ifTrue = null, ifFalse = item)
     }
   }
 }
