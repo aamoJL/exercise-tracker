@@ -49,7 +49,7 @@ interface RoutineDao {
 
   @Transaction
   @Query("SELECT * FROM routines WHERE id = :routineId")
-  fun getRoutineWithExerciseProgressesFlow(routineId: Long): Flow<RoutineWithExerciseProgresses>
+  fun getRoutineWithExerciseProgressesFlow(routineId: Long): Flow<RoutineWithExerciseProgresses?>
 
   @Transaction
   @Query("SELECT * FROM exercises WHERE id = :exerciseId")

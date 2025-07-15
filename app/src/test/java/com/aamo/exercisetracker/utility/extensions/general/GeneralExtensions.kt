@@ -11,8 +11,8 @@ import org.junit.Test
 class GeneralExtensionsTests {
   @Test
   fun `applyIf test`() {
-    assertEquals(1, applyIf(condition = true, value = 1))
-    assertEquals(null, applyIf(condition = false, value = 1))
+    assertEquals(1, applyIf(condition = true, value = { 1 }))
+    assertEquals(null, applyIf(condition = false, value = { 1 }))
   }
 
   @Test
@@ -63,7 +63,7 @@ class GeneralExtensionsTests {
 
   @Test
   fun `ifElse test`() {
-    assertTrue(ifElse(condition = false, ifTrue = false, ifFalse = true))
-    assertFalse(ifElse(condition = true, ifTrue = false, ifFalse = true))
+    assertTrue(ifElse(condition = false, ifTrue = { false.also { fail() } }, ifFalse = { true }))
+    assertFalse(ifElse(condition = true, ifTrue = { false }, ifFalse = { true.also { fail() } }))
   }
 }

@@ -74,9 +74,11 @@ class RoutineScreenViewModel(routineId: Long, routineDao: RoutineDao) : ViewMode
   init {
     viewModelScope.launch {
       routineDao.getRoutineWithExerciseProgressesFlow(routineId).collect { item ->
-        routine = item.routine
-        _exercises.update { item.exerciseProgresses }
-        isLoading = false
+        item?.also {
+          routine = item.routine
+          _exercises.update { item.exerciseProgresses }
+          isLoading = false
+        }
       }
     }
   }
@@ -137,8 +139,8 @@ fun RoutineScreen(
         val exercise: Exercise = exercise
         val isFinished: Boolean? = ifElse(
           condition = showProgress,
-          ifTrue = progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true,
-          ifFalse = null)
+          ifTrue = { progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true },
+          ifFalse = { null })
       }
     }.sortedBy { it.exercise.name }
   }

@@ -211,12 +211,12 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       repeat(7) { i ->
         Text(
-          text = stringResource(dayOrder[i].nameResourceKey).take(2), color = ifElse(
+          text = stringResource(dayOrder[i].nameResourceKey).take(2),
+          color = ifElse(
             condition = dayIsSelected(day = dayOrder[i], schedule = schedule),
-            ifTrue = MaterialTheme.colorScheme.secondary,
-            ifFalse = MaterialTheme.colorScheme.outline
-          ), style = MaterialTheme.typography.labelSmall
-        )
+            ifTrue = { MaterialTheme.colorScheme.secondary },
+            ifFalse = { MaterialTheme.colorScheme.outline }),
+          style = MaterialTheme.typography.labelSmall)
       }
     }
   }

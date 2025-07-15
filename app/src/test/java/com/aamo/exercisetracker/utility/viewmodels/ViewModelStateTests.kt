@@ -42,7 +42,7 @@ class ViewModelStateTests {
   @Test
   fun `validation valid test`() {
     ViewModelState(0).apply {
-      validation { ifElse(condition = it > 2, ifTrue = it, ifFalse = null) }
+      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
       update(3)
     }.also {
       assertEquals(3, it.value)
@@ -52,7 +52,7 @@ class ViewModelStateTests {
   @Test
   fun `validation invalid test`() {
     ViewModelState(0).apply {
-      validation { ifElse(condition = it > 2, ifTrue = it, ifFalse = null) }
+      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
       update(1)
     }.also {
       assertEquals(0, it.value)

@@ -29,12 +29,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -77,31 +74,46 @@ import java.util.Calendar
 data class RoutineFormScreen(val id: Long)
 
 class RoutineFormViewModel(
-  private val fetchData: suspend () -> RoutineWithSchedule?,
-  private val saveData: suspend (name: String, schedule: List<Day>) -> RoutineWithSchedule?,
+  private val fetchData: suspend () -> Model,
+  private val saveData: suspend (Model) -> Boolean,
   private val deleteData: suspend () -> Boolean
 ) : ViewModel() {
-  inner class UiState(onUnsavedChanges: () -> Unit) {
+  data class Model(
+    val routineName: String,
+    val selectedDays: List<Day>,
+    val isNew: Boolean,
+  )
+
+  class UiState {
     val routineName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
     val selectedDays = ViewModelStateList<Day>().unique().onChange { onUnsavedChanges() }
-    var isNew by mutableStateOf(false)
+    var isNew by mutableStateOf(true)
     var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
-    var deleted by mutableStateOf(false)
+
+    private fun canSave(): Boolean {
+      return when {
+        savingState.state == SavingState.State.SAVING -> false
+        routineName.value.isEmpty() -> false
+        else -> true
+      }
+    }
+
+    private fun onUnsavedChanges() {
+      if (!savingState.unsavedChanges) {
+        savingState = savingState.copy(unsavedChanges = true)
+      }
+    }
   }
 
-  val uiState = UiState(onUnsavedChanges = { onUnsavedChanges() })
+  val uiState = UiState()
 
   init {
     viewModelScope.launch {
-      fetchData()?.also { result ->
+      fetchData().also { result ->
         uiState.apply {
-          isNew = result.routine.id == 0L
-          routineName.update(result.routine.name)
-          result.schedule?.apply {
-            selectedDays.clear()
-            selectedDays.add(*Day.entries.filter { isDaySelected(it.getDayNumber()) }
-              .toTypedArray())
-          }
+          routineName.update(result.routineName)
+          selectedDays.add(*result.selectedDays.toTypedArray())
+          isNew = result.isNew
           savingState = savingState.copy(unsavedChanges = false)
         }
       }
@@ -112,13 +124,17 @@ class RoutineFormViewModel(
    * Saves the routine to the database
    */
   fun save() {
-    if (!canSave()) return
+    if (!uiState.savingState.canSave()) return
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
       runCatching {
-        checkNotNull(saveData(uiState.routineName.value, uiState.selectedDays.values))
+        check(saveData(uiState.let { s ->
+          Model(
+            routineName = s.routineName.value, selectedDays = s.selectedDays.values, isNew = s.isNew
+          )
+        }))
       }.onSuccess { _ ->
         uiState.apply { savingState = savingState.getAsSaved() }
       }.onFailure { error ->
@@ -134,21 +150,7 @@ class RoutineFormViewModel(
     if (uiState.isNew) return
 
     viewModelScope.launch {
-      runCatching { deleteData() }.onSuccess { uiState.deleted = it }
-    }
-  }
-
-  private fun canSave(): Boolean {
-    return when {
-      uiState.savingState.state == SavingState.State.SAVING -> false
-      uiState.routineName.value.isEmpty() -> false
-      else -> true
-    }
-  }
-
-  private fun onUnsavedChanges() {
-    if (!uiState.savingState.unsavedChanges) {
-      uiState.savingState = uiState.savingState.copy(unsavedChanges = true)
+      runCatching { deleteData() }
     }
   }
 }
@@ -157,66 +159,75 @@ fun NavGraphBuilder.routineFormScreen(
   onBack: () -> Unit, onSaved: (id: Long) -> Unit, onDeleted: () -> Unit
 ) {
   composable<RoutineFormScreen> { navStack ->
-    var id by rememberSaveable { mutableLongStateOf(navStack.toRoute<RoutineFormScreen>().id) }
+    var (routineId) = navStack.toRoute<RoutineFormScreen>()
     val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
 
     val viewmodel: RoutineFormViewModel = viewModel(factory = viewModelFactory {
       initializer {
         RoutineFormViewModel(
           fetchData = {
-            ifElse(
-              condition = id == 0L,
-              ifTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
-              ifFalse = dao.getRoutineWithSchedule(id)
-            )
-          },
-          saveData = { name, schedule ->
-            ifElse(
-              condition = id == 0L,
-              ifTrue = RoutineWithSchedule(routine = Routine(name = String.EMPTY), schedule = null),
-              ifFalse = dao.getRoutineWithSchedule(id)
-            )?.let { rws ->
-              rws.copy(
-                routine = rws.routine.copy(name = name), schedule = rws.schedule.let {
-                  it?.copy() ?: RoutineSchedule(routineId = rws.routine.id)
-                }.copy(
-                  sunday = schedule.contains(Day.SUNDAY),
-                  monday = schedule.contains(Day.MONDAY),
-                  tuesday = schedule.contains(Day.TUESDAY),
-                  wednesday = schedule.contains(Day.WEDNESDAY),
-                  thursday = schedule.contains(Day.THURSDAY),
-                  friday = schedule.contains(Day.FRIDAY),
-                  saturday = schedule.contains(Day.SATURDAY),
-                )
+            ifElse(condition = routineId == 0L, ifTrue = {
+              RoutineFormViewModel.Model(
+                routineName = String.EMPTY, selectedDays = emptyList(), isNew = true
               )
-            }?.let { routine ->
-              dao.upsertAndGet(routine)?.also { result ->
-                id = result.routine.id
+            }, ifFalse = {
+              (dao.getRoutineWithSchedule(routineId)
+                ?: throw Exception("Failed to fetch data")).let { result ->
+                RoutineFormViewModel.Model(
+                  routineName = result.routine.name,
+                  selectedDays = result.schedule?.asListOfDays() ?: emptyList(),
+                  isNew = false
+                )
+              }
+            })
+          },
+          saveData = { model ->
+            ifElse(condition = model.isNew, ifTrue = {
+              RoutineWithSchedule(
+                routine = Routine(name = String.EMPTY), schedule = null
+              )
+            }, ifFalse = {
+              dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
+            }).let { result ->
+              result.copy(
+                routine = result.routine.copy(name = model.routineName),
+                schedule = result.schedule.let { schedule ->
+                  (schedule?.copy() ?: RoutineSchedule(routineId = result.routine.id)).copy(
+                    sunday = model.selectedDays.contains(Day.SUNDAY),
+                    monday = model.selectedDays.contains(Day.MONDAY),
+                    tuesday = model.selectedDays.contains(Day.TUESDAY),
+                    wednesday = model.selectedDays.contains(Day.WEDNESDAY),
+                    thursday = model.selectedDays.contains(Day.THURSDAY),
+                    friday = model.selectedDays.contains(Day.FRIDAY),
+                    saturday = model.selectedDays.contains(Day.SATURDAY),
+                  )
+                })
+            }.let { routine ->
+              dao.upsertAndGet(routine).let { result ->
+                (result != null).onTrue {
+                  result?.also {
+                    routineId = result.routine.id
+                    onSaved(routineId)
+                  }
+                }
               }
             }
           },
           deleteData = {
-            dao.getRoutineWithSchedule(id)?.let { dao.delete(it.routine) > 0 } == true
+            if (routineId == 0L) false
+
+            (dao.getRoutine(routineId) ?: throw Exception("Failed to fetch data")).let { result ->
+              (dao.delete(result) > 0).onTrue {
+                onDeleted()
+              }
+            }
           },
         )
       }
     })
-    val uiState = viewmodel.uiState
-
-    LaunchedEffect(uiState.deleted) {
-      if (uiState.deleted) {
-        onDeleted()
-      }
-    }
-
-    LaunchedEffect(uiState.savingState.state) {
-      if (uiState.savingState.state == SavingState.State.SAVED) {
-        if (id != 0L) onSaved(id)
-      }
-    }
 
     RoutineFormScreen(
-      uiState = uiState,
+      uiState = viewmodel.uiState,
       onBack = onBack,
       onSave = { viewmodel.save() },
       onDelete = { viewmodel.delete() })
@@ -263,9 +274,8 @@ fun RoutineFormScreen(
       Text(
         text = ifElse(
           condition = uiState.isNew,
-          ifTrue = stringResource(R.string.title_new_routine),
-          ifFalse = stringResource(R.string.title_edit_routine)
-        )
+          ifTrue = { stringResource(R.string.title_new_routine) },
+          ifFalse = { stringResource(R.string.title_edit_routine) })
       )
     }, navigationIcon = {
       BackNavigationIconButton(onBack = {

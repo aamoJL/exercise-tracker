@@ -161,7 +161,7 @@ fun DailiesScreen(
         ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
 
       Card(
-        border = applyIf(isToday, BorderStroke(2.dp, MaterialTheme.colorScheme.primary)),
+        border = applyIf(isToday) { BorderStroke(2.dp, MaterialTheme.colorScheme.primary) },
         modifier = Modifier
           .fillMaxSize()
           .padding(vertical = (16 + 32 * (pageOffset.coerceIn(0f, 1f))).dp)

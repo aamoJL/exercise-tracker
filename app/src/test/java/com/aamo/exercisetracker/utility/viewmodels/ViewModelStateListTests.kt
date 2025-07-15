@@ -52,7 +52,7 @@ class ViewModelStateListTests {
   @Test
   fun `validation valid test`() {
     ViewModelStateList<Int>().apply {
-      validation { ifElse(condition = it > 2, ifTrue = it, ifFalse = null) }
+      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
       add(3)
     }.also {
       assertEquals(1, it.values.size)
@@ -63,7 +63,7 @@ class ViewModelStateListTests {
   @Test
   fun `validation invalid test`() {
     ViewModelStateList<Int>().apply {
-      validation { ifElse(condition = it > 2, ifTrue = it, ifFalse = null) }
+      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
       add(1)
     }.also {
       assertEquals(0, it.values.size)
@@ -84,7 +84,7 @@ class ViewModelStateListTests {
   @Test
   fun `multiple validations test`() {
     ViewModelStateList<Int>().apply {
-      validation { ifElse(condition = it > 2, ifTrue = it, ifFalse = null) }
+      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
       unique()
       add(3, 3, 3, 1, 1)
     }.also {

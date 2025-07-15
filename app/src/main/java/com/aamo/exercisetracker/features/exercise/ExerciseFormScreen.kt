@@ -85,7 +85,6 @@ import kotlin.time.Duration.Companion.minutes
 
 @Serializable
 data class EditExerciseFormScreen(val id: Long)
-
 @Serializable
 data class AddExerciseFormScreen(val routineId: Long)
 
@@ -103,7 +102,7 @@ class ExerciseFormViewModel(
     val isNew: Boolean,
   )
 
-  class UiState() {
+  class UiState {
     inner class SetAmount(value: Int = 0) {
       val amount = ViewModelState(value).validation { validation(it) }
       val listKey: Int = nextSetKey++
@@ -153,7 +152,7 @@ class ExerciseFormViewModel(
 
   init {
     viewModelScope.launch {
-      fetchData().let { result ->
+      fetchData().also { result ->
         uiState.apply {
           exerciseName.update(result.exerciseName)
           restDuration.update(result.restDuration)
@@ -232,9 +231,8 @@ fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long
                     it.minutes.inWholeMilliseconds.toInt()
                   }, unit = model.setUnit, valueType = ifElse(
                     condition = model.hasTimer,
-                    ifTrue = ExerciseSet.ValueType.COUNTDOWN,
-                    ifFalse = ExerciseSet.ValueType.REPETITION
-                  )
+                    ifTrue = { ExerciseSet.ValueType.COUNTDOWN },
+                    ifFalse = { ExerciseSet.ValueType.REPETITION })
                 )
               })
           ).let { result ->
@@ -303,24 +301,23 @@ fun NavGraphBuilder.editExerciseFormScreen(
                         unit = model.setUnit,
                         valueType = ifElse(
                           condition = model.hasTimer,
-                          ifTrue = ExerciseSet.ValueType.COUNTDOWN,
-                          ifFalse = ExerciseSet.ValueType.REPETITION
-                        )
+                          ifTrue = { ExerciseSet.ValueType.COUNTDOWN },
+                          ifFalse = { ExerciseSet.ValueType.REPETITION })
                       )
                     }
                   }
                 })
             ).let { result ->
-              result > 0
-            }.also {
-              onSaved(exerciseId)
+              (result > 0).onTrue {
+                onSaved(exerciseId)
+              }
             }
           }
         }, deleteData = {
-          dao.getExercise(exerciseId).let { result ->
-            if (result == null) false else dao.delete(result) > 0
-          }.also {
-            if (it) onDeleted()
+          (dao.getExercise(exerciseId) ?: throw Exception("Failed to fetch data")).let { result ->
+            (dao.delete(result) > 0).onTrue {
+              onDeleted()
+            }
           }
         })
       }
@@ -380,9 +377,8 @@ fun ExerciseFormScreen(
       Text(
         text = ifElse(
           condition = uiState.isNew,
-          ifTrue = stringResource(R.string.title_new_exercise),
-          ifFalse = stringResource(R.string.title_edit_exercise)
-        )
+          ifTrue = { stringResource(R.string.title_new_exercise) },
+          ifFalse = { stringResource(R.string.title_edit_exercise) })
       )
     }, navigationIcon = {
       BackNavigationIconButton(onBack = {
@@ -500,9 +496,8 @@ fun ExerciseFormScreen(
                 keyboardOptions = KeyboardOptions(
                   imeAction = ifElse(
                     condition = i < uiState.sets.values.count() - 1,
-                    ifTrue = ImeAction.Next,
-                    ifFalse = ImeAction.Done
-                  )
+                    ifTrue = { ImeAction.Next },
+                    ifFalse = { ImeAction.Done })
                 ),
                 modifier = Modifier.fillMaxWidth()
               )

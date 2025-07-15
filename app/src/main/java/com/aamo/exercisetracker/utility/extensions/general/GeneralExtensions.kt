@@ -2,8 +2,8 @@ package com.aamo.exercisetracker.utility.extensions.general
 
 import org.jetbrains.annotations.NotNull
 
-fun <T> applyIf(condition: Boolean, value: T): T? {
-  return if (condition) value else null
+inline fun <T> applyIf(condition: Boolean, value: () -> T): T? {
+  return if (condition) value() else null
 }
 
 inline fun <T> T.letIf(condition: Boolean, block: (T) -> T): T {
@@ -41,6 +41,6 @@ inline fun <T> T.onNull(block: () -> Unit): T {
   return this
 }
 
-fun <T> ifElse(condition: Boolean, ifTrue: T, ifFalse: T): T {
-  return if (condition) ifTrue else ifFalse
+inline fun <T> ifElse(condition: Boolean, ifTrue: () -> T, ifFalse: () -> T): T {
+  return if (condition) ifTrue() else ifFalse()
 }

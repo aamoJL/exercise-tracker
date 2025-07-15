@@ -9,6 +9,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.aamo.exercisetracker.utility.extensions.date.Day
 
 @Entity(tableName = "routines")
 data class Routine(
@@ -46,6 +47,10 @@ data class RoutineSchedule(
       7 -> saturday
       else -> false
     }
+  }
+
+  fun asListOfDays(): List<Day> {
+    return Day.entries.filter { this.isDaySelected(it.getDayNumber()) }
   }
 }
 

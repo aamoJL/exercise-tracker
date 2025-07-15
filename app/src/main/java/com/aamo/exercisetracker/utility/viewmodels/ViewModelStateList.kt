@@ -71,7 +71,7 @@ class ViewModelStateList<T> {
 
   fun unique(): ViewModelStateList<T> {
     return validation { item ->
-      ifElse(condition = _values.contains(item), ifTrue = null, ifFalse = item)
+      ifElse(condition = _values.contains(item), ifTrue = { null }, ifFalse = { item })
     }
   }
 }

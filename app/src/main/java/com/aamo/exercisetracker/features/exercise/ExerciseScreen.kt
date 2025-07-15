@@ -422,7 +422,7 @@ fun ExerciseScreen(
               .heightIn(max = 100.dp)
               .fillMaxSize()
           ) {
-            Text(stringResource(R.string.btn_finish), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.btn_done), style = MaterialTheme.typography.titleLarge)
           }
         }
       }
@@ -442,7 +442,7 @@ fun ExerciseScreen(
           containerColor = MaterialTheme.colorScheme.secondary
         )
       ) {
-        Text(stringResource(R.string.btn_stop))
+        Text(stringResource(R.string.btn_finish))
       }
     }
     TimerSheet(
@@ -496,9 +496,9 @@ fun SetProgress(currentSet: Int, totalSets: Int) {
       Text(
         text = ifElse(
           condition = currentSet > totalSets,
-          ifTrue = stringResource(R.string.title_completed),
-          ifFalse = stringResource(R.string.title_set)
-        ), style = MaterialTheme.typography.titleMedium
+          ifTrue = { stringResource(R.string.title_completed) },
+          ifFalse = { stringResource(R.string.title_set) }),
+        style = MaterialTheme.typography.titleMedium
       )
       Text(
         text = "${min(currentSet, totalSets)}/$totalSets",
@@ -551,9 +551,9 @@ fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit)
       Text(
         text = ifElse(
           condition = setState.timer.duration > 0.milliseconds,
-          ifTrue = stringResource(R.string.btn_start),
-          ifFalse = stringResource(R.string.btn_done)
-        ), style = MaterialTheme.typography.titleLarge
+          ifTrue = { stringResource(R.string.btn_start) },
+          ifFalse = { stringResource(R.string.btn_done) }),
+        style = MaterialTheme.typography.titleLarge
       )
     }
   }
