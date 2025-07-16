@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -75,10 +76,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseSet
-import com.aamo.exercisetracker.database.entities.ExerciseWithProgressAndSets
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
@@ -90,6 +89,8 @@ import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.utility.tags.ERROR_TAG
+import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
@@ -103,91 +104,72 @@ import kotlin.time.Duration.Companion.seconds
 data class ExerciseScreen(val id: Long = 0)
 
 class ExerciseScreenViewModel(
-  private val fetchData: suspend () -> ExerciseWithProgressAndSets?,
-  private val saveData: suspend (ExerciseProgress) -> Unit,
-  private val resourceProvider: ResourceProvider,
+  private val fetchData: suspend () -> Model,
+  private val saveProgress: suspend () -> Unit,
 ) : ViewModel() {
-  data class ResourceProvider(val setTimerTitle: String, val restTimerTitle: String)
-
-  data class SetState(
-    val sets: List<ExerciseSet> = emptyList(),
-    val index: Int = 0,
-    private val timerActive: Boolean = false,
+  data class Model(
+    val exerciseName: String,
+    val sets: List<SetModel>,
   ) {
-    val set: ExerciseSet? = sets.elementAtOrNull(index)
-    val total: Int = sets.size
-    val timer: TimerState = initTimer()
-
-    private fun initTimer(): TimerState {
-      val hasTimer = set?.valueType?.equals(ExerciseSet.ValueType.COUNTDOWN) == true
-
-      return TimerState(
-        isActive = hasTimer && timerActive,
-        duration = if (hasTimer) set.value.milliseconds else 0.milliseconds
-      )
-    }
+    data class SetModel(
+      val repetitions: Int?,
+      val setDuration: Duration?,
+      val restDuration: Duration?,
+      val unit: String
+    )
   }
 
-  data class TimerState(
-    val isActive: Boolean = false,
-    val duration: Duration = 0.milliseconds,
-  )
+  class TimerState(val duration: Duration) {
+    val isActive = ViewModelState(false).validation { value -> value && duration > 0.seconds }
+  }
 
-  var exerciseModel: ExerciseWithProgressAndSets? by mutableStateOf(null)
-    private set
-  var setState by mutableStateOf(SetState())
-    private set
-  var restState by mutableStateOf(TimerState())
-    private set
-  var isLoading by mutableStateOf(true)
-    private set
-  var inProgress by mutableStateOf(false)
-    private set
+  class UiState {
+    inner class SetState(val index: Int) {
+      val set = sets.elementAtOrNull(index)
+      val setTimer: TimerState? = set?.setDuration?.let { TimerState(duration = it) }
+      val restTimer: TimerState? = set?.restDuration?.let { TimerState(duration = it) }
+    }
+
+    var exerciseName by mutableStateOf(String.EMPTY)
+    var sets: List<Model.SetModel> = emptyList()
+    val setState = ViewModelState(SetState(0)).onChange { inProgress = it.index != 0 }
+    var isLoading by mutableStateOf(true)
+    var inProgress by mutableStateOf(false)
+      private set
+  }
+
+  val uiState = UiState()
 
   init {
     viewModelScope.launch {
-      fetchData().let {
-        exerciseModel = it
-        setState = SetState(sets = it?.sets ?: emptyList())
-        restState = TimerState(duration = it?.exercise?.restDuration ?: 0.seconds)
-        isLoading = false
+      fetchData().let { result ->
+        uiState.apply {
+          exerciseName = result.exerciseName
+          sets = result.sets
+          setState.update(SetState(index = 0))
+          isLoading = false
+        }
       }
     }
   }
 
   fun startSet(countDownTimerService: CountDownTimerService) {
-    inProgress = true
-
-    if (setState.timer.duration > 0.milliseconds) {
+    uiState.setState.value.setTimer.onNotNull { setTimer ->
       startTimer(
         countDownTimerService = countDownTimerService,
-        title = resourceProvider.setTimerTitle,
-        duration = setState.timer.duration,
-        onStart = { setState = setState.copy(timerActive = true) },
-        onFinished = {
-          setState = setState.copy(timerActive = false)
-          finishSet(countDownTimerService)
-        })
-    }
-    else {
+        duration = setTimer.duration,
+        onStart = { setTimer.isActive.update(true) },
+        onFinished = { finishSet(countDownTimerService) },
+        onCleanUp = { setTimer.isActive.update(false) })
+    }.onNull {
       finishSet(countDownTimerService)
     }
   }
 
-  fun finishExercise(onSaved: () -> Unit) {
-    inProgress = false
-
-    // Save progress
+  fun finishExercise() {
     viewModelScope.launch {
-      exerciseModel?.let { model ->
-        val finishedDate = Calendar.getInstance().time
-        val progress = model.progress?.copy(finishedDate = finishedDate) ?: ExerciseProgress(
-          exerciseId = model.exercise.id, finishedDate = finishedDate
-        )
-
-        saveData(progress).also {
-          onSaved()
-        }
+      runCatching { saveProgress() }.onFailure { error ->
+        Log.e(ERROR_TAG, error.message.toString())
       }
     }
   }
@@ -196,78 +178,98 @@ class ExerciseScreenViewModel(
     countDownTimerService.stop()
   }
 
-  fun cancelSetTimer(countDownTimerService: CountDownTimerService) {
+  fun cancelTimer(countDownTimerService: CountDownTimerService) {
     countDownTimerService.cancel()
-    setState = setState.copy(timerActive = false)
   }
 
   private fun finishSet(countDownTimerService: CountDownTimerService) {
-    setState.copy(index = setState.index + 1, timerActive = false).let { nextSetState ->
-      nextSetState.set.onNull {
-        // Was final set, no resting
-        setState = nextSetState
-      }.onNotNull {
-        startTimer(
-          countDownTimerService = countDownTimerService,
-          title = resourceProvider.restTimerTitle,
-          duration = restState.duration,
-          onStart = { restState = restState.copy(isActive = true) },
-          onFinished = {
-            restState = restState.copy(isActive = false)
-            setState = nextSetState
-          })
+    uiState.apply {
+      SetState(index = setState.value.index + 1).let { nextSetState ->
+        nextSetState.set.onNull {
+          // Was final set, no resting
+          setState.update(nextSetState)
+        }.onNotNull { set ->
+          setState.value.restTimer.onNotNull { restTimer ->
+            startTimer(
+              countDownTimerService = countDownTimerService,
+              duration = restTimer.duration,
+              onStart = { restTimer.isActive.update(true) },
+              onFinished = { setState.update(nextSetState) },
+              onCleanUp = { restTimer.isActive.update(false) })
+          }
+        }
       }
     }
   }
 
   private fun startTimer(
     countDownTimerService: CountDownTimerService,
-    title: String,
     duration: Duration,
-    onStart: () -> Unit,
-    onFinished: () -> Unit
+    onFinished: () -> Unit,
+    onStart: (() -> Unit)? = null,
+    onCleanUp: (() -> Unit)? = null,
   ) {
     if (duration <= 0.seconds) {
+      onStart?.invoke()
       onFinished()
+      onCleanUp?.invoke()
       return
     }
 
     countDownTimerService.start(
-      title = title, durationMillis = duration.inWholeMilliseconds, onFinished = onFinished
-    ).also {
-      onStart()
-    }
+      durationMillis = duration.inWholeMilliseconds,
+      onFinished = onFinished,
+      onStart = onStart,
+      onCleanUp = onCleanUp
+    )
   }
 }
 
 fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Unit) {
   composable<ExerciseScreen> { navStack ->
-    val (id) = navStack.toRoute<ExerciseScreen>()
+    val (exerciseId) = navStack.toRoute<ExerciseScreen>()
+    val setTimerTitle = stringResource(R.string.title_set_timer)
+    val restTimerTitle = stringResource(R.string.title_rest_timer)
     val context = LocalContext.current
     val dao = RoutineDatabase.getDatabase(context.applicationContext).routineDao()
-    val resourceProvider = ExerciseScreenViewModel.ResourceProvider(
-      setTimerTitle = stringResource(R.string.title_set_timer),
-      restTimerTitle = stringResource(R.string.title_rest_timer)
-    )
 
     val viewmodel: ExerciseScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        ExerciseScreenViewModel(
-          fetchData = { dao.getExerciseWithProgressAndSets(id) },
-          saveData = { dao.upsert(it) },
-          resourceProvider = resourceProvider
-        )
+        ExerciseScreenViewModel(fetchData = {
+          (dao.getExerciseWithProgressAndSets(exerciseId)
+            ?: throw Exception("Failed to fetch data")).let { result ->
+            ExerciseScreenViewModel.Model(
+              exerciseName = result.exercise.name, sets = result.sets.map { set ->
+                ExerciseScreenViewModel.Model.SetModel(
+                  repetitions = ifElse(
+                    condition = set.valueType == ExerciseSet.ValueType.REPETITION,
+                    ifTrue = { set.value },
+                    ifFalse = { null }),
+                  setDuration = ifElse(
+                    condition = set.valueType == ExerciseSet.ValueType.COUNTDOWN,
+                    ifTrue = { set.value.milliseconds },
+                    ifFalse = { null }),
+                  restDuration = result.exercise.restDuration,
+                  unit = set.unit
+                )
+              })
+          }
+        }, saveProgress = {
+          dao.upsert(Calendar.getInstance().time.let { finishedDate ->
+            dao.getExerciseProgressByExerciseId(exerciseId)?.copy(finishedDate = finishedDate)
+              ?: ExerciseProgress(exerciseId = exerciseId, finishedDate = finishedDate)
+          }).also {
+            onBack()
+          }
+        })
       }
     })
-    val exercise = viewmodel.exerciseModel?.exercise
-    val setState = viewmodel.setState
-    val restState = viewmodel.restState
-
-    var service: CountDownTimerService? by remember { mutableStateOf(null) }
+    val uiState = viewmodel.uiState
+    var timerService: CountDownTimerService? by remember { mutableStateOf(null) }
     val connection = remember {
       object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-          service = (binder as? CountDownTimerService.BinderHelper)?.getService()?.apply {
+          timerService = (binder as? CountDownTimerService.BinderHelper)?.getService()?.apply {
             // Notifications needs to be hidden also here, because the service will be null in
             //  LifecycleEventEffect ON_RESUME when the configuration changes
             hideNotification()
@@ -275,7 +277,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-          service = null
+          timerService = null
         }
       }
     }
@@ -284,16 +286,20 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     var openInProgressEditDialog by remember { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-      service?.hideNotification()
+      timerService?.hideNotification()
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
-      if (viewmodel.restState.isActive || viewmodel.setState.timer.isActive) {
-        service?.showNotification()
+      uiState.setState.value.apply {
+        when {
+          restTimer?.isActive?.value == true -> timerService?.showNotification(restTimerTitle)
+          setTimer?.isActive?.value == true -> timerService?.showNotification(setTimerTitle)
+          else -> {}
+        }
       }
     }
 
-    BackHandler(enabled = viewmodel.inProgress) {
+    BackHandler(enabled = uiState.inProgress) {
       openInProgressBackDialog = true
     }
 
@@ -306,7 +312,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     if (openInProgressEditDialog) {
       InProgressDialog(onDismiss = { openInProgressEditDialog = false }, onConfirm = {
         openInProgressEditDialog = false
-        onEdit(id)
+        onEdit(exerciseId)
       })
     }
 
@@ -322,25 +328,22 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
       }
     }
 
-    LoadingScreen(enabled = viewmodel.isLoading) {
-      if (exercise != null) {
-        ExerciseScreen(
-          exercise = exercise,
-          setState = setState,
-          restState = restState,
-          onBack = {
-            viewmodel.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
-          },
-          onEdit = {
-            viewmodel.inProgress.onTrue { openInProgressEditDialog = true }.onFalse { onEdit(id) }
-          },
-          onStartSet = { service?.let { viewmodel.startSet(it) } },
-          onStopSetTimer = { service?.let { viewmodel.stopTimer(it) } },
-          onCancelSet = { service?.let { viewmodel.cancelSetTimer(it) } },
-          onStopRest = { service?.let { viewmodel.stopTimer(it) } },
-          onFinishExercise = { viewmodel.finishExercise(onSaved = { onBack() }) },
-        )
-      }
+    LoadingScreen(enabled = uiState.isLoading) {
+      ExerciseScreen(
+        uiState = uiState,
+        onBack = {
+          uiState.inProgress.onTrue { openInProgressBackDialog = true }.onFalse { onBack() }
+        },
+        onEdit = {
+          uiState.inProgress.onTrue { openInProgressEditDialog = true }
+            .onFalse { onEdit(exerciseId) }
+        },
+        onStartSet = { timerService?.let { viewmodel.startSet(it) } },
+        onStopSetTimer = { timerService?.let { viewmodel.stopTimer(it) } },
+        onCancelSet = { timerService?.let { viewmodel.cancelTimer(it) } },
+        onStopRest = { timerService?.let { viewmodel.stopTimer(it) } },
+        onFinishExercise = { viewmodel.finishExercise() },
+      )
     }
   }
 }
@@ -348,9 +351,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ExerciseScreen(
-  exercise: Exercise,
-  setState: ExerciseScreenViewModel.SetState,
-  restState: ExerciseScreenViewModel.TimerState,
+  uiState: ExerciseScreenViewModel.UiState,
   onBack: () -> Unit,
   onEdit: () -> Unit,
   onStartSet: () -> Unit,
@@ -359,7 +360,7 @@ fun ExerciseScreen(
   onStopRest: () -> Unit,
   onFinishExercise: () -> Unit,
 ) {
-  val restSheetState = rememberModalBottomSheetState(
+  val restTimerSheetState = rememberModalBottomSheetState(
     skipPartiallyExpanded = true,
     confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
   val setTimerSheetState = rememberModalBottomSheetState(
@@ -368,27 +369,29 @@ fun ExerciseScreen(
   var showRestSheet by remember { mutableStateOf(false) }
   var showSetTimerSheet by remember { mutableStateOf(false) }
 
-  LaunchedEffect(restState.isActive) {
-    restSheetState.apply {
-      if (restState.isActive) show() else hide()
-    }
+  LaunchedEffect(uiState.setState.value.restTimer?.isActive?.value) {
     // sheet state can't be checked with SheetState.currentValue, because confirmValueChange
     //  is always false, so the state will not change when closing the sheet.
-    showRestSheet = restState.isActive
+    showRestSheet = restTimerSheetState.let { sheetState ->
+      uiState.setState.value.restTimer?.isActive?.value.also { active ->
+        if (active == true) sheetState.show() else sheetState.hide()
+      }
+    } ?: false
   }
 
-  LaunchedEffect(setState.timer.isActive) {
-    setTimerSheetState.apply {
-      if (setState.timer.isActive) show() else hide()
-    }
+  LaunchedEffect(uiState.setState.value.setTimer?.isActive?.value) {
     // sheet state can't be checked with SheetState.currentValue, because confirmValueChange
     //  is always false, so the state will not change when closing the sheet.
-    showSetTimerSheet = setState.timer.isActive
+    showSetTimerSheet = setTimerSheetState.let { sheetState ->
+      uiState.setState.value.setTimer?.isActive?.value.also { active ->
+        if (active == true) sheetState.show() else sheetState.hide()
+      }
+    } ?: false
   }
 
   Scaffold(
     topBar = {
-      TopAppBar(title = { Text(exercise.name) }, actions = {
+      TopAppBar(title = { Text(uiState.exerciseName) }, actions = {
         IconButton(onClick = onEdit) {
           Icon(
             imageVector = Icons.Filled.Edit,
@@ -407,12 +410,12 @@ fun ExerciseScreen(
         verticalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.padding(16.dp)
       ) {
-        SetProgress(currentSet = setState.index + 1, totalSets = setState.total)
+        SetProgressIndicator(
+          currentSet = uiState.setState.value.index + 1, totalSets = uiState.sets.size
+        )
 
-        if (setState.set != null) {
-          SetContent(setState = setState, onSubmit = {
-            onStartSet()
-          })
+        if (uiState.setState.value.set != null) {
+          SetContent(setState = uiState.setState.value, onStartSet = { onStartSet() })
         }
         else {
           Button(
@@ -428,27 +431,12 @@ fun ExerciseScreen(
       }
     }
 
-    // Visibility needs to be checked with showRestSheet instead of setState.isResting because
+    // Visibility needs to be checked with showRestSheet because
     //  otherwise the sheet closing animation will not work correctly.
-    TimerSheet(
-      isVisible = showRestSheet,
-      timerTitle = stringResource(R.string.title_rest),
-      timerState = restState,
-      sheetState = restSheetState,
-      onDismissRequest = onStopRest,
-    ) {
-      Button(
-        onClick = onStopRest, colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.secondary
-        )
-      ) {
-        Text(stringResource(R.string.btn_finish))
-      }
-    }
     TimerSheet(
       isVisible = showSetTimerSheet,
       timerTitle = stringResource(R.string.title_set_timer),
-      timerState = setState.timer,
+      timerState = uiState.setState.value.setTimer,
       sheetState = setTimerSheetState,
       onDismissRequest = onCancelSet,
     ) {
@@ -468,10 +456,25 @@ fun ExerciseScreen(
       }
     }
   }
+  TimerSheet(
+    isVisible = showRestSheet,
+    timerTitle = stringResource(R.string.title_rest),
+    timerState = uiState.setState.value.restTimer,
+    sheetState = restTimerSheetState,
+    onDismissRequest = onStopRest,
+  ) {
+    Button(
+      onClick = onStopRest, colors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.secondary
+      )
+    ) {
+      Text(stringResource(R.string.btn_finish))
+    }
+  }
 }
 
 @Composable
-fun SetProgress(currentSet: Int, totalSets: Int) {
+fun SetProgressIndicator(currentSet: Int, totalSets: Int) {
   val progress by remember(currentSet) {
     mutableFloatStateOf((currentSet.toFloat() - 1) / totalSets.toFloat())
   }
@@ -514,14 +517,16 @@ fun SetProgress(currentSet: Int, totalSets: Int) {
 }
 
 @Composable
-fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit) {
-  fun getSetValueString(set: ExerciseSet?): String {
-    return when (set?.valueType) {
-      ExerciseSet.ValueType.COUNTDOWN -> set.value.milliseconds.inWholeMinutes.toString()
-      null -> String.EMPTY
-      else -> set.value.toString()
+fun SetContent(setState: ExerciseScreenViewModel.UiState.SetState, onStartSet: () -> Unit) {
+  fun getSetValueString(set: ExerciseScreenViewModel.Model.SetModel?): String {
+    return when {
+      set?.repetitions != null -> set.repetitions.toString()
+      set?.setDuration != null -> set.setDuration.inWholeMinutes.toString()
+      else -> String.EMPTY
     }
   }
+
+  if (setState.set == null) return
 
   Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
     Card {
@@ -536,21 +541,21 @@ fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit)
           style = MaterialTheme.typography.titleMedium
         )
         Text(
-          text = "${getSetValueString(setState.set)} ${setState.set?.unit}",
+          text = "${getSetValueString(setState.set)} ${setState.set.unit}",
           style = MaterialTheme.typography.displayMedium
         )
       }
     }
     Button(
       shape = CardDefaults.shape,
-      onClick = onSubmit,
+      onClick = onStartSet,
       modifier = Modifier
         .heightIn(max = 100.dp)
         .fillMaxSize()
     ) {
       Text(
         text = ifElse(
-          condition = setState.timer.duration > 0.milliseconds,
+          condition = setState.setTimer != null,
           ifTrue = { stringResource(R.string.btn_start) },
           ifFalse = { stringResource(R.string.btn_done) }),
         style = MaterialTheme.typography.titleLarge
@@ -564,22 +569,25 @@ fun SetContent(setState: ExerciseScreenViewModel.SetState, onSubmit: () -> Unit)
 fun TimerSheet(
   isVisible: Boolean,
   timerTitle: String,
-  timerState: ExerciseScreenViewModel.TimerState,
+  timerState: ExerciseScreenViewModel.TimerState?,
   sheetState: SheetState,
   onDismissRequest: () -> Unit,
   content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {
-    val restStartTime = rememberSaveable(timerState.isActive) { System.currentTimeMillis() }
-    var clockText by rememberSaveable { mutableStateOf(timerState.duration.toClockString()) }
+    val isActive = timerState?.isActive?.value == true
+    val duration = timerState?.duration ?: 0.seconds
+
+    val restStartTime = rememberSaveable(isActive) { System.currentTimeMillis() }
+    var clockText by rememberSaveable { mutableStateOf(duration.toClockString()) }
     val progress = remember {
-      if (timerState.duration.inWholeMilliseconds <= 0) Animatable(1f)
-      else Animatable(initialValue = ((System.currentTimeMillis() - restStartTime).toFloat() / timerState.duration.inWholeMilliseconds.toFloat()))
+      if (duration.inWholeMilliseconds <= 0) Animatable(1f)
+      else Animatable(initialValue = ((System.currentTimeMillis() - restStartTime).toFloat() / duration.inWholeMilliseconds.toFloat()))
     }
 
     LaunchedEffect(Unit) {
       val remainingMillis =
-        timerState.duration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
+        duration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
 
       progress.animateTo(
         targetValue = 1f, animationSpec = tween(
@@ -588,10 +596,10 @@ fun TimerSheet(
       )
     }
 
-    DisposableEffect(timerState.isActive) {
-      val timer = if (timerState.isActive) timer(period = 1.seconds.inWholeMilliseconds) {
+    DisposableEffect(isActive) {
+      val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
         val remainingMillis =
-          timerState.duration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
+          duration.inWholeMilliseconds - (System.currentTimeMillis() - restStartTime)
 
         clockText = remainingMillis.milliseconds.toClockString()
       }

@@ -11,14 +11,16 @@ class ViewModelState<T>(initValue: T) {
   private var onChange: ((T) -> Unit)? = null
   private var validationPredicate: ((T) -> T?)? = null
 
-  fun update(value: T) {
+  fun update(value: T): T {
     val validation = validationPredicate
-    val value = if (validation != null) validation(value) else value
+    val newValue = if (validation != null) validation(value) else value
 
-    if (this.value != value && value != null) {
-      this.value = value
-      onChange?.invoke(value)
+    if (this.value != newValue && newValue != null) {
+      this.value = newValue
+      onChange?.invoke(this.value)
     }
+
+    return this.value
   }
 
   /**

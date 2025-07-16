@@ -15,42 +15,42 @@ interface RoutineDao {
   @Query("SELECT * FROM routines WHERE id = :routineId")
   suspend fun getRoutine(routineId: Long): Routine?
 
-  @Query("SELECT * FROM routine_schedules WHERE id = :scheduleId")
-  suspend fun getSchedule(scheduleId: Long): RoutineSchedule?
-
   @Query("SELECT * FROM routine_schedules WHERE routine_id = :routineId")
   suspend fun getScheduleByRoutineId(routineId: Long): RoutineSchedule?
 
-  @Query("SELECT * FROM routine_schedules")
-  suspend fun getSchedules(): List<RoutineSchedule>
-
+  // TODO: unit test
   @Query("SELECT * FROM exercises WHERE id = :exerciseId")
   suspend fun getExercise(exerciseId: Long): Exercise?
+
+  // TODO: unit test
+  @Query("SELECT * FROM exercise_progress WHERE exercise_id = :exerciseId")
+  suspend fun getExerciseProgressByExerciseId(exerciseId: Long): ExerciseProgress?
 
   @Transaction
   @Query("SELECT * FROM routines WHERE id = :routineId")
   suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule?
 
+  // TODO: unit test
   @Transaction
   @Query("SELECT * FROM routines")
   fun getRoutinesWithScheduleFlow(): Flow<List<RoutineWithSchedule>>
 
+  // TODO: unit test
   @Transaction
   @Query("SELECT * FROM routines")
   fun getRoutineWithScheduleAndExerciseProgressesFlow(): Flow<List<RoutineWithScheduleAndExerciseProgresses>>
 
-  @Transaction
-  @Query("SELECT * FROM routines WHERE id = :routineId")
-  suspend fun getRoutineWithExercises(routineId: Long): RoutineWithExercises?
-
+  // TODO: unit test
   @Transaction
   @Query("SELECT * FROM exercises WHERE id = :exerciseId")
   suspend fun getExerciseWithSets(exerciseId: Long): ExerciseWithSets?
 
+  // TODO: unit test
   @Transaction
   @Query("SELECT * FROM routines WHERE id = :routineId")
   fun getRoutineWithExerciseProgressesFlow(routineId: Long): Flow<RoutineWithExerciseProgresses?>
 
+  // TODO: unit test
   @Transaction
   @Query("SELECT * FROM exercises WHERE id = :exerciseId")
   suspend fun getExerciseWithProgressAndSets(exerciseId: Long): ExerciseWithProgressAndSets?
@@ -125,18 +125,10 @@ interface RoutineDao {
     return Pair(routineId, scheduleId)
   }
 
+  // TODO: unit test
   @Transaction
   suspend fun upsertAndGet(routineWithSchedule: RoutineWithSchedule): RoutineWithSchedule? {
-    upsert(routineWithSchedule).let {
-      return getRoutineWithSchedule(it.first)
-    }
-  }
-
-  @Transaction
-  suspend fun upsertAndGet(exerciseWithSets: ExerciseWithSets): ExerciseWithSets? {
-    upsert(exerciseWithSets).let {
-      return getExerciseWithSets(it)
-    }
+    return getRoutineWithSchedule(upsert(routineWithSchedule).first)
   }
   // endregion
 
@@ -155,6 +147,7 @@ interface RoutineDao {
   // endregion
 
   // region Helper functions
+  // TODO: unit test
   /**
    * @return the new id from upsert if the value is not -1, otherwise returns old id
    */

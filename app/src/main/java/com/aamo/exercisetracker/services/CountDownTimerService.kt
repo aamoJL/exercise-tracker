@@ -28,9 +28,15 @@ import kotlin.concurrent.timerTask
 
 class CountDownTimerService() : Service() {
   private data class TimerState(
-    val title: String,
     val timer: Timer,
-    val onFinished: (() -> Unit),
+    /**
+     * Will be called when the timer has been stopped
+     */
+    val onFinished: () -> Unit,
+    /**
+     * Will be called when the timer has been stopped or cancelled
+     */
+    val onCleanUp: (() -> Unit)?,
     val startTime: Long,
     val durationMillis: Long,
   )
@@ -50,22 +56,27 @@ class CountDownTimerService() : Service() {
     stopSelf()
   }
 
-  fun start(title: String, durationMillis: Long, onFinished: () -> Unit) {
-    if (durationMillis > 0L) {
-      cancel()
-      state = TimerState(
-        title = title,
-        timer = Timer(true).apply {
-          schedule(timerTask {
-            vibrate()
-            stop()
-          }, durationMillis)
-        },
-        onFinished = onFinished,
-        startTime = System.currentTimeMillis(),
-        durationMillis = durationMillis
-      )
-    }
+  fun start(
+    durationMillis: Long,
+    onFinished: () -> Unit,
+    onStart: (() -> Unit)? = null,
+    onCleanUp: (() -> Unit)? = null
+  ) {
+    cancel()
+    state = TimerState(
+      timer = Timer(true).apply {
+        schedule(timerTask {
+          // OnFinished and onCleanUp will be invoked in the stop() function
+          vibrate()
+          stop()
+        }, durationMillis)
+      },
+      onFinished = onFinished,
+      onCleanUp = onCleanUp,
+      startTime = System.currentTimeMillis(),
+      durationMillis = durationMillis
+    )
+    onStart?.invoke()
   }
 
   fun stop() {
@@ -80,18 +91,19 @@ class CountDownTimerService() : Service() {
     state?.apply {
       timer.cancel()
       timer.purge()
+      onCleanUp?.invoke()
     }
-    state = null
 
+    state = null
     hideNotification()
   }
 
-  fun showNotification() {
+  fun showNotification(title: String) {
     if (state == null) return
 
     state?.let {
       sendNotification(
-        title = it.title,
+        title = title,
         durationMillis = it.durationMillis - (System.currentTimeMillis() - it.startTime)
       )
     }
