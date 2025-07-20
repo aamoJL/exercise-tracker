@@ -232,7 +232,7 @@ fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long
                   }, unit = model.setUnit, valueType = ifElse(
                     condition = model.hasTimer,
                     ifTrue = { ExerciseSet.ValueType.COUNTDOWN },
-                    ifFalse = { ExerciseSet.ValueType.REPETITION })
+                    ifFalse = { ExerciseSet.ValueType.REPETITION }), exerciseId = 0L
                 )
               })
           ).let { result ->
@@ -289,7 +289,7 @@ fun NavGraphBuilder.editExerciseFormScreen(
                 ), sets = sets.take(model.setAmounts.size).let { list ->
                   list.toMutableList().apply {
                     // Add missing sets
-                    repeat(model.setAmounts.size - list.size) { add(ExerciseSet()) }
+                    repeat(model.setAmounts.size - list.size) { add(ExerciseSet(exerciseId = exerciseId)) }
                   }.let { list ->
                     list.mapIndexed { i, item ->
                       item.copy(

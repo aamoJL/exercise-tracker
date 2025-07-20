@@ -73,7 +73,7 @@ class RoutineScreenViewModel(routineId: Long, routineDao: RoutineDao) : ViewMode
 
   init {
     viewModelScope.launch {
-      routineDao.getRoutineWithExerciseProgressesFlow(routineId).collect { item ->
+      routineDao.getRoutineWithProgressesFlow(routineId).collect { item ->
         item?.also {
           routine = item.routine
           _exercises.update { item.exerciseProgresses }

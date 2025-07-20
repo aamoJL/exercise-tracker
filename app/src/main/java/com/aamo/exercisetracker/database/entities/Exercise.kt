@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.minutes
 )
 data class Exercise(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
-  @ColumnInfo(name = "routine_id") val routineId: Long = 0,
+  @ColumnInfo(name = "routine_id") val routineId: Long,
   @ColumnInfo(name = "name") val name: String = String.EMPTY,
   @ColumnInfo(name = "rest_duration") val restDuration: Duration = 0.minutes,
 )
@@ -40,7 +40,7 @@ data class Exercise(
 )
 data class ExerciseSet(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
-  @ColumnInfo(name = "exercise_id") val exerciseId: Long = 0,
+  @ColumnInfo(name = "exercise_id") val exerciseId: Long,
   @ColumnInfo(name = "value") val value: Int = 0,
   @ColumnInfo(name = "unit") val unit: String = "reps",
   @ColumnInfo(name = "value_type", defaultValue = "0")
@@ -62,7 +62,7 @@ data class ExerciseSet(
 )
 data class ExerciseProgress(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
-  @ColumnInfo(name = "exercise_id") val exerciseId: Long = 0,
+  @ColumnInfo(name = "exercise_id") val exerciseId: Long,
   @ColumnInfo(name = "finished_date") val finishedDate: Date,
 )
 // endregion

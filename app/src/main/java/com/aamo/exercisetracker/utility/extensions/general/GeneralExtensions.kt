@@ -13,6 +13,13 @@ inline fun <T> T.letIf(condition: Boolean, block: (T) -> T): T {
   else this
 }
 
+inline fun <T> T.letIf(condition: (T) -> Boolean, block: (T) -> T): T {
+  return if (condition(this)) {
+    block(this)
+  }
+  else this
+}
+
 inline fun Boolean.onFalse(block: () -> Unit): Boolean {
   if (!this) {
     block()

@@ -96,7 +96,7 @@ fun NavGraphBuilder.dailiesScreen(onRoutineSelected: (Long) -> Unit) {
       initializer {
         DailiesScreenViewModel(fetchData = {
           RoutineDatabase.getDatabase(context).routineDao()
-            .getRoutineWithScheduleAndExerciseProgressesFlow()
+            .getRoutinesWithScheduleAndProgressesFlow()
         })
       }
     })

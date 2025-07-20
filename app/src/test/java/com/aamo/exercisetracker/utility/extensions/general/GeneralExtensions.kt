@@ -22,6 +22,12 @@ class GeneralExtensionsTests {
   }
 
   @Test
+  fun `letIf with block test`() {
+    assertEquals(1, 0.letIf({ it == 0 }) { 1 })
+    assertEquals(0, 0.letIf({ it == 1 }) { 1 })
+  }
+
+  @Test
   fun `onFalse test`() {
     var value = false
     value.onFalse { value = true }.also {
