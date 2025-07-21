@@ -1,6 +1,5 @@
 package com.aamo.exercisetracker.features.routine
 
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +51,7 @@ import com.aamo.exercisetracker.ui.components.SearchTextField
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,15 +66,12 @@ import java.util.Calendar
 @Serializable
 object RoutineListScreen
 
-class RoutineListScreenViewModel(context: Context) : ViewModel() {
-  private val database: RoutineDatabase = RoutineDatabase.getDatabase(context)
-
-  private val _routines = database.routineDao().getRoutinesWithScheduleFlow()
-    .map { list -> list.sortedBy { it.routine.name } }.also {
-      viewModelScope.launch {
-        it.collect { isLoading = false }
-      }
+class RoutineListScreenViewModel(fetchData: () -> Flow<List<RoutineWithSchedule>>) : ViewModel() {
+  private val _routines = fetchData().map { list -> list.sortedBy { it.routine.name } }.also {
+    viewModelScope.launch {
+      it.collect { isLoading = false }
     }
+  }
 
   var isLoading by mutableStateOf(true)
     private set
@@ -97,7 +94,11 @@ fun NavGraphBuilder.routineListScreen(
   composable<RoutineListScreen> {
     val context = LocalContext.current.applicationContext
     val viewmodel: RoutineListScreenViewModel = viewModel(factory = viewModelFactory {
-      initializer { RoutineListScreenViewModel(context = context) }
+      initializer {
+        RoutineListScreenViewModel(fetchData = {
+          RoutineDatabase.getDatabase(context).routineDao().getRoutinesWithScheduleFlow()
+        })
+      }
     })
     val routines by viewmodel.filteredRoutines.collectAsStateWithLifecycle()
     val filterWord by viewmodel.filterWord.collectAsStateWithLifecycle()
@@ -216,7 +217,8 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
             condition = dayIsSelected(day = dayOrder[i], schedule = schedule),
             ifTrue = { MaterialTheme.colorScheme.secondary },
             ifFalse = { MaterialTheme.colorScheme.outline }),
-          style = MaterialTheme.typography.labelSmall)
+          style = MaterialTheme.typography.labelSmall
+        )
       }
     }
   }

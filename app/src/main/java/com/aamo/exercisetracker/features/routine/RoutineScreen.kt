@@ -47,10 +47,11 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
 import com.aamo.exercisetracker.database.entities.Routine
-import com.aamo.exercisetracker.database.entities.RoutineDao
+import com.aamo.exercisetracker.database.entities.RoutineWithExerciseProgresses
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -62,7 +63,7 @@ import java.time.ZoneId
 @Serializable
 data class RoutineScreen(val id: Long = 0L, val showProgress: Boolean = false)
 
-class RoutineScreenViewModel(routineId: Long, routineDao: RoutineDao) : ViewModel() {
+class RoutineScreenViewModel(fetchData: () -> Flow<RoutineWithExerciseProgresses?>) : ViewModel() {
   private val _exercises = MutableStateFlow<List<ExerciseWithProgress>>(emptyList())
   val exercises = _exercises.asStateFlow()
 
@@ -73,11 +74,11 @@ class RoutineScreenViewModel(routineId: Long, routineDao: RoutineDao) : ViewMode
 
   init {
     viewModelScope.launch {
-      routineDao.getRoutineWithProgressesFlow(routineId).collect { item ->
+      fetchData().collect { item ->
+        isLoading = false
         item?.also {
           routine = item.routine
           _exercises.update { item.exerciseProgresses }
-          isLoading = false
         }
       }
     }
@@ -91,16 +92,18 @@ fun NavGraphBuilder.routineScreen(
   onEdit: (id: Long) -> Unit
 ) {
   composable<RoutineScreen> { navStack ->
-    val (id: Long, showProgress: Boolean) = navStack.toRoute<RoutineScreen>()
+    val (routineId: Long, showProgress: Boolean) = navStack.toRoute<RoutineScreen>()
     val context = LocalContext.current.applicationContext
     val viewmodel: RoutineScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         RoutineScreenViewModel(
-          routineId = id, routineDao = RoutineDatabase.getDatabase(context).routineDao()
+          fetchData = {
+            RoutineDatabase.getDatabase(context).routineDao()
+              .getRoutineWithProgressesFlow(routineId)
+          },
         )
       }
     })
-
     val routine = viewmodel.routine
     val exercises by viewmodel.exercises.collectAsStateWithLifecycle()
 
@@ -113,7 +116,7 @@ fun NavGraphBuilder.routineScreen(
           onBack = onBack,
           onAddExercise = onAddExercise,
           onSelectExercise = onSelectExercise,
-          onEdit = { onEdit(id) })
+          onEdit = { onEdit(routineId) })
       }
     }
   }
