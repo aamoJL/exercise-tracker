@@ -50,13 +50,16 @@
     <string name="cd_save_routine">Tallenna ohjelma</string>
     <string name="label_schedule">Aikataulu</string>
     <string name="dialog_title_delete_routine">Poista ohjelma?</string>
-    <string name="cd_add_routine">Lisää ohjelma</string>
+    <string name="cd_add_routine">Lisää uusi ohjelma</string>
     <string name="label_inactive">Epäaktiivinen</string>
     <string name="label_every_day">Päivittäinen</string>
     <string name="cd_edit_routine">Muokkaa ohjelmaa</string>
-    <string name="cd_add_exercise">Lisää treeni</string>
+    <string name="cd_add_exercise">Lisää uusi treeni</string>
     <string name="ph_search">Hae…</string>
     <string name="cd_clear">Tyhjennä</string>
     <string name="dialog_title_unsaved_changes">Tallentamattomia muutoksia</string>
     <string name="dialog_text_unsaved_changes">Palaa takaisin tallentamatta muutoksia?</string>
+    <string name="cd_monthly_progress_tab">Kehitys välilehti</string>
+    <string name="label_progress">Kehitys</string>
+    <string name="cd_add_monthly_progress">Lisää uusi kehitys</string>
 </resources>

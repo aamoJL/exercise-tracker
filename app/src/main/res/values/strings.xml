@@ -59,4 +59,7 @@
     <string name="cd_clear">Clear</string>
     <string name="dialog_title_unsaved_changes">Unsaved changes</string>
     <string name="dialog_text_unsaved_changes">Go back without saving?</string>
+    <string name="cd_monthly_progress_tab">Monthly progress tab</string>
+    <string name="label_progress">Progress</string>
+    <string name="cd_add_monthly_progress">Add monthly progress</string>
 </resources>

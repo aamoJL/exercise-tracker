@@ -66,6 +66,8 @@ import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.absoluteValue
 
+// TODO: add monthly progresses to the dailies screen?
+
 @Serializable
 data class DailiesScreen(val initialDay: Day)
 
@@ -88,7 +90,7 @@ class DailiesScreenViewModel(fetchData: () -> Flow<List<RoutineWithScheduleAndEx
   }
 }
 
-fun NavGraphBuilder.dailiesScreen(onRoutineSelected: (Long) -> Unit) {
+fun NavGraphBuilder.dailiesScreen(onSelectRoutine: (Long) -> Unit) {
   composable<DailiesScreen> { stack ->
     val initialDay = stack.toRoute<DailiesScreen>().initialDay
     val context = LocalContext.current.applicationContext
@@ -106,7 +108,7 @@ fun NavGraphBuilder.dailiesScreen(onRoutineSelected: (Long) -> Unit) {
       routines = routines,
       isLoading = viewmodel.isLoading,
       initialDay = initialDay,
-      onRoutineSelected = onRoutineSelected,
+      onRoutineSelected = onSelectRoutine,
       modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
     )
   }

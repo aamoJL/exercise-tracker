@@ -15,6 +15,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -25,6 +26,8 @@ import androidx.navigation.compose.rememberNavController
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.dailies.dailiesScreen
+import com.aamo.exercisetracker.features.monthlyProgress.MonthlyProgressListScreen
+import com.aamo.exercisetracker.features.monthlyProgress.monthlyProgressListScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
@@ -47,7 +50,7 @@ fun NavGraphBuilder.homeScreen(navController: NavController) {
 @Composable
 fun HomeScreen(mainNavController: NavController) {
   val homeNavController = rememberNavController()
-  val navStack = homeNavController.currentBackStackEntryAsState().value
+  val navStackEntry = homeNavController.currentBackStackEntryAsState().value
 
   Column {
     NavHost(
@@ -55,7 +58,7 @@ fun HomeScreen(mainNavController: NavController) {
       startDestination = DailiesScreen(Day.today()),
       modifier = Modifier.weight(1f)
     ) {
-      dailiesScreen(onRoutineSelected = { id ->
+      dailiesScreen(onSelectRoutine = { id ->
         mainNavController.navigate(RoutinePage(id = id, showProgress = true)) {
           launchSingleTop = true
         }
@@ -65,27 +68,36 @@ fun HomeScreen(mainNavController: NavController) {
           launchSingleTop = true
         }
       }, onAddRoutine = { mainNavController.navigate(RoutineFormScreen(id = 0L)) })
+      monthlyProgressListScreen(onSelectProgress = {
+        // TODO: progress page
+      }, onAddProgress = {
+        // TODO: progress form page
+      })
     }
 
     // prevents bottom bar to be visible when IME is visible
     if (!WindowInsets.isImeVisible) {
       BottomAppBar {
         NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
-          NavigationBarItem(selected = navStack.destinationEquals(DailiesScreen::class), onClick = {
-            navStack.destinationEquals(DailiesScreen::class).onFalse {
-              homeNavController.popBackStack(route = DailiesScreen::class, inclusive = false)
-                .onFalse { homeNavController.navigate(route = DailiesScreen(Day.today())) }
-            }
-          }, icon = {
-            Icon(
-              imageVector = Icons.Filled.DateRange,
-              contentDescription = stringResource(R.string.cd_dailies_tab)
-            )
-          }, label = { Text(stringResource(R.string.label_dailies)) })
           NavigationBarItem(
-            selected = navStack.destinationEquals(RoutineListScreen::class),
+            selected = navStackEntry.destinationEquals(DailiesScreen::class),
             onClick = {
-              navStack.destinationEquals(RoutineListScreen::class).onFalse {
+              navStackEntry.destinationEquals(DailiesScreen::class).onFalse {
+                homeNavController.popBackStack(route = DailiesScreen::class, inclusive = false)
+                  .onFalse { homeNavController.navigate(route = DailiesScreen(Day.today())) }
+              }
+            },
+            icon = {
+              Icon(
+                imageVector = Icons.Filled.DateRange,
+                contentDescription = stringResource(R.string.cd_dailies_tab)
+              )
+            },
+            label = { Text(stringResource(R.string.label_dailies)) })
+          NavigationBarItem(
+            selected = navStackEntry.destinationEquals(RoutineListScreen::class),
+            onClick = {
+              navStackEntry.destinationEquals(RoutineListScreen::class).onFalse {
                 homeNavController.navigate(route = RoutineListScreen) {
                   popUpTo(DailiesScreen::class) { inclusive = false }
                 }
@@ -98,6 +110,22 @@ fun HomeScreen(mainNavController: NavController) {
               )
             },
             label = { Text(stringResource(R.string.label_routines)) })
+          NavigationBarItem(
+            selected = navStackEntry.destinationEquals(MonthlyProgressListScreen::class),
+            onClick = {
+              navStackEntry.destinationEquals(MonthlyProgressListScreen::class).onFalse {
+                homeNavController.navigate(route = MonthlyProgressListScreen) {
+                  popUpTo(DailiesScreen::class) { inclusive = false }
+                }
+              }
+            },
+            icon = {
+              Icon(
+                painter = painterResource(R.drawable.baseline_bar_chart_24),
+                contentDescription = stringResource(R.string.cd_monthly_progress_tab)
+              )
+            },
+            label = { Text(stringResource(R.string.label_progress)) })
         }
       }
     }
