@@ -26,8 +26,10 @@ import androidx.navigation.compose.rememberNavController
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.dailies.dailiesScreen
-import com.aamo.exercisetracker.features.monthlyProgress.MonthlyProgressListScreen
-import com.aamo.exercisetracker.features.monthlyProgress.monthlyProgressListScreen
+import com.aamo.exercisetracker.features.progressTracking.ProgressTrackingPage
+import com.aamo.exercisetracker.features.progressTracking.TrackedProgressFormScreen
+import com.aamo.exercisetracker.features.progressTracking.TrackedProgressListScreen
+import com.aamo.exercisetracker.features.progressTracking.trackedProgressListScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
@@ -67,11 +69,19 @@ fun HomeScreen(mainNavController: NavController) {
         mainNavController.navigate(RoutinePage(id = id)) {
           launchSingleTop = true
         }
-      }, onAddRoutine = { mainNavController.navigate(RoutineFormScreen(id = 0L)) })
-      monthlyProgressListScreen(onSelectProgress = {
-        // TODO: progress page
+      }, onAddRoutine = {
+        mainNavController.navigate(RoutineFormScreen(id = 0L)) {
+          launchSingleTop = true
+        }
+      })
+      trackedProgressListScreen(onSelectProgress = { id ->
+        mainNavController.navigate(ProgressTrackingPage(progressId = id)) {
+          launchSingleTop = true
+        }
       }, onAddProgress = {
-        // TODO: progress form page
+        mainNavController.navigate(TrackedProgressFormScreen(progressId = 0L)) {
+          launchSingleTop = true
+        }
       })
     }
 
@@ -111,10 +121,10 @@ fun HomeScreen(mainNavController: NavController) {
             },
             label = { Text(stringResource(R.string.label_routines)) })
           NavigationBarItem(
-            selected = navStackEntry.destinationEquals(MonthlyProgressListScreen::class),
+            selected = navStackEntry.destinationEquals(TrackedProgressListScreen::class),
             onClick = {
-              navStackEntry.destinationEquals(MonthlyProgressListScreen::class).onFalse {
-                homeNavController.navigate(route = MonthlyProgressListScreen) {
+              navStackEntry.destinationEquals(TrackedProgressListScreen::class).onFalse {
+                homeNavController.navigate(route = TrackedProgressListScreen) {
                   popUpTo(DailiesScreen::class) { inclusive = false }
                 }
               }
@@ -122,7 +132,7 @@ fun HomeScreen(mainNavController: NavController) {
             icon = {
               Icon(
                 painter = painterResource(R.drawable.baseline_bar_chart_24),
-                contentDescription = stringResource(R.string.cd_monthly_progress_tab)
+                contentDescription = stringResource(R.string.cd_progress_tracking_tab)
               )
             },
             label = { Text(stringResource(R.string.label_progress)) })

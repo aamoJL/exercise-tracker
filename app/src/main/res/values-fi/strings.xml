@@ -59,7 +59,10 @@
     <string name="cd_clear">Tyhjennä</string>
     <string name="dialog_title_unsaved_changes">Tallentamattomia muutoksia</string>
     <string name="dialog_text_unsaved_changes">Palaa takaisin tallentamatta muutoksia?</string>
-    <string name="cd_monthly_progress_tab">Kehitys välilehti</string>
+    <string name="cd_progress_tracking_tab">Kehitys välilehti</string>
     <string name="label_progress">Kehitys</string>
-    <string name="cd_add_monthly_progress">Lisää uusi kehitys</string>
+    <string name="cd_add_tracked_progress">Lisää uusi kehitys</string>
+    <string name="label_untimed">Ajastamaton</string>
+    <string name="label_weekly">Viikoittain</string>
+    <string name="label_every_x_weeks">%1$d viikon välein</string>
 </resources>

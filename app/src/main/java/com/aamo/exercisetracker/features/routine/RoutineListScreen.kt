@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -132,9 +131,7 @@ fun RoutineListScreen(
         .imePadding()
     ) {
       TopAppBar(title = { null }, actions = {
-        SearchTextField(
-          value = filterWord, onValueChange = onFilterChanged, modifier = Modifier.height(50.dp)
-        )
+        SearchTextField(value = filterWord, onValueChange = onFilterChanged)
         IconButton(onClick = onAdd) {
           Icon(
             imageVector = Icons.Filled.Add,
