@@ -65,4 +65,12 @@
     <string name="label_untimed">Untimed</string>
     <string name="label_weekly">Weekly</string>
     <string name="label_every_x_weeks">Every %1$d weeks</string>
+    <string name="dialog_title_delete_tracked_progress">Delete tracked progress?</string>
+    <string name="title_new_tracked_progress">New Tracked Progress</string>
+    <string name="title_edit_tracked_progress">Edit Tracked Progress</string>
+    <string name="cd_delete_tracked_progress">Delete tracked progress</string>
+    <string name="cd_save_tracked_progress">Save tracked progress</string>
+    <string name="label_weekly_interval_optional">Weekly interval (optional)</string>
+    <string name="suffix_weeks">weeks</string>
+    <string name="label_progress_unit">Progress unit</string>
 </resources>

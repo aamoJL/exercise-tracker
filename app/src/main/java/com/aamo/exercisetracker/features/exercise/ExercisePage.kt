@@ -8,12 +8,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ExercisePage(val id: Long)
 
-fun NavGraphBuilder.exercisePage(navController: NavController, onBack: () -> Unit) {
+fun NavGraphBuilder.exercisePage(navController: NavController) {
   navigation<ExercisePage>(startDestination = ExerciseScreen()) {
-    exerciseScreen(onBack = onBack, onEdit = { id ->
+    exerciseScreen(onBack = { navController.navigateUp() }, onEdit = { id ->
       navController.navigate(EditExerciseFormScreen(id))
     })
-    editExerciseFormScreen(onBack = onBack, onSaved = { id ->
+    editExerciseFormScreen(onBack = { navController.navigateUp() }, onSaved = { id ->
       navController.navigate(ExerciseScreen(id)) {
         launchSingleTop = true
         popUpTo<ExerciseScreen> { inclusive = true }

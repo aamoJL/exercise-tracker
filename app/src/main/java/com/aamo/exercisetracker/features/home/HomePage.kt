@@ -27,8 +27,8 @@ fun HomePage() {
             launchSingleTop = true
           }
         })
-      exercisePage(navController = navController, onBack = { navController.navigateUp() })
-      progressTrackingPage()
+      exercisePage(navController = navController)
+      progressTrackingPage(navController = navController)
     }
   }
 }

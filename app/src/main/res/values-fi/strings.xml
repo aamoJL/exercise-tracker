@@ -52,7 +52,7 @@
     <string name="dialog_title_delete_routine">Poista ohjelma?</string>
     <string name="cd_add_routine">Lisää uusi ohjelma</string>
     <string name="label_inactive">Epäaktiivinen</string>
-    <string name="label_every_day">Päivittäinen</string>
+    <string name="label_every_day">Päivittäin</string>
     <string name="cd_edit_routine">Muokkaa ohjelmaa</string>
     <string name="cd_add_exercise">Lisää uusi treeni</string>
     <string name="ph_search">Hae…</string>
@@ -65,4 +65,12 @@
     <string name="label_untimed">Ajastamaton</string>
     <string name="label_weekly">Viikoittain</string>
     <string name="label_every_x_weeks">%1$d viikon välein</string>
+    <string name="dialog_title_delete_tracked_progress">Poista kehityksen seuranta?</string>
+    <string name="title_new_tracked_progress">Uusi kehityksen seuranta</string>
+    <string name="title_edit_tracked_progress">Muokkaa kehityksen seurantaa</string>
+    <string name="cd_delete_tracked_progress">Poista kehityksen seuranta</string>
+    <string name="cd_save_tracked_progress">Tallenna kehityksen seuranta</string>
+    <string name="suffix_weeks">viikkoa</string>
+    <string name="label_progress_unit">Kehityksen yksikkö</string>
+    <string name="label_weekly_interval_optional">Aikaväli (vapaaehtoinen)</string>
 </resources>

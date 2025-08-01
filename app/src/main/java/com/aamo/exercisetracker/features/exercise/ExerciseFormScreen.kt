@@ -17,8 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,7 +27,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -65,6 +62,7 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.FormList
 import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
@@ -203,6 +201,8 @@ class ExerciseFormViewModel(
   }
 }
 
+// TODO: Combine graphs to one
+
 fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long) -> Unit) {
   composable<AddExerciseFormScreen> { navStack ->
     val (routineId) = navStack.toRoute<AddExerciseFormScreen>()
@@ -276,7 +276,7 @@ fun NavGraphBuilder.editExerciseFormScreen(
                 }
               },
               hasTimer = (sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN),
-              isNew = exercise.id == 0L
+              isNew = false
             )
           }
         }, saveData = { model ->
@@ -362,10 +362,13 @@ fun ExerciseFormScreen(
     )
   }
   if (openDeleteDialog) {
-    DeleteDialog(onDismiss = { openDeleteDialog = false }, onConfirm = {
-      openDeleteDialog = false
-      onDelete()
-    })
+    DeleteDialog(
+      title = stringResource(R.string.dialog_title_delete_exercise),
+      onDismiss = { openDeleteDialog = false },
+      onConfirm = {
+        openDeleteDialog = false
+        onDelete()
+      })
   }
 
   BackHandler(enabled = uiState.savingState.unsavedChanges) {
@@ -540,28 +543,4 @@ private fun DismissBoxBackgroundContent(
       )
     }
   }
-}
-
-@Composable
-private fun DeleteDialog(
-  onDismiss: () -> Unit,
-  onConfirm: () -> Unit,
-) {
-  AlertDialog(
-    title = { Text(text = stringResource(R.string.dialog_title_delete_exercise)) },
-    onDismissRequest = onDismiss,
-    confirmButton = {
-      TextButton(
-        onClick = onConfirm,
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-      ) {
-        Text(text = stringResource(R.string.btn_delete))
-      }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text(text = stringResource(R.string.btn_cancel))
-      }
-    },
-  )
 }
