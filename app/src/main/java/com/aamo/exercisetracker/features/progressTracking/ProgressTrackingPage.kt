@@ -6,14 +6,24 @@ import androidx.navigation.navigation
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ProgressTrackingPage(val progressId: Long)
+object ProgressTrackingPage
 
 fun NavGraphBuilder.progressTrackingPage(navController: NavController) {
   navigation<ProgressTrackingPage>(startDestination = ProgressTrackingScreen(progressId = 0L)) {
-    progressTrackingScreen()
-    trackedProgressFormScreen(
-      onBack = { navController.navigateUp() },
-      onSaved = { _ -> navController.navigateUp() },
-      onDeleted = { navController.popBackStack<ProgressTrackingPage>(inclusive = true) })
+    progressTrackingScreen(onBack = { navController.navigateUp() }, onEdit = { id ->
+      navController.navigate(TrackedProgressFormScreen(progressId = id))
+    }, onShowRecords = { id ->
+      navController.navigate(TrackedProgressRecordListScreen(progressId = id))
+    })
+    trackedProgressFormScreen(onBack = { navController.navigateUp() }, onSaved = { id ->
+      if (navController.popBackStack<ProgressTrackingScreen>(inclusive = true)) {
+        navController.navigate(ProgressTrackingScreen(progressId = id)) { launchSingleTop = true }
+      }
+      else {
+        navController.navigateUp()
+      }
+    }, onDeleted = { navController.popBackStack<ProgressTrackingPage>(inclusive = true) })
+    trackedProgressRecordListScreen(
+      onBack = { navController.navigateUp() })
   }
 }

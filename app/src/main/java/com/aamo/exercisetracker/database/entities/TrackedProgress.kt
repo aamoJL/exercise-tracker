@@ -29,7 +29,7 @@ data class TrackedProgress(
 )
 data class TrackedProgressValue(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
-  @ColumnInfo(name = "tracked_progress_id") val progressId: Int,
+  @ColumnInfo(name = "tracked_progress_id") val progressId: Long,
   @ColumnInfo(name = "value") val value: Int = 0,
   @ColumnInfo(name = "added_date") val addedDate: Date,
 )

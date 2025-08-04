@@ -73,4 +73,18 @@
     <string name="label_weekly_interval_optional">Weekly interval (optional)</string>
     <string name="suffix_weeks">weeks</string>
     <string name="label_progress_unit">Progress unit</string>
+    <string name="cd_edit_tracked_progress">Edit tracked progress</string>
+    <string name="btn_add">Add</string>
+    <string name="dialog_title_add_new_record">Add new record</string>
+    <string name="cd_add">Add</string>
+    <string name="cd_show_records">Show records</string>
+    <string name="cd_delete_record">Delete record</string>
+    <string name="title_tracked_progress_records">%1$s - records</string>
+    <string name="dialog_title_delete_record">Delete record?</string>
+    <string name="dialog_title_edit_record">Edit record</string>
+    <string name="btn_save">Save</string>
+    <string name="cd_edit_record">Edit record</string>
+    <string name="btn_select">Select</string>
+    <string name="btn_change">Change</string>
+    <string name="cd_change_date">Change date</string>
 </resources>

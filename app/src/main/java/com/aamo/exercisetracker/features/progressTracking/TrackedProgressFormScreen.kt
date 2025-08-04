@@ -176,9 +176,12 @@ fun NavGraphBuilder.trackedProgressFormScreen(
               intervalWeeks = model.weeklyInterval,
               unit = model.progressValueUnit
             )
-          ).let { result ->
-            (result > 0).onTrue { onSaved(result) }
-          }
+          ).also { result ->
+            ifElse(
+              condition = result == -1L,
+              ifTrue = { progressId },
+              ifFalse = { result }).also { onSaved(it) }
+          }.let { true }
         }, deleteData = {
           (dao.getTrackedProgress(progressId)
             ?: throw Exception("Failed to fetch data")).let { result ->

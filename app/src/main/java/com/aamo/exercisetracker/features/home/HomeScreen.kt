@@ -26,7 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.dailies.dailiesScreen
-import com.aamo.exercisetracker.features.progressTracking.ProgressTrackingPage
+import com.aamo.exercisetracker.features.progressTracking.ProgressTrackingScreen
 import com.aamo.exercisetracker.features.progressTracking.TrackedProgressFormScreen
 import com.aamo.exercisetracker.features.progressTracking.TrackedProgressListScreen
 import com.aamo.exercisetracker.features.progressTracking.trackedProgressListScreen
@@ -75,7 +75,7 @@ fun HomeScreen(mainNavController: NavController) {
         }
       })
       trackedProgressListScreen(onSelectProgress = { id ->
-        mainNavController.navigate(ProgressTrackingPage(progressId = id)) {
+        mainNavController.navigate(ProgressTrackingScreen(progressId = id)) {
           launchSingleTop = true
         }
       }, onAddProgress = {

@@ -16,9 +16,21 @@ interface TrackedProgressDao {
   @Query("SELECT * FROM tracked_progress")
   fun getProgressesFlow(): Flow<List<TrackedProgress>>
 
+  @Query("SELECT * FROM tracked_progress_values WHERE tracked_progress_id = :progressId")
+  fun getProgressValuesFlow(progressId: Long): Flow<List<TrackedProgressValue>>
+
+  @Query("SELECT * FROM tracked_progress_values WHERE id = :valueId")
+  suspend fun getProgressValueById(valueId: Long): TrackedProgressValue?
+
   @Upsert
   suspend fun upsert(trackedProgress: TrackedProgress): Long
 
+  @Upsert
+  suspend fun upsert(trackedProgressValue: TrackedProgressValue): Long
+
   @Delete
   suspend fun delete(trackedProgress: TrackedProgress): Int
+
+  @Query("DELETE FROM tracked_progress_values WHERE id = :trackedProgressId")
+  suspend fun deleteValueById(trackedProgressId: Long)
 }
