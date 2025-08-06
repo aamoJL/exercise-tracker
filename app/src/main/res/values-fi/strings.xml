@@ -87,4 +87,7 @@
     <string name="btn_select">Valitse</string>
     <string name="btn_change">Vaihda</string>
     <string name="cd_change_date">Vaihda päivämäärää</string>
+    <string name="label_hours">Tuntia</string>
+    <string name="label_minutes">Minuuttia</string>
+    <string name="label_seconds">Sekuntia</string>
 </resources>

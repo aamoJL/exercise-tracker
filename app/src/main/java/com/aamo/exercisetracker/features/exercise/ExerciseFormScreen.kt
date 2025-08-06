@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -68,6 +69,7 @@ import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
@@ -433,6 +435,7 @@ fun ExerciseFormScreen(
         onValueChange = { uiState.restDuration.update(it.minutes) },
         suffix = { Text(stringResource(R.string.suffix_minutes)) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        visualTransformation = VisualTransformation.HideZero,
         modifier = Modifier.fillMaxWidth()
       )
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {

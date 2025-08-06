@@ -87,4 +87,7 @@
     <string name="btn_select">Select</string>
     <string name="btn_change">Change</string>
     <string name="cd_change_date">Change date</string>
+    <string name="label_hours">Hours</string>
+    <string name="label_minutes">Minutes</string>
+    <string name="label_seconds">Seconds</string>
 </resources>
