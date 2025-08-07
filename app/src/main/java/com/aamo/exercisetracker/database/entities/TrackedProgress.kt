@@ -17,6 +17,8 @@ data class TrackedProgress(
   @ColumnInfo(name = "name") val name: String = String.EMPTY,
   @ColumnInfo(name = "interval_weeks") val intervalWeeks: Int = 1,
   @ColumnInfo(name = "unit") val unit: String = String.EMPTY,
+  @ColumnInfo(name = "has_stopwatch") val hasStopWatch: Boolean = false,
+  @ColumnInfo(name = "timer_time") val timerTime: Long? = null
 )
 
 @Entity(

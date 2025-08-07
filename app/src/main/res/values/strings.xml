@@ -90,4 +90,7 @@
     <string name="label_hours">Hours</string>
     <string name="label_minutes">Minutes</string>
     <string name="label_seconds">Seconds</string>
+    <string name="label_stopwatch">Stopwatch</string>
+    <string name="label_time">Time</string>
+    <string name="title_repetitions">Repetitions</string>
 </resources>

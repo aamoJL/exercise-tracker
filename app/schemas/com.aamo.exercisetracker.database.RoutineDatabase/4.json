@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "3552cdd6612a164ef972a97c580aef5c",
+    "identityHash": "c3ff13a5507185fbcf2542022288511c",
     "entities": [
       {
         "tableName": "routines",
@@ -301,7 +301,7 @@
       },
       {
         "tableName": "tracked_progress",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `interval_weeks` INTEGER NOT NULL, `unit` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `interval_weeks` INTEGER NOT NULL, `unit` TEXT NOT NULL, `has_stopwatch` INTEGER NOT NULL, `timer_time` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -326,6 +326,17 @@
             "columnName": "unit",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "hasStopWatch",
+            "columnName": "has_stopwatch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timerTime",
+            "columnName": "timer_time",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -398,7 +409,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3552cdd6612a164ef972a97c580aef5c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c3ff13a5507185fbcf2542022288511c')"
     ]
   }
 }

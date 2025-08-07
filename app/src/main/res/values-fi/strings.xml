@@ -90,4 +90,7 @@
     <string name="label_hours">Tuntia</string>
     <string name="label_minutes">Minuuttia</string>
     <string name="label_seconds">Sekuntia</string>
+    <string name="label_stopwatch">Sekuntikello</string>
+    <string name="label_time">Aika</string>
+    <string name="title_repetitions">Toistoja</string>
 </resources>
