@@ -83,12 +83,12 @@ import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.tags.ERROR_TAG
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch

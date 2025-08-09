@@ -4,7 +4,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import kotlin.math.min
 
 val VisualTransformation.Companion.HideZero: VisualTransformation

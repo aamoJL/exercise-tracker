@@ -45,7 +45,7 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

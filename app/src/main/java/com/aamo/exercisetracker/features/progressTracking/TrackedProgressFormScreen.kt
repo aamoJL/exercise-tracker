@@ -53,14 +53,15 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.DurationNumberField
+import com.aamo.exercisetracker.ui.components.DurationNumberFieldFields
 import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
@@ -98,7 +99,6 @@ class TrackedProgressFormScreenViewModel(
     val progressValueUnit = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
     val progressType = ViewModelState(ProgressType.REPETITION).onChange {
       if (it != ProgressType.TIMER) timerDuration.update(0.seconds)
-      onUnsavedChanges()
     }
     val timerDuration = ViewModelState(0.seconds).onChange { onUnsavedChanges() }
     var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
@@ -416,7 +416,7 @@ fun TrackedProgressFormScreen(
           )
           DurationNumberField(
             enabled = uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER,
-            hours = false,
+            fields = DurationNumberFieldFields(hours = DurationNumberFieldFields.Properties(enabled = false)),
             value = uiState.timerDuration.value,
             onValueChange = { uiState.timerDuration.update(it) },
             shape = RectangleShape,

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.utility.extensions.string
+package com.aamo.exercisetracker.utility.extensions.general
 
 import org.junit.Assert.assertTrue
 import org.junit.Test

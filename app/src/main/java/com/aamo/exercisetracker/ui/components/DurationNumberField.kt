@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.ui.components
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
@@ -20,19 +21,30 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aamo.exercisetracker.R
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.DurationSegments
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import kotlin.math.max
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+data class DurationNumberFieldFields(
+  val hours: Properties = Properties(max = 23),
+  val minutes: Properties = Properties(max = 59),
+  val seconds: Properties = Properties(max = 59),
+) {
+  data class Properties(
+    val enabled: Boolean = true, val max: Long = Long.MAX_VALUE
+  )
+}
 
 /**
- * @param limitBiggestUnit Limits the biggest enabled unit so it will not go over its intended range.
- * For example: hours field would be limited to 23 hours
  * @param hideZeroOnDisabled Will show only the input labels if the value equals zero and the input has been disabled
  */
 @Composable
@@ -40,10 +52,7 @@ fun DurationNumberField(
   value: Duration,
   onValueChange: (Duration) -> Unit,
   enabled: Boolean = true,
-  hours: Boolean = true,
-  minutes: Boolean = true,
-  seconds: Boolean = true,
-  limitBiggestUnit: Boolean = false,
+  fields: DurationNumberFieldFields = DurationNumberFieldFields(),
   hideZeroOnDisabled: Boolean = true,
   modifier: Modifier = Modifier,
   shape: Shape = TextFieldDefaults.shape,
@@ -59,7 +68,9 @@ fun DurationNumberField(
     )
   }
 ) {
-  val segments = remember(value) { getDurationSegments(value, hours, minutes, seconds) }
+  val (hours, minutes, seconds) = fields
+  val segments =
+    remember(value) { getDurationSegments(value, hours.enabled, minutes.enabled, seconds.enabled) }
   val visualTransformation = if (hideZeroOnDisabled && value == Duration.ZERO && !enabled) {
     VisualTransformation.HideZero
   }
@@ -90,12 +101,12 @@ fun DurationNumberField(
   Row(
     verticalAlignment = Alignment.CenterVertically, modifier = modifier
   ) {
-    if (hours) {
+    if (hours.enabled) {
       IntNumberField(
         enabled = enabled,
         value = segments.hours,
         onValueChange = {
-          if (!limitBiggestUnit || it < 24) {
+          if (it <= hours.max || it < 24) {
             onValueChange(segments.copy(hours = it).toDuration())
           }
         },
@@ -112,16 +123,16 @@ fun DurationNumberField(
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.weight(1f)
       )
-      if (minutes xor seconds) {
+      if (minutes.enabled || seconds.enabled) {
         divider()
       }
     }
-    if (minutes) {
+    if (minutes.enabled) {
       IntNumberField(
         enabled = enabled,
         value = segments.minutes,
         onValueChange = {
-          if (!hours && !limitBiggestUnit || it < 60) {
+          if (it <= minutes.max || it < 60) {
             onValueChange(segments.copy(minutes = it).toDuration())
           }
         },
@@ -138,16 +149,16 @@ fun DurationNumberField(
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.weight(1f)
       )
-      if (seconds) {
+      if (seconds.enabled) {
         divider()
       }
     }
-    if (seconds) {
+    if (seconds.enabled) {
       IntNumberField(
         enabled = enabled,
         value = segments.seconds,
         onValueChange = {
-          if (!hours && !minutes && !limitBiggestUnit || it < 60) {
+          if (it <= seconds.max || it < 60) {
             onValueChange(segments.copy(seconds = it).toDuration())
           }
         },
@@ -181,4 +192,15 @@ private fun getDurationSegments(
   return DurationSegments(
     seconds = seconds.toInt(), minutes = minutes.toInt(), hours = hours.toInt()
   )
+}
+
+@Preview
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme {
+    Surface {
+      DurationNumberField(
+        value = (10.hours + 46.minutes + 55.seconds), onValueChange = {})
+    }
+  }
 }
