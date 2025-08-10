@@ -93,4 +93,7 @@
     <string name="label_stopwatch">Sekuntikello</string>
     <string name="label_time">Aika</string>
     <string name="title_repetitions">Toistoja</string>
+    <string name="cd_timer">Ajastin</string>
+    <string name="title_timer">Ajastin</string>
+    <string name="title_stopwatch">Sekuntikello</string>
 </resources>

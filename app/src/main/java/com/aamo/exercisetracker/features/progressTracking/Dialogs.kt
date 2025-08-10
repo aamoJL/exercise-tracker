@@ -17,12 +17,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
@@ -42,16 +46,23 @@ fun RepetitionRecordDialog(
   onConfirm: (value: Int, date: Date) -> Unit,
   onDismiss: () -> Unit
 ) {
+  val focusRequester = remember { FocusRequester() }
   var showDatePicker by remember { mutableStateOf(false) }
   var fieldValue by remember { mutableIntStateOf(value) }
   val datePickerState = rememberDatePickerState(initialSelectedDateMillis = date.time)
+
+  LaunchedEffect(Unit) {
+    focusRequester.requestFocus()
+  }
 
   AlertDialog(title = { Text(text = label) }, text = {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
       IntNumberField(
         value = fieldValue,
         onValueChange = { fieldValue = it },
-        suffix = { Text(text = valueUnit) })
+        suffix = { Text(text = valueUnit) },
+        modifier = Modifier.focusRequester(focusRequester)
+      )
       Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -115,15 +126,21 @@ fun DurationRecordDialog(
   onConfirm: (duration: Duration, date: Date) -> Unit,
   onDismiss: () -> Unit
 ) {
+  val focusRequester = remember { FocusRequester() }
   var showDatePicker by remember { mutableStateOf(false) }
   var fieldValue by remember { mutableStateOf(duration) }
   val datePickerState = rememberDatePickerState(initialSelectedDateMillis = date.time)
+
+  LaunchedEffect(Unit) {
+    focusRequester.requestFocus()
+  }
 
   AlertDialog(title = { Text(text = label) }, text = {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
       DurationNumberField(
         value = fieldValue,
         onValueChange = { fieldValue = it },
+        modifier = Modifier.focusRequester(focusRequester)
       )
       Row(
         verticalAlignment = Alignment.CenterVertically,

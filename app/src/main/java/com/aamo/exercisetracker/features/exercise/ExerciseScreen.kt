@@ -338,10 +338,10 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
           uiState.inProgress.onTrue { openInProgressEditDialog = true }
             .onFalse { onEdit(exerciseId) }
         },
-        onStartSet = { timerService?.let { viewmodel.startSet(it) } },
-        onStopSetTimer = { timerService?.let { viewmodel.stopTimer(it) } },
-        onCancelSet = { timerService?.let { viewmodel.cancelTimer(it) } },
-        onStopRest = { timerService?.let { viewmodel.stopTimer(it) } },
+        onStartSet = { timerService?.also { viewmodel.startSet(it) } },
+        onStopSetTimer = { timerService?.also { viewmodel.stopTimer(it) } },
+        onCancelSet = { timerService?.also { viewmodel.cancelTimer(it) } },
+        onStopRest = { timerService?.also { viewmodel.stopTimer(it) } },
         onFinishExercise = { viewmodel.finishExercise() },
       )
     }
@@ -430,30 +430,28 @@ fun ExerciseScreen(
         }
       }
     }
-
-    // Visibility needs to be checked with showRestSheet because
-    //  otherwise the sheet closing animation will not work correctly.
-    TimerSheet(
-      isVisible = showSetTimerSheet,
-      timerTitle = stringResource(R.string.title_set_timer),
-      timerState = uiState.setState.value.setTimer,
-      sheetState = setTimerSheetState,
-      onDismissRequest = onCancelSet,
+  }
+  // Visibility needs to be checked with showRestSheet because
+  //  otherwise the sheet closing animation will not work correctly.
+  TimerSheet(
+    isVisible = showSetTimerSheet,
+    timerTitle = stringResource(R.string.title_set_timer),
+    timerState = uiState.setState.value.setTimer,
+    sheetState = setTimerSheetState,
+  ) {
+    Button(
+      onClick = onCancelSet, colors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.error
+      ), modifier = Modifier.weight(1f)
     ) {
-      Button(
-        onClick = onCancelSet, colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.error
-        ), modifier = Modifier.weight(1f)
-      ) {
-        Text(stringResource(R.string.btn_cancel))
-      }
-      Button(
-        onClick = onStopSetTimer, colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.secondary
-        ), modifier = Modifier.weight(1f)
-      ) {
-        Text(stringResource(R.string.btn_finish))
-      }
+      Text(stringResource(R.string.btn_cancel))
+    }
+    Button(
+      onClick = onStopSetTimer, colors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.secondary
+      ), modifier = Modifier.weight(1f)
+    ) {
+      Text(stringResource(R.string.btn_finish))
     }
   }
   TimerSheet(
@@ -461,7 +459,6 @@ fun ExerciseScreen(
     timerTitle = stringResource(R.string.title_rest),
     timerState = uiState.setState.value.restTimer,
     sheetState = restTimerSheetState,
-    onDismissRequest = onStopRest,
   ) {
     Button(
       onClick = onStopRest, colors = ButtonDefaults.buttonColors(
@@ -571,7 +568,6 @@ fun TimerSheet(
   timerTitle: String,
   timerState: ExerciseScreenViewModel.TimerState?,
   sheetState: SheetState,
-  onDismissRequest: () -> Unit,
   content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {
@@ -612,7 +608,7 @@ fun TimerSheet(
     }
 
     ModalBottomSheet(
-      sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
+      sheetState = sheetState, onDismissRequest = {}, dragHandle = null
     ) {
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,

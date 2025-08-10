@@ -93,4 +93,7 @@
     <string name="label_stopwatch">Stopwatch</string>
     <string name="label_time">Time</string>
     <string name="title_repetitions">Repetitions</string>
+    <string name="cd_timer">Timer</string>
+    <string name="title_timer">Timer</string>
+    <string name="title_stopwatch">Stopwatch</string>
 </resources>
