@@ -38,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
@@ -48,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -80,6 +80,7 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.services.CountDownTimerService
+import com.aamo.exercisetracker.services.StopwatchTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
@@ -132,7 +133,7 @@ class ProgressTrackingScreenViewModel(
     }
   }
 
-  class TimerState(val duration: Duration) {
+  class CountDownTimerState(val duration: Duration) {
     val isActive =
       ViewModelState(false).validation { value -> value && duration > 0.seconds }.onChange {
         if (it) isFinished = false
@@ -140,13 +141,18 @@ class ProgressTrackingScreenViewModel(
     var isFinished by mutableStateOf(false)
   }
 
+  class StopwatchTimerState {
+    val isActive = ViewModelState(false)
+    val finalDuration = ViewModelState(0.milliseconds)
+  }
+
   class UiState {
     var progressName by mutableStateOf(String.EMPTY)
     var recordValueUnit by mutableStateOf(String.EMPTY)
     var records by mutableStateOf(emptyList<Int>())
     var recordType by mutableStateOf(Model.RecordType.REPETITION)
-    var timerState: TimerState? = TimerState(0.milliseconds)
-    val stopwatchActive = ViewModelState(false)
+    var countDownTimerState: CountDownTimerState = CountDownTimerState(0.milliseconds)
+    var stopwatchTimerState: StopwatchTimerState = StopwatchTimerState()
     var isLoading by mutableStateOf(true)
   }
 
@@ -161,7 +167,7 @@ class ProgressTrackingScreenViewModel(
             recordValueUnit = result.recordValueUnit
             recordType = result.recordType
             result.countDownTime?.also {
-              timerState = TimerState(duration = result.countDownTime)
+              countDownTimerState = CountDownTimerState(duration = result.countDownTime)
             }
 
             viewModelScope.launch {
@@ -186,7 +192,7 @@ class ProgressTrackingScreenViewModel(
   fun startTimer(countDownTimerService: CountDownTimerService) {
     countDownTimerService.cancel()
 
-    uiState.timerState?.let { timerState ->
+    uiState.countDownTimerState.also { timerState ->
       val duration = timerState.duration
 
       if (duration <= 0.seconds) {
@@ -201,8 +207,26 @@ class ProgressTrackingScreenViewModel(
     }
   }
 
+  fun startTimer(stopwatchTimerService: StopwatchTimerService) {
+    stopwatchTimerService.apply {
+      cancel()
+      start(
+        onStart = { uiState.stopwatchTimerState.isActive.update(true) },
+        onFinished = { uiState.stopwatchTimerState.finalDuration.update(it) },
+        onCleanUp = { uiState.stopwatchTimerState.isActive.update(false) })
+    }
+  }
+
+  fun stopTimer(stopwatchTimerService: StopwatchTimerService) {
+    stopwatchTimerService.stop()
+  }
+
   fun cancelTimer(countDownTimerService: CountDownTimerService) {
     countDownTimerService.cancel()
+  }
+
+  fun cancelTimer(stopwatchTimerService: StopwatchTimerService) {
+    stopwatchTimerService.cancel()
   }
 }
 
@@ -242,45 +266,63 @@ fun NavGraphBuilder.progressTrackingScreen(
       }
     })
     val uiState = viewmodel.uiState
-
     val context = LocalContext.current
     val timerTitle = stringResource(R.string.title_timer)
-    var timerService: CountDownTimerService? by remember { mutableStateOf(null) }
-    val connection = remember {
+    val stopwatchTitle = stringResource(R.string.title_stopwatch)
+    var countDownService: CountDownTimerService? by remember { mutableStateOf(null) }
+    var stopwatchService: StopwatchTimerService? by remember { mutableStateOf(null) }
+    val timerConnection = remember {
       object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-          timerService = (binder as? CountDownTimerService.BinderHelper)?.getService()?.apply {
-            // Notifications needs to be hidden also here, because the service will be null in
-            //  LifecycleEventEffect ON_RESUME when the configuration changes
-            hideNotification()
+          // Notifications needs to be hidden here, because the service will be null in
+          //  LifecycleEventEffect ON_RESUME when the configuration changes
+          when (binder) {
+            is CountDownTimerService.BinderHelper -> binder.getService().apply {
+              countDownService = this
+              hideNotification()
+            }
+
+            is StopwatchTimerService.BinderHelper -> binder.getService().apply {
+              stopwatchService = this
+              hideNotification()
+            }
           }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-          timerService = null
+          countDownService = null
+          stopwatchService = null
         }
       }
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-      timerService?.hideNotification()
+      countDownService?.hideNotification()
+      stopwatchService?.hideNotification()
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
-      if (uiState.timerState?.isActive?.value == true) {
-        timerService?.showNotification(timerTitle)
+      if (uiState.countDownTimerState.isActive.value) {
+        countDownService?.showNotification(timerTitle)
+      }
+      if (uiState.stopwatchTimerState.isActive.value) {
+        stopwatchService?.showNotification(stopwatchTitle)
       }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(uiState.recordType) {
       context.apply {
-        bindService(
-          Intent(this, CountDownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
-        )
+        when (uiState.recordType) {
+          ProgressTrackingScreenViewModel.Model.RecordType.TIMER -> CountDownTimerService::class.java
+          ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> StopwatchTimerService::class.java
+          else -> null
+        }?.also {
+          bindService(Intent(this, it), timerConnection, Context.BIND_AUTO_CREATE)
+        }
       }
 
       onDispose {
-        context.unbindService(connection)
+        runCatching { context.unbindService(timerConnection) }
       }
     }
 
@@ -290,9 +332,11 @@ fun NavGraphBuilder.progressTrackingScreen(
       onBack = onBack,
       onShowRecords = { onShowRecords(progressId) },
       onAddValue = { value, date -> viewmodel.addNewValue(value, date) },
-      onStartTimer = { timerService?.also { viewmodel.startTimer(it) } },
-      onCancelTimer = { timerService?.also { viewmodel.cancelTimer(it) } },
-    )
+      onStartTimer = { countDownService?.also { viewmodel.startTimer(it) } },
+      onCancelTimer = { countDownService?.also { viewmodel.cancelTimer(it) } },
+      onStartStopwatch = { stopwatchService?.also { viewmodel.startTimer(it) } },
+      onStopStopwatch = { stopwatchService?.also { viewmodel.stopTimer(it) } },
+      onCancelStopwatch = { stopwatchService?.also { viewmodel.cancelTimer(it) } })
   }
 }
 
@@ -306,6 +350,9 @@ fun ProgressTrackingScreen(
   onAddValue: (value: Int, date: Date) -> Unit,
   onStartTimer: () -> Unit,
   onCancelTimer: () -> Unit,
+  onStartStopwatch: () -> Unit,
+  onStopStopwatch: () -> Unit,
+  onCancelStopwatch: () -> Unit,
 ) {
   var showNewRecordDialog by remember { mutableStateOf(false) }
   var showTimerSheet by remember { mutableStateOf(false) }
@@ -317,13 +364,17 @@ fun ProgressTrackingScreen(
     when (uiState.recordType) {
       ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> DurationRecordDialog(
         label = stringResource(R.string.dialog_title_add_new_record),
-        duration = Duration.ZERO,
+        initDuration = uiState.stopwatchTimerState.finalDuration.value,
         date = Date(),
         onConfirm = { duration, date ->
           onAddValue(duration.inWholeMilliseconds.toInt(), date)
           showNewRecordDialog = false
+          uiState.stopwatchTimerState.finalDuration.update(0.seconds)
         },
-        onDismiss = { showNewRecordDialog = false })
+        onDismiss = {
+          showNewRecordDialog = false
+          uiState.stopwatchTimerState.finalDuration.update(0.seconds)
+        })
 
       else -> RepetitionRecordDialog(
         label = stringResource(R.string.dialog_title_add_new_record),
@@ -339,8 +390,8 @@ fun ProgressTrackingScreen(
     }
   }
 
-  LaunchedEffect(uiState.timerState?.isFinished) {
-    if (uiState.timerState?.isFinished == true) {
+  LaunchedEffect(uiState.countDownTimerState.isFinished) {
+    if (uiState.countDownTimerState.isFinished) {
       showTimerSheet = false
       showNewRecordDialog = true
     }
@@ -407,9 +458,12 @@ fun ProgressTrackingScreen(
       ProgressTrackingScreenViewModel.Model.RecordType.TIMER -> TimerSheet(
         isVisible = showTimerSheet,
         timerTitle = stringResource(R.string.title_timer),
-        timerState = uiState.timerState,
+        countDownTimerState = uiState.countDownTimerState,
         sheetState = timerSheetState,
-      ) {
+        onDismissRequest = {
+          showTimerSheet = false
+          onCancelTimer()
+        }) {
         Button(
           onClick = {
             showTimerSheet = false
@@ -421,9 +475,12 @@ fun ProgressTrackingScreen(
           Text(stringResource(R.string.btn_cancel))
         }
         Button(
-          onClick = onStartTimer, colors = ButtonDefaults.buttonColors(
+          enabled = !uiState.countDownTimerState.isActive.value,
+          onClick = onStartTimer,
+          colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.secondary
-          ), modifier = Modifier.weight(1f)
+          ),
+          modifier = Modifier.weight(1f)
         ) {
           Text(stringResource(R.string.btn_start))
         }
@@ -431,24 +488,45 @@ fun ProgressTrackingScreen(
 
       ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> StopwatchSheet(
         isVisible = showTimerSheet,
-        isActive = uiState.stopwatchActive.value,
+        isActive = uiState.stopwatchTimerState.isActive.value,
         timerTitle = stringResource(R.string.title_stopwatch),
         sheetState = timerSheetState,
+        onDismissRequest = {
+          showTimerSheet = false
+          onCancelStopwatch()
+        },
       ) {
         Button(
-          onClick = { showTimerSheet = false }, colors = ButtonDefaults.buttonColors(
+          onClick = {
+            showTimerSheet = false
+            onCancelStopwatch()
+          }, colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error
           ), modifier = Modifier.weight(1f)
         ) {
           Text(stringResource(R.string.btn_cancel))
         }
-        Button(
-          onClick = { TODO("start stopwatch") }, colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondary
-          ), modifier = Modifier.weight(1f)
-        ) {
-          Text(stringResource(R.string.btn_start))
-        }
+        ifElse(condition = uiState.stopwatchTimerState.isActive.value, ifTrue = {
+          OutlinedButton(
+            onClick = {
+              showTimerSheet = false
+              onStopStopwatch()
+              showNewRecordDialog = true
+            }, colors = ButtonDefaults.outlinedButtonColors(
+              contentColor = MaterialTheme.colorScheme.secondary
+            ), modifier = Modifier.weight(1f)
+          ) {
+            Text(stringResource(R.string.btn_stop))
+          }
+        }, ifFalse = {
+          Button(
+            onClick = { onStartStopwatch() }, colors = ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.secondary
+            ), modifier = Modifier.weight(1f)
+          ) {
+            Text(stringResource(R.string.btn_start))
+          }
+        })
       }
 
       else -> null
@@ -542,13 +620,14 @@ fun RecordChart(
 fun TimerSheet(
   isVisible: Boolean,
   timerTitle: String,
-  timerState: ProgressTrackingScreenViewModel.TimerState?,
+  countDownTimerState: ProgressTrackingScreenViewModel.CountDownTimerState,
   sheetState: SheetState,
+  onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
   content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {
-    val isActive = timerState?.isActive?.value == true
-    val duration = timerState?.duration ?: 0.seconds
+    val isActive = countDownTimerState.isActive.value
+    val duration = countDownTimerState.duration
 
     val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
     var clockText by rememberSaveable { mutableStateOf(duration.toClockString()) }
@@ -585,7 +664,9 @@ fun TimerSheet(
       }
     }
 
-    ModalBottomSheet(sheetState = sheetState, onDismissRequest = {}, dragHandle = null) {
+    ModalBottomSheet(
+      sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
+    ) {
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -646,16 +727,18 @@ fun StopwatchSheet(
   isActive: Boolean,
   timerTitle: String,
   sheetState: SheetState,
+  onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
   content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {
     val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
-    var passedDuration by rememberSaveable { mutableLongStateOf(0L) }
-    var clockText by rememberSaveable(passedDuration) { mutableStateOf(passedDuration.milliseconds.toClockString()) }
+    var clockText by rememberSaveable(isActive) {
+      mutableStateOf((System.currentTimeMillis() - startTime).milliseconds.toClockString())
+    }
 
     DisposableEffect(isActive) {
       val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
-        passedDuration = System.currentTimeMillis() - startTime
+        clockText = (System.currentTimeMillis() - startTime).milliseconds.toClockString()
       }
       else null
 
@@ -666,7 +749,7 @@ fun StopwatchSheet(
     }
 
     ModalBottomSheet(
-      sheetState = sheetState, onDismissRequest = {}, dragHandle = null
+      sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
     ) {
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -209,7 +209,7 @@ fun TrackedProgressRecordListScreen(
 
           TrackedProgressRecordListScreenViewModel.Model.ValueType.DURATION -> DurationRecordDialog(
             label = stringResource(R.string.dialog_title_edit_record),
-            duration = record.value.toDuration(DurationUnit.MILLISECONDS),
+            initDuration = record.value.toDuration(DurationUnit.MILLISECONDS),
             date = record.date,
             onConfirm = { duration, date ->
               onSaveRecord(record.copy(value = duration.inWholeMilliseconds.toInt(), date = date))

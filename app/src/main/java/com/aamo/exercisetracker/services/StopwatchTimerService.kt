@@ -7,30 +7,24 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
-import android.os.VibrationAttributes
-import android.os.VibrationEffect
-import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
-import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.tags.ERROR_TAG
-import java.util.Timer
-import kotlin.concurrent.timerTask
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
-class CountDownTimerService() : Service() {
+class StopwatchTimerService() : Service() {
   /**
    * @param onFinished Will be called when the timer has been stopped
    * @param onCleanUp Will be called when the timer has been stopped or cancelled
    */
   private data class TimerState(
-    val timer: Timer,
-    val onFinished: () -> Unit,
+    val onFinished: (Duration) -> Unit,
     val onCleanUp: (() -> Unit)?,
     val startTime: Long,
-    val durationMillis: Long,
   )
 
   private val binder = BinderHelper()
@@ -49,40 +43,27 @@ class CountDownTimerService() : Service() {
   }
 
   fun start(
-    durationMillis: Long,
-    onFinished: () -> Unit,
-    onStart: (() -> Unit)? = null,
-    onCleanUp: (() -> Unit)? = null
+    onStart: (() -> Unit)? = null, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)? = null
   ) {
     cancel()
     state = TimerState(
-      timer = Timer(true).apply {
-        schedule(timerTask {
-          // OnFinished and onCleanUp will be invoked in the stop() function
-          vibrate()
-          stop()
-        }, durationMillis)
-      },
       onFinished = onFinished,
       onCleanUp = onCleanUp,
       startTime = System.currentTimeMillis(),
-      durationMillis = durationMillis
     )
     onStart?.invoke()
   }
 
   fun stop() {
-    state?.onFinished.let {
+    state?.also {
       // Cancel before invoking so the onFinished can start a new timer
       cancel()
-      it?.invoke()
+      it.onFinished.invoke((System.currentTimeMillis() - it.startTime).milliseconds)
     }
   }
 
   fun cancel() {
     state?.apply {
-      timer.cancel()
-      timer.purge()
       onCleanUp?.invoke()
     }
 
@@ -93,11 +74,8 @@ class CountDownTimerService() : Service() {
   fun showNotification(title: String) {
     if (state == null) return
 
-    state?.let {
-      sendNotification(
-        title = title,
-        durationMillis = it.durationMillis - (System.currentTimeMillis() - it.startTime)
-      )
+    state?.also {
+      sendNotification(title = title, startTime = it.startTime)
     }
   }
 
@@ -107,31 +85,16 @@ class CountDownTimerService() : Service() {
     }
   }
 
-  private fun sendNotification(title: String, durationMillis: Long) {
+  private fun sendNotification(title: String, startTime: Long) {
     val notificationBuilder =
       NotificationCompat.Builder(this, TimerServiceProperties.CHANNEL_ID).setContentTitle(title)
         .setSmallIcon(ic_lock_idle_alarm).setPriority(NotificationCompat.PRIORITY_LOW)
-        .setOnlyAlertOnce(true).setUsesChronometer(true).setChronometerCountDown(true)
-        .setWhen(System.currentTimeMillis() + durationMillis).setOngoing(true)
+        .setOnlyAlertOnce(true).setUsesChronometer(true).setChronometerCountDown(false)
+        .setWhen(startTime).setOngoing(true)
 
     with(NotificationManagerCompat.from(this)) {
       if (checkPermission()) {
         notify(TimerServiceProperties.NOTIFICATION_ID, notificationBuilder.build())
-      }
-    }
-  }
-
-  @Suppress("HardCodedStringLiteral")
-  private fun vibrate() {
-    val vibration = VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
-    val attributes = VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_ALARM).build()
-
-    (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator.apply {
-      hasVibrator().onTrue {
-        // Vibration without attributes does not work, if the app is on the background
-        vibrate(vibration, attributes)
-      }.onFalse {
-        Log.e(ERROR_TAG, "Device does not have a vibrator")
       }
     }
   }
@@ -146,6 +109,6 @@ class CountDownTimerService() : Service() {
   }
 
   inner class BinderHelper : Binder() {
-    fun getService(): CountDownTimerService = this@CountDownTimerService
+    fun getService(): StopwatchTimerService = this@StopwatchTimerService
   }
 }

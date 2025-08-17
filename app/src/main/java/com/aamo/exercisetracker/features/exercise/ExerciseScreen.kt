@@ -438,6 +438,7 @@ fun ExerciseScreen(
     timerTitle = stringResource(R.string.title_set_timer),
     timerState = uiState.setState.value.setTimer,
     sheetState = setTimerSheetState,
+    onDismissRequest = onCancelSet
   ) {
     Button(
       onClick = onCancelSet, colors = ButtonDefaults.buttonColors(
@@ -459,6 +460,7 @@ fun ExerciseScreen(
     timerTitle = stringResource(R.string.title_rest),
     timerState = uiState.setState.value.restTimer,
     sheetState = restTimerSheetState,
+    onDismissRequest = onStopRest
   ) {
     Button(
       onClick = onStopRest, colors = ButtonDefaults.buttonColors(
@@ -568,6 +570,7 @@ fun TimerSheet(
   timerTitle: String,
   timerState: ExerciseScreenViewModel.TimerState?,
   sheetState: SheetState,
+  onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
   content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {
@@ -608,7 +611,7 @@ fun TimerSheet(
     }
 
     ModalBottomSheet(
-      sheetState = sheetState, onDismissRequest = {}, dragHandle = null
+      sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
     ) {
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,

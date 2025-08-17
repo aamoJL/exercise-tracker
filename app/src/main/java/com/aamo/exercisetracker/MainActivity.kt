@@ -9,6 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.aamo.exercisetracker.features.home.HomePage
 import com.aamo.exercisetracker.services.CountDownTimerService
+import com.aamo.exercisetracker.services.StopwatchTimerService
+import com.aamo.exercisetracker.services.TimerServiceProperties
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,18 +24,19 @@ class MainActivity : ComponentActivity() {
       }
     }
 
-    CountDownTimerService.createNotificationChannel(context = applicationContext, activity = this)
-    // CountDownTimerService needs to be started here because the onTaskRemoved does not get
+    TimerServiceProperties.createNotificationChannel(context = applicationContext, activity = this)
+    // Timer services must be started here because the onTaskRemoved does not get
     //  invoked on binding
     startService(Intent(this, CountDownTimerService::class.java))
+    startService(Intent(this, StopwatchTimerService::class.java))
   }
 
   override fun onRequestPermissionsResult(
     requestCode: Int, permissions: Array<out String?>, grantResults: IntArray, deviceId: Int
   ) {
-    if (requestCode == CountDownTimerService.PERMISSION_CODE) {
+    if (requestCode == TimerServiceProperties.PERMISSION_CODE) {
       if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-        CountDownTimerService.createNotificationChannel(
+        TimerServiceProperties.createNotificationChannel(
           context = applicationContext, activity = this
         )
       }

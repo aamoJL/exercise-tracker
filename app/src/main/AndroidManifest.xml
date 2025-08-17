@@ -26,5 +26,6 @@
         </activity>
 
         <service android:name=".services.CountDownTimerService" />
+        <service android:name=".services.StopwatchTimerService" />
     </application>
 </manifest>
