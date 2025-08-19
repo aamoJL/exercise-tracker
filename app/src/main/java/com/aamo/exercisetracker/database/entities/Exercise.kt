@@ -16,7 +16,7 @@ import kotlin.time.Duration.Companion.minutes
 
 // region Entities
 @Entity(
-  tableName = "exercises", foreignKeys = [ForeignKey(
+  tableName = "exercise", foreignKeys = [ForeignKey(
     entity = Routine::class,
     parentColumns = ["id"],
     childColumns = ["routine_id"],
@@ -31,7 +31,7 @@ data class Exercise(
 )
 
 @Entity(
-  tableName = "exercise_sets", foreignKeys = [ForeignKey(
+  tableName = "exercise_set", foreignKeys = [ForeignKey(
     entity = Exercise::class,
     parentColumns = ["id"],
     childColumns = ["exercise_id"],

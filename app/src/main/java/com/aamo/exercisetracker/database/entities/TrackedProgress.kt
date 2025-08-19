@@ -22,7 +22,7 @@ data class TrackedProgress(
 )
 
 @Entity(
-  tableName = "tracked_progress_values", foreignKeys = [ForeignKey(
+  tableName = "tracked_progress_value", foreignKeys = [ForeignKey(
     entity = TrackedProgress::class,
     parentColumns = ["id"],
     childColumns = ["tracked_progress_id"],

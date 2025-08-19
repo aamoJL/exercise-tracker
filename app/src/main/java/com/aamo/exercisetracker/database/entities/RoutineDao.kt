@@ -13,40 +13,40 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RoutineDao {
   // region GET
-  @Query("SELECT * FROM routines WHERE id = :routineId")
+  @Query("SELECT * FROM routine WHERE id = :routineId")
   suspend fun getRoutine(routineId: Long): Routine?
 
-  @Query("SELECT * FROM routine_schedules WHERE routine_id = :routineId")
+  @Query("SELECT * FROM routine_schedule WHERE routine_id = :routineId")
   suspend fun getScheduleByRoutineId(routineId: Long): RoutineSchedule?
 
-  @Query("SELECT * FROM exercises WHERE id = :exerciseId")
+  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
   suspend fun getExercise(exerciseId: Long): Exercise?
 
   @Query("SELECT * FROM exercise_progress WHERE exercise_id = :exerciseId")
   suspend fun getExerciseProgressByExerciseId(exerciseId: Long): ExerciseProgress?
 
   @Transaction
-  @Query("SELECT * FROM routines WHERE id = :routineId")
+  @Query("SELECT * FROM routine WHERE id = :routineId")
   suspend fun getRoutineWithSchedule(routineId: Long): RoutineWithSchedule?
 
   @Transaction
-  @Query("SELECT * FROM routines")
+  @Query("SELECT * FROM routine")
   fun getRoutinesWithScheduleFlow(): Flow<List<RoutineWithSchedule>>
 
   @Transaction
-  @Query("SELECT * FROM routines")
+  @Query("SELECT * FROM routine")
   fun getRoutinesWithScheduleAndProgressesFlow(): Flow<List<RoutineWithScheduleAndExerciseProgresses>>
 
   @Transaction
-  @Query("SELECT * FROM exercises WHERE id = :exerciseId")
+  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
   suspend fun getExerciseWithSets(exerciseId: Long): ExerciseWithSets?
 
   @Transaction
-  @Query("SELECT * FROM routines WHERE id = :routineId")
+  @Query("SELECT * FROM routine WHERE id = :routineId")
   fun getRoutineWithProgressesFlow(routineId: Long): Flow<RoutineWithExerciseProgresses?>
 
   @Transaction
-  @Query("SELECT * FROM exercises WHERE id = :exerciseId")
+  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
   suspend fun getExerciseWithProgressAndSets(exerciseId: Long): ExerciseWithProgressAndSets?
   // endregion
 

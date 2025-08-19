@@ -11,14 +11,14 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.aamo.exercisetracker.utility.extensions.date.Day
 
-@Entity(tableName = "routines")
+@Entity(tableName = "routine")
 data class Routine(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "name") val name: String,
 )
 
 @Entity(
-  tableName = "routine_schedules", foreignKeys = [ForeignKey(
+  tableName = "routine_schedule", foreignKeys = [ForeignKey(
     entity = Routine::class,
     parentColumns = ["id"],
     childColumns = ["routine_id"],

@@ -16,13 +16,13 @@ interface TrackedProgressDao {
   @Query("SELECT * FROM tracked_progress")
   fun getProgressesFlow(): Flow<List<TrackedProgress>>
 
-  @Query("SELECT * FROM tracked_progress_values WHERE tracked_progress_id = :progressId")
+  @Query("SELECT * FROM tracked_progress_value WHERE tracked_progress_id = :progressId")
   fun getProgressValuesFlow(progressId: Long): Flow<List<TrackedProgressValue>>
 
-  @Query("SELECT * FROM tracked_progress_values WHERE id = :valueId")
+  @Query("SELECT * FROM tracked_progress_value WHERE id = :valueId")
   suspend fun getProgressValueById(valueId: Long): TrackedProgressValue?
 
-  @Query("SELECT * FROM tracked_progress LEFT JOIN tracked_progress_values ON tracked_progress_id = tracked_progress.id")
+  @Query("SELECT * FROM tracked_progress LEFT JOIN tracked_progress_value ON tracked_progress_id = tracked_progress.id")
   fun getProgressesWithValuesFlow(): Flow<Map<TrackedProgress, List<TrackedProgressValue>>>
 
   @Upsert
@@ -34,6 +34,6 @@ interface TrackedProgressDao {
   @Delete
   suspend fun delete(trackedProgress: TrackedProgress): Int
 
-  @Query("DELETE FROM tracked_progress_values WHERE id = :trackedProgressId")
+  @Query("DELETE FROM tracked_progress_value WHERE id = :trackedProgressId")
   suspend fun deleteValueById(trackedProgressId: Long)
 }

@@ -3,9 +3,11 @@ package com.aamo.exercisetracker.database
 import android.content.Context
 import androidx.room.AutoMigration
 import androidx.room.Database
+import androidx.room.RenameTable
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.AutoMigrationSpec
 import com.aamo.exercisetracker.database.converters.DateConverter
 import com.aamo.exercisetracker.database.converters.DurationConverter
 import com.aamo.exercisetracker.database.converters.ExerciseSetValueTypeConverter
@@ -26,6 +28,9 @@ import com.aamo.exercisetracker.database.entities.TrackedProgressValue
     AutoMigration(from = 1, to = 2),
     AutoMigration(from = 2, to = 3),
     AutoMigration(from = 3, to = 4),
+    AutoMigration(
+      from = 4, to = 5, spec = RoutineDatabase.VersionFourToFiveAutoMigrationSpec::class
+    ),
   ],
 )
 @TypeConverters(
@@ -33,7 +38,7 @@ import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 )
 abstract class RoutineDatabase : RoomDatabase() {
   object Properties {
-    const val VERSION = 4
+    const val VERSION = 5
   }
 
   abstract fun routineDao(): RoutineDao
@@ -52,4 +57,14 @@ abstract class RoutineDatabase : RoomDatabase() {
       }
     }
   }
+
+  @Suppress("HardCodedStringLiteral")
+  @RenameTable.Entries(
+    RenameTable(fromTableName = "exercises", toTableName = "exercise"),
+    RenameTable(fromTableName = "exercise_sets", toTableName = "exercise_set"),
+    RenameTable(fromTableName = "routines", toTableName = "routine"),
+    RenameTable(fromTableName = "routine_schedules", toTableName = "routine_schedule"),
+    RenameTable(fromTableName = "tracked_progress_values", toTableName = "tracked_progress_value"),
+  )
+  class VersionFourToFiveAutoMigrationSpec : AutoMigrationSpec
 }
