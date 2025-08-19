@@ -20,4 +20,11 @@ class DurationTests {
     assertEquals("02:00:00", 26.hours.toClockString(hasHours = true))
     assertEquals("01:02:33", (1.hours + 2.minutes + 33.seconds).toClockString(hasHours = true))
   }
+
+  @Test
+  fun `weeks returns correct duration`() {
+    assertEquals(7L, 1.weeks.inWholeDays)
+    assertEquals(14L, 2.weeks.inWholeDays)
+    assertEquals(1814400000L, 3.weeks.inWholeMilliseconds)
+  }
 }

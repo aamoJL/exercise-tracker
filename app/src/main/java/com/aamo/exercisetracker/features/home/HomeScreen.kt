@@ -64,6 +64,10 @@ fun HomeScreen(mainNavController: NavController) {
         mainNavController.navigate(RoutinePage(id = id, showProgress = true)) {
           launchSingleTop = true
         }
+      }, onTrackedProgressSelected = {
+        mainNavController.navigate(ProgressTrackingScreen(progressId = it)) {
+          launchSingleTop = true
+        }
       })
       routineListScreen(onSelectRoutine = { id ->
         mainNavController.navigate(RoutinePage(id = id)) {

@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.utility.extensions.date
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -28,6 +29,9 @@ fun Duration.toClockString(
     }.plus((this.inWholeSeconds % 60).toString().padStart(2, '0'))
   }
 }
+
+val Int.weeks: Duration
+  get() = this.days * 7
 
 data class DurationSegments(val seconds: Int, val minutes: Int, val hours: Int) {
   fun toDuration(): Duration {

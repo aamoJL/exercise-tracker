@@ -22,6 +22,9 @@ interface TrackedProgressDao {
   @Query("SELECT * FROM tracked_progress_values WHERE id = :valueId")
   suspend fun getProgressValueById(valueId: Long): TrackedProgressValue?
 
+  @Query("SELECT * FROM tracked_progress LEFT JOIN tracked_progress_values ON tracked_progress_id = tracked_progress.id")
+  fun getProgressesWithValuesFlow(): Flow<Map<TrackedProgress, List<TrackedProgressValue>>>
+
   @Upsert
   suspend fun upsert(trackedProgress: TrackedProgress): Long
 

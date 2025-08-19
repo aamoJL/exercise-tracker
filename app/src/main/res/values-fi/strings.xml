@@ -96,4 +96,5 @@
     <string name="cd_timer">Ajastin</string>
     <string name="title_timer">Ajastin</string>
     <string name="title_stopwatch">Sekuntikello</string>
+    <string name="title_scheduled_trackers">Ajastetut seurannat</string>
 </resources>
