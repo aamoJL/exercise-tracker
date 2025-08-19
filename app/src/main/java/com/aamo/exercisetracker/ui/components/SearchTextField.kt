@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.aamo.exercisetracker.R
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 
 @Composable
 fun SearchTextField(
@@ -26,8 +26,7 @@ fun SearchTextField(
       if (value.isNotEmpty()) {
         IconButton(onClick = { onValueChange(String.EMPTY) }) {
           Icon(
-            imageVector = Icons.Filled.Clear,
-            contentDescription = stringResource(R.string.cd_clear)
+            imageVector = Icons.Filled.Clear, contentDescription = stringResource(R.string.cd_clear)
           )
         }
       }

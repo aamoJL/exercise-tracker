@@ -9,7 +9,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import java.util.Date
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes

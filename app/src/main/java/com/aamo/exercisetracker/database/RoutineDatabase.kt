@@ -15,13 +15,17 @@ import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
+import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.database.entities.TrackedProgressDao
+import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 
 @Database(
   version = RoutineDatabase.Properties.VERSION,
-  entities = [Routine::class, RoutineSchedule::class, Exercise::class, ExerciseSet::class, ExerciseProgress::class],
+  entities = [Routine::class, RoutineSchedule::class, Exercise::class, ExerciseSet::class, ExerciseProgress::class, TrackedProgress::class, TrackedProgressValue::class],
   autoMigrations = [
     AutoMigration(from = 1, to = 2),
     AutoMigration(from = 2, to = 3),
+    AutoMigration(from = 3, to = 4),
   ],
 )
 @TypeConverters(
@@ -29,10 +33,11 @@ import com.aamo.exercisetracker.database.entities.RoutineSchedule
 )
 abstract class RoutineDatabase : RoomDatabase() {
   object Properties {
-    const val VERSION = 3
+    const val VERSION = 4
   }
 
   abstract fun routineDao(): RoutineDao
+  abstract fun trackedProgressDao(): TrackedProgressDao
 
   companion object {
     @Suppress("HardCodedStringLiteral") private const val DATABASE_NAME = "routine_database"

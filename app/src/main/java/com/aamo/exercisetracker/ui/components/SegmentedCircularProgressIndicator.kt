@@ -141,7 +141,7 @@ private fun DrawScope.drawCircularIndicator(
 
 @Preview
 @Composable
-fun Preview() {
+private fun Preview() {
   ExerciseTrackerTheme {
     Box(
       contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)

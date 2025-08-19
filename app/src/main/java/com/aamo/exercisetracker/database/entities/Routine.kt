@@ -60,12 +60,6 @@ data class RoutineWithSchedule(
   val schedule: RoutineSchedule?
 )
 
-data class RoutineWithExercises(
-  @Embedded val routine: Routine,
-  @Relation(entity = Exercise::class, parentColumn = "id", entityColumn = "routine_id")
-  val exercises: List<Exercise>
-)
-
 data class RoutineWithExerciseProgresses(
   @Embedded val routine: Routine,
   @Relation(entity = Exercise::class, parentColumn = "id", entityColumn = "routine_id")

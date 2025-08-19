@@ -14,8 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -25,7 +23,6 @@ import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,15 +51,16 @@ import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
@@ -259,10 +257,13 @@ fun RoutineFormScreen(
     )
   }
   if (openDeleteDialog) {
-    DeleteDialog(onDismiss = { openDeleteDialog = false }, onConfirm = {
-      openDeleteDialog = false
-      onDelete()
-    })
+    DeleteDialog(
+      title = stringResource(R.string.dialog_title_delete_routine),
+      onDismiss = { openDeleteDialog = false },
+      onConfirm = {
+        openDeleteDialog = false
+        onDelete()
+      })
   }
 
   BackHandler(enabled = unsavedChanges) {
@@ -357,28 +358,4 @@ fun RoutineFormScreen(
       }
     }
   }
-}
-
-@Composable
-private fun DeleteDialog(
-  onDismiss: () -> Unit,
-  onConfirm: () -> Unit,
-) {
-  AlertDialog(
-    title = { Text(text = stringResource(R.string.dialog_title_delete_routine)) },
-    onDismissRequest = onDismiss,
-    confirmButton = {
-      TextButton(
-        onClick = onConfirm,
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-      ) {
-        Text(text = stringResource(R.string.btn_delete))
-      }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text(text = stringResource(R.string.btn_cancel))
-      }
-    },
-  )
 }

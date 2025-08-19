@@ -83,12 +83,12 @@ import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.tags.ERROR_TAG
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
@@ -338,10 +338,10 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
           uiState.inProgress.onTrue { openInProgressEditDialog = true }
             .onFalse { onEdit(exerciseId) }
         },
-        onStartSet = { timerService?.let { viewmodel.startSet(it) } },
-        onStopSetTimer = { timerService?.let { viewmodel.stopTimer(it) } },
-        onCancelSet = { timerService?.let { viewmodel.cancelTimer(it) } },
-        onStopRest = { timerService?.let { viewmodel.stopTimer(it) } },
+        onStartSet = { timerService?.also { viewmodel.startSet(it) } },
+        onStopSetTimer = { timerService?.also { viewmodel.stopTimer(it) } },
+        onCancelSet = { timerService?.also { viewmodel.cancelTimer(it) } },
+        onStopRest = { timerService?.also { viewmodel.stopTimer(it) } },
         onFinishExercise = { viewmodel.finishExercise() },
       )
     }
@@ -430,30 +430,29 @@ fun ExerciseScreen(
         }
       }
     }
-
-    // Visibility needs to be checked with showRestSheet because
-    //  otherwise the sheet closing animation will not work correctly.
-    TimerSheet(
-      isVisible = showSetTimerSheet,
-      timerTitle = stringResource(R.string.title_set_timer),
-      timerState = uiState.setState.value.setTimer,
-      sheetState = setTimerSheetState,
-      onDismissRequest = onCancelSet,
+  }
+  // Visibility needs to be checked with showRestSheet because
+  //  otherwise the sheet closing animation will not work correctly.
+  TimerSheet(
+    isVisible = showSetTimerSheet,
+    timerTitle = stringResource(R.string.title_set_timer),
+    timerState = uiState.setState.value.setTimer,
+    sheetState = setTimerSheetState,
+    onDismissRequest = onCancelSet
+  ) {
+    Button(
+      onClick = onCancelSet, colors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.error
+      ), modifier = Modifier.weight(1f)
     ) {
-      Button(
-        onClick = onCancelSet, colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.error
-        ), modifier = Modifier.weight(1f)
-      ) {
-        Text(stringResource(R.string.btn_cancel))
-      }
-      Button(
-        onClick = onStopSetTimer, colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.secondary
-        ), modifier = Modifier.weight(1f)
-      ) {
-        Text(stringResource(R.string.btn_finish))
-      }
+      Text(stringResource(R.string.btn_cancel))
+    }
+    Button(
+      onClick = onStopSetTimer, colors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.secondary
+      ), modifier = Modifier.weight(1f)
+    ) {
+      Text(stringResource(R.string.btn_finish))
     }
   }
   TimerSheet(
@@ -461,7 +460,7 @@ fun ExerciseScreen(
     timerTitle = stringResource(R.string.title_rest),
     timerState = uiState.setState.value.restTimer,
     sheetState = restTimerSheetState,
-    onDismissRequest = onStopRest,
+    onDismissRequest = onStopRest
   ) {
     Button(
       onClick = onStopRest, colors = ButtonDefaults.buttonColors(
@@ -571,7 +570,7 @@ fun TimerSheet(
   timerTitle: String,
   timerState: ExerciseScreenViewModel.TimerState?,
   sheetState: SheetState,
-  onDismissRequest: () -> Unit,
+  onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
   content: @Composable RowScope.() -> Unit,
 ) {
   if (isVisible) {

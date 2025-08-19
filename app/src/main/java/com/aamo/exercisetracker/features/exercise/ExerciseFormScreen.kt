@@ -17,8 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,7 +27,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -50,6 +47,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,15 +63,17 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.FormList
 import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.utility.extensions.form.HideZero
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.extensions.string.EMPTY
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
@@ -203,6 +203,8 @@ class ExerciseFormViewModel(
   }
 }
 
+// TODO: Combine graphs to one
+
 fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long) -> Unit) {
   composable<AddExerciseFormScreen> { navStack ->
     val (routineId) = navStack.toRoute<AddExerciseFormScreen>()
@@ -276,7 +278,7 @@ fun NavGraphBuilder.editExerciseFormScreen(
                 }
               },
               hasTimer = (sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN),
-              isNew = exercise.id == 0L
+              isNew = false
             )
           }
         }, saveData = { model ->
@@ -362,10 +364,13 @@ fun ExerciseFormScreen(
     )
   }
   if (openDeleteDialog) {
-    DeleteDialog(onDismiss = { openDeleteDialog = false }, onConfirm = {
-      openDeleteDialog = false
-      onDelete()
-    })
+    DeleteDialog(
+      title = stringResource(R.string.dialog_title_delete_exercise),
+      onDismiss = { openDeleteDialog = false },
+      onConfirm = {
+        openDeleteDialog = false
+        onDelete()
+      })
   }
 
   BackHandler(enabled = uiState.savingState.unsavedChanges) {
@@ -430,6 +435,7 @@ fun ExerciseFormScreen(
         onValueChange = { uiState.restDuration.update(it.minutes) },
         suffix = { Text(stringResource(R.string.suffix_minutes)) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        visualTransformation = VisualTransformation.HideZero,
         modifier = Modifier.fillMaxWidth()
       )
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -540,28 +546,4 @@ private fun DismissBoxBackgroundContent(
       )
     }
   }
-}
-
-@Composable
-private fun DeleteDialog(
-  onDismiss: () -> Unit,
-  onConfirm: () -> Unit,
-) {
-  AlertDialog(
-    title = { Text(text = stringResource(R.string.dialog_title_delete_exercise)) },
-    onDismissRequest = onDismiss,
-    confirmButton = {
-      TextButton(
-        onClick = onConfirm,
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-      ) {
-        Text(text = stringResource(R.string.btn_delete))
-      }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text(text = stringResource(R.string.btn_cancel))
-      }
-    },
-  )
 }

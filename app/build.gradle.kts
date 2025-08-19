@@ -70,6 +70,7 @@ dependencies {
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.testing.android)
+  implementation(libs.compose.charts)
   ksp(libs.androidx.room.compiler)
   testImplementation(libs.junit)
   testImplementation(libs.androidx.room.testing)
