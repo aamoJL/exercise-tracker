@@ -31,6 +31,7 @@ fun SearchTextField(
         }
       }
     },
+    singleLine = true,
     modifier = modifier
   )
 }
