@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +59,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -109,6 +108,7 @@ class ExerciseScreenViewModel(
 ) : ViewModel() {
   data class Model(
     val exerciseName: String,
+    val routineId: Long,
     val sets: List<SetModel>,
   ) {
     data class SetModel(
@@ -136,6 +136,7 @@ class ExerciseScreenViewModel(
     var isLoading by mutableStateOf(true)
     var inProgress by mutableStateOf(false)
       private set
+    var routineId: Long = 0L
   }
 
   val uiState = UiState()
@@ -147,6 +148,7 @@ class ExerciseScreenViewModel(
           exerciseName = result.exerciseName
           sets = result.sets
           setState.update(SetState(index = 0))
+          routineId = result.routineId
           isLoading = false
         }
       }
@@ -225,7 +227,9 @@ class ExerciseScreenViewModel(
   }
 }
 
-fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Unit) {
+fun NavGraphBuilder.exerciseScreen(
+  onBack: () -> Unit, onEdit: (exerciseId: Long, routineId: Long) -> Unit
+) {
   composable<ExerciseScreen> { navStack ->
     val (exerciseId) = navStack.toRoute<ExerciseScreen>()
     val setTimerTitle = stringResource(R.string.title_set_timer)
@@ -239,7 +243,9 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
           (dao.getExerciseWithProgressAndSets(exerciseId)
             ?: throw Exception("Failed to fetch data")).let { result ->
             ExerciseScreenViewModel.Model(
-              exerciseName = result.exercise.name, sets = result.sets.map { set ->
+              exerciseName = result.exercise.name,
+              routineId = result.exercise.routineId,
+              sets = result.sets.map { set ->
                 ExerciseScreenViewModel.Model.SetModel(
                   repetitions = ifElse(
                     condition = set.valueType == ExerciseSet.ValueType.REPETITION,
@@ -312,7 +318,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
     if (openInProgressEditDialog) {
       InProgressDialog(onDismiss = { openInProgressEditDialog = false }, onConfirm = {
         openInProgressEditDialog = false
-        onEdit(exerciseId)
+        onEdit(exerciseId, uiState.routineId)
       })
     }
 
@@ -336,7 +342,7 @@ fun NavGraphBuilder.exerciseScreen(onBack: () -> Unit, onEdit: (id: Long) -> Uni
         },
         onEdit = {
           uiState.inProgress.onTrue { openInProgressEditDialog = true }
-            .onFalse { onEdit(exerciseId) }
+            .onFalse { onEdit(exerciseId, uiState.routineId) }
         },
         onStartSet = { timerService?.also { viewmodel.startSet(it) } },
         onStopSetTimer = { timerService?.also { viewmodel.stopTimer(it) } },
@@ -394,7 +400,7 @@ fun ExerciseScreen(
       TopAppBar(title = { Text(uiState.exerciseName) }, actions = {
         IconButton(onClick = onEdit) {
           Icon(
-            imageVector = Icons.Filled.Edit,
+            painter = painterResource(R.drawable.rounded_edit_24),
             contentDescription = stringResource(R.string.cd_edit_exercise)
           )
         }

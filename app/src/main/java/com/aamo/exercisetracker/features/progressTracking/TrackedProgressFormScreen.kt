@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
@@ -56,11 +54,14 @@ import com.aamo.exercisetracker.ui.components.DurationNumberField
 import com.aamo.exercisetracker.ui.components.DurationNumberFieldFields
 import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
+import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
+import com.aamo.exercisetracker.utility.extensions.general.equalsAny
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import com.aamo.exercisetracker.utility.extensions.general.letIf
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
@@ -119,6 +120,7 @@ class TrackedProgressFormScreenViewModel(
     }
   }
 
+  var isLoading by mutableStateOf(true)
   val uiState = UiState()
 
   init {
@@ -138,6 +140,7 @@ class TrackedProgressFormScreenViewModel(
           isNew = result.isNew
           savingState = savingState.copy(unsavedChanges = false)
         }
+        isLoading = false
       }
     }
   }
@@ -237,11 +240,13 @@ fun NavGraphBuilder.trackedProgressFormScreen(
     })
     val uiState = viewmodel.uiState
 
-    TrackedProgressFormScreen(
-      uiState = uiState,
-      onBack = onBack,
-      onSave = { viewmodel.save() },
-      onDelete = { viewmodel.delete() })
+    LoadingScreen(enabled = viewmodel.isLoading) {
+      TrackedProgressFormScreen(
+        uiState = uiState,
+        onBack = onBack,
+        onSave = { viewmodel.save() },
+        onDelete = { viewmodel.delete() })
+    }
   }
 }
 
@@ -254,34 +259,58 @@ fun TrackedProgressFormScreen(
   onDelete: () -> Unit,
 ) {
   val progressUnitDefault = stringResource(R.string.ph_reps)
-  var previousProgressUnit by remember { mutableStateOf(progressUnitDefault) }
-  var previousTimerDuration by remember { mutableStateOf(uiState.timerDuration.value) }
+
+  val unitFieldEnabled by remember(uiState.progressType.value) {
+    mutableStateOf(
+      uiState.progressType.value.equalsAny(
+        TrackedProgressFormScreenViewModel.UiState.ProgressType.REPETITION,
+        TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER
+      )
+    )
+  }
+  val durationFieldEnabled by remember(uiState.progressType.value) {
+    mutableStateOf(
+      uiState.progressType.value.equalsAny(
+        TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER,
+      )
+    )
+  }
+  var unitFieldPreviousValue by remember {
+    mutableStateOf(
+      uiState.progressValueUnit.value.letIf(
+        condition = { it.isEmpty() },
+        block = { progressUnitDefault })
+    )
+  }
+  var durationFieldPreviousValue by remember { mutableStateOf(uiState.timerDuration.value) }
 
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
 
-  LaunchedEffect(uiState.progressType.value) {
-    if (uiState.progressType.value != TrackedProgressFormScreenViewModel.UiState.ProgressType.STOPWATCH) {
-      // Set value unit to previous repetition unit
-      uiState.progressValueUnit.update(previousProgressUnit)
-    }
-    else {
-      // Set value unit to default stopwatch unit
-      previousProgressUnit = uiState.progressValueUnit.value
-      uiState.progressValueUnit.update(String.EMPTY)
+  LaunchedEffect(uiState.progressValueUnit.value) {
+    if (unitFieldEnabled) {
+      unitFieldPreviousValue = uiState.progressValueUnit.value
     }
   }
 
   LaunchedEffect(uiState.timerDuration.value) {
-    if (uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER) {
-      previousTimerDuration = uiState.timerDuration.value
+    if (durationFieldEnabled) {
+      durationFieldPreviousValue = uiState.timerDuration.value
     }
   }
 
-  LaunchedEffect(uiState.progressType.value) {
-    if (uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER) {
-      uiState.timerDuration.update(previousTimerDuration)
-    }
+  LaunchedEffect(unitFieldEnabled) {
+    ifElse(
+      condition = unitFieldEnabled,
+      ifTrue = { uiState.progressValueUnit.update(unitFieldPreviousValue) },
+      ifFalse = { uiState.progressValueUnit.update(String.EMPTY) })
+  }
+
+  LaunchedEffect(durationFieldEnabled) {
+    ifElse(
+      condition = durationFieldEnabled,
+      ifTrue = { uiState.timerDuration.update(durationFieldPreviousValue) },
+      ifFalse = { uiState.timerDuration.update(0.seconds) })
   }
 
   if (openUnsavedDialog) {
@@ -323,7 +352,7 @@ fun TrackedProgressFormScreen(
       if (!uiState.isNew) {
         IconButton(onClick = { openDeleteDialog = true }) {
           Icon(
-            imageVector = Icons.Filled.Delete,
+            painter = painterResource(R.drawable.rounded_delete_24),
             contentDescription = stringResource(R.string.cd_delete_tracked_progress)
           )
         }
@@ -334,7 +363,7 @@ fun TrackedProgressFormScreen(
         enabled = uiState.savingState.canSave()
       ) {
         Icon(
-          imageVector = Icons.Filled.Done,
+          painter = painterResource(R.drawable.round_done_24),
           contentDescription = stringResource(R.string.cd_save_tracked_progress)
         )
       }
@@ -403,7 +432,7 @@ fun TrackedProgressFormScreen(
             .weight(1f)
         ) {
           TextField(
-            enabled = uiState.progressType.value != TrackedProgressFormScreenViewModel.UiState.ProgressType.STOPWATCH,
+            enabled = unitFieldEnabled,
             value = uiState.progressValueUnit.value,
             label = { Text(stringResource(R.string.label_progress_unit)) },
             shape = RectangleShape,
@@ -415,7 +444,7 @@ fun TrackedProgressFormScreen(
             modifier = Modifier.fillMaxWidth()
           )
           DurationNumberField(
-            enabled = uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER,
+            enabled = durationFieldEnabled,
             fields = DurationNumberFieldFields(hours = DurationNumberFieldFields.Properties(enabled = false)),
             value = uiState.timerDuration.value,
             onValueChange = { uiState.timerDuration.update(it) },

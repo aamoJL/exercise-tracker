@@ -25,10 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -402,13 +398,13 @@ fun ProgressTrackingScreen(
       TopAppBar(title = { Text(uiState.progressName) }, actions = {
         IconButton(onClick = onEdit) {
           Icon(
-            imageVector = Icons.Filled.Edit,
+            painter = painterResource(R.drawable.rounded_edit_24),
             contentDescription = stringResource(R.string.cd_edit_tracked_progress)
           )
         }
         IconButton(enabled = uiState.records.isNotEmpty(), onClick = onShowRecords) {
           Icon(
-            imageVector = Icons.AutoMirrored.Filled.List,
+            painter = painterResource(R.drawable.rounded_list_24),
             contentDescription = stringResource(R.string.cd_show_records)
           )
         }
@@ -423,7 +419,7 @@ fun ProgressTrackingScreen(
             modifier = Modifier.padding(8.dp)
           ) {
             Icon(
-              painter = painterResource(R.drawable.outline_timer_24),
+              painter = painterResource(R.drawable.rounded_timer_24),
               contentDescription = stringResource(R.string.cd_timer)
             )
           }
@@ -434,7 +430,10 @@ fun ProgressTrackingScreen(
           onClick = { showNewRecordDialog = true },
           modifier = Modifier.padding(8.dp)
         ) {
-          Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
+          Icon(
+            painter = painterResource(R.drawable.rounded_add_24),
+            contentDescription = stringResource(R.string.cd_add)
+          )
         }
       }
     }) { innerPadding ->
@@ -595,12 +594,13 @@ fun RecordChart(
   val popupProperties = PopupProperties(
     mode = PopupProperties.Mode.PointMode(threshold = 30.dp),
     textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
-    contentBuilder = { _, _, value ->
+    contentBuilder = { popup ->
       when (uiState.recordType) {
-        ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> value.toDuration(DurationUnit.MILLISECONDS)
-          .toClockString(hasHours = value >= 1.hours.inWholeMilliseconds).trimFirst('0')
+        ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> popup.value.toDuration(
+          DurationUnit.MILLISECONDS
+        ).toClockString(hasHours = popup.value >= 1.hours.inWholeMilliseconds).trimFirst('0')
 
-        else -> DecimalFormat.getInstance().apply { maximumFractionDigits = 0 }.format(value)
+        else -> DecimalFormat.getInstance().apply { maximumFractionDigits = 0 }.format(popup.value)
       }
     })
 

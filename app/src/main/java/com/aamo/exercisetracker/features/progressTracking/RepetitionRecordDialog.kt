@@ -3,8 +3,6 @@ package com.aamo.exercisetracker.features.progressTracking
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -27,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
@@ -74,7 +73,7 @@ fun RepetitionRecordDialog(
           )
         ) {
           Icon(
-            imageVector = Icons.Filled.DateRange,
+            painter = painterResource(R.drawable.rounded_date_range_24),
             contentDescription = stringResource(R.string.cd_change_date)
           )
         }

@@ -4,9 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -103,7 +100,7 @@ fun HomeScreen(mainNavController: NavController) {
             },
             icon = {
               Icon(
-                imageVector = Icons.Filled.DateRange,
+                painter = painterResource(R.drawable.rounded_calendar_check_24),
                 contentDescription = stringResource(R.string.cd_dailies_tab)
               )
             },
@@ -119,7 +116,7 @@ fun HomeScreen(mainNavController: NavController) {
             },
             icon = {
               Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
+                painter = painterResource(R.drawable.rounded_list_24),
                 contentDescription = stringResource(R.string.cd_routines_tab)
               )
             },
@@ -135,7 +132,7 @@ fun HomeScreen(mainNavController: NavController) {
             },
             icon = {
               Icon(
-                painter = painterResource(R.drawable.baseline_bar_chart_24),
+                painter = painterResource(R.drawable.rounded_bar_chart_24),
                 contentDescription = stringResource(R.string.cd_progress_tracking_tab)
               )
             },

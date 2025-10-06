@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -62,11 +60,13 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
+import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.FormList
 import com.aamo.exercisetracker.ui.components.IntNumberField
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
+import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
@@ -84,9 +84,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 @Serializable
-data class EditExerciseFormScreen(val id: Long)
-@Serializable
-data class AddExerciseFormScreen(val routineId: Long)
+data class ExerciseFormScreen(val exerciseId: Long, val routineId: Long)
 
 class ExerciseFormViewModel(
   private val fetchData: suspend () -> Model,
@@ -148,6 +146,7 @@ class ExerciseFormViewModel(
     }
   }
 
+  var isLoading by mutableStateOf(true)
   val uiState = UiState()
 
   init {
@@ -162,6 +161,7 @@ class ExerciseFormViewModel(
           isNew = result.isNew
           savingState = savingState.copy(unsavedChanges = false)
         }
+        isLoading = false
       }
     }
   }
@@ -203,134 +203,135 @@ class ExerciseFormViewModel(
   }
 }
 
-// TODO: Combine graphs to one
-
-fun NavGraphBuilder.addExerciseFormScreen(onBack: () -> Unit, onSaved: (id: Long) -> Unit) {
-  composable<AddExerciseFormScreen> { navStack ->
-    val (routineId) = navStack.toRoute<AddExerciseFormScreen>()
+fun NavGraphBuilder.exerciseFormScreen(
+  onBack: () -> Unit, onUpdate: (id: Long) -> Unit, onAdd: (id: Long) -> Unit, onDeleted: () -> Unit
+) {
+  composable<ExerciseFormScreen> { navStack ->
+    val (exerciseId, routineId) = navStack.toRoute<ExerciseFormScreen>()
     val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
-    val setUnitDefault = stringResource(R.string.ph_reps)
+
     val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        ExerciseFormViewModel(fetchData = {
-          ExerciseFormViewModel.Model(
-            exerciseName = String.EMPTY,
-            restDuration = 0.milliseconds,
-            setUnit = setUnitDefault,
-            setAmounts = listOf(0),
-            hasTimer = false,
-            isNew = true
+        ExerciseFormViewModel(fetchData = { fetchData(exerciseId, dao) }, saveData = { model ->
+          saveData(
+            exerciseId = exerciseId, routineId = routineId, model = model, dao = dao
+          ).let { result ->
+            result?.also {
+              ifElse(
+                condition = exerciseId == 0L,
+                ifTrue = { onAdd(result) },
+                ifFalse = { onUpdate(result) })
+            } != null
+          }
+        }, deleteData = {
+          deleteData(exerciseId = exerciseId, dao = dao).onTrue {
+            onDeleted()
+          }
+        })
+      }
+    })
+
+    val uiState = viewmodel.uiState
+
+    LoadingScreen(enabled = viewmodel.isLoading) {
+      ExerciseFormScreen(
+        uiState = uiState,
+        onBack = onBack,
+        onSave = { viewmodel.save() },
+        onDelete = { viewmodel.delete() })
+    }
+  }
+}
+
+private suspend fun deleteData(exerciseId: Long, dao: RoutineDao): Boolean {
+  return if (exerciseId == 0L) false
+  else {
+    (dao.getExercise(exerciseId) ?: throw Exception("Failed to fetch data")).let { result ->
+      (dao.delete(result) > 0)
+    }
+  }
+}
+
+private suspend fun saveData(
+  exerciseId: Long, routineId: Long, model: ExerciseFormViewModel.Model, dao: RoutineDao
+): Long? {
+  return ifElse(condition = exerciseId == 0L, ifTrue = {
+    dao.upsert(
+      ExerciseWithSets(
+        exercise = Exercise(
+          routineId = routineId, name = model.exerciseName, restDuration = model.restDuration
+        ), sets = model.setAmounts.map { amount ->
+          ExerciseSet(
+            value = amount.letIf(model.hasTimer) {
+              // Change minutes to milliseconds if set has timer
+              it.minutes.inWholeMilliseconds.toInt()
+            }, unit = model.setUnit, valueType = ifElse(
+              condition = model.hasTimer,
+              ifTrue = { ExerciseSet.ValueType.COUNTDOWN },
+              ifFalse = { ExerciseSet.ValueType.REPETITION }), exerciseId = exerciseId
           )
-        }, saveData = { model ->
-          dao.upsert(
-            ExerciseWithSets(
-              exercise = Exercise(
-                routineId = routineId, name = model.exerciseName, restDuration = model.restDuration
-              ), sets = model.setAmounts.map { amount ->
-                ExerciseSet(
-                  value = amount.letIf(model.hasTimer) {
+        })
+    )
+  }, ifFalse = {
+    (dao.getExerciseWithSets(exerciseId)
+      ?: throw Exception("Failed to fetch data")).let { (exercise, sets) ->
+      dao.upsert(
+        ExerciseWithSets(
+          exercise = exercise.copy(
+            name = model.exerciseName, restDuration = model.restDuration
+          ), sets = sets.take(model.setAmounts.size).let { list ->
+            list.toMutableList().apply {
+              // Add missing sets
+              repeat(model.setAmounts.size - list.size) { add(ExerciseSet(exerciseId = exerciseId)) }
+            }.let { list ->
+              list.mapIndexed { i, item ->
+                item.copy(
+                  exerciseId = exercise.id, value = model.setAmounts[i].letIf(model.hasTimer) {
                     // Change minutes to milliseconds if set has timer
                     it.minutes.inWholeMilliseconds.toInt()
                   }, unit = model.setUnit, valueType = ifElse(
                     condition = model.hasTimer,
                     ifTrue = { ExerciseSet.ValueType.COUNTDOWN },
-                    ifFalse = { ExerciseSet.ValueType.REPETITION }), exerciseId = 0L
+                    ifFalse = { ExerciseSet.ValueType.REPETITION })
                 )
-              })
-          ).let { result ->
-            (result > 0).onTrue {
-              onSaved(result)
+              }
             }
-          }
-        }, deleteData = { false })
-      }
-    })
-    val uiState = viewmodel.uiState
-
-    ExerciseFormScreen(
-      uiState = uiState,
-      onBack = onBack,
-      onSave = { viewmodel.save() },
-      onDelete = { viewmodel.delete() })
+          })
+      )
+    }
+  }).letIf(condition = { it == -1L }) {
+    return null
   }
 }
 
-fun NavGraphBuilder.editExerciseFormScreen(
-  onBack: () -> Unit, onSaved: (id: Long) -> Unit, onDeleted: () -> Unit
-) {
-  composable<EditExerciseFormScreen> { navStack ->
-    val (exerciseId) = navStack.toRoute<EditExerciseFormScreen>()
-    val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
-    val setUnitDefault = stringResource(R.string.ph_reps)
-    val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
-      initializer {
-        ExerciseFormViewModel(fetchData = {
-          (dao.getExerciseWithSets(exerciseId)
-            ?: throw Exception("Failed to fetch data")).let { (exercise, sets) ->
-            ExerciseFormViewModel.Model(
-              exerciseName = exercise.name,
-              restDuration = exercise.restDuration,
-              setUnit = sets.firstOrNull()?.unit ?: setUnitDefault,
-              setAmounts = sets.map { set ->
-                set.value.letIf(set.valueType == ExerciseSet.ValueType.COUNTDOWN) {
-                  // Change milliseconds to minutes, if set has timer
-                  it.milliseconds.inWholeMinutes.toInt()
-                }
-              },
-              hasTimer = (sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN),
-              isNew = false
-            )
+private suspend fun fetchData(id: Long, dao: RoutineDao): ExerciseFormViewModel.Model {
+  if (id == 0L) {
+    return ExerciseFormViewModel.Model(
+      exerciseName = String.EMPTY,
+      restDuration = 0.milliseconds,
+      setUnit = String.EMPTY,
+      setAmounts = listOf(0),
+      hasTimer = false,
+      isNew = true
+    )
+  }
+  else {
+    return (dao.getExerciseWithSets(id)
+      ?: throw Exception("Failed to fetch data")).let { (exercise, sets) ->
+      ExerciseFormViewModel.Model(
+        exerciseName = exercise.name,
+        restDuration = exercise.restDuration,
+        setUnit = sets.firstOrNull()?.unit ?: String.EMPTY,
+        setAmounts = sets.map { set ->
+          set.value.letIf(set.valueType == ExerciseSet.ValueType.COUNTDOWN) {
+            // Change milliseconds to minutes, if set has timer
+            it.milliseconds.inWholeMinutes.toInt()
           }
-        }, saveData = { model ->
-          (dao.getExerciseWithSets(exerciseId)
-            ?: throw Exception("Failed to fetch data")).let { (exercise, sets) ->
-            dao.upsert(
-              ExerciseWithSets(
-                exercise = exercise.copy(
-                  name = model.exerciseName, restDuration = model.restDuration
-                ), sets = sets.take(model.setAmounts.size).let { list ->
-                  list.toMutableList().apply {
-                    // Add missing sets
-                    repeat(model.setAmounts.size - list.size) { add(ExerciseSet(exerciseId = exerciseId)) }
-                  }.let { list ->
-                    list.mapIndexed { i, item ->
-                      item.copy(
-                        exerciseId = exercise.id,
-                        value = model.setAmounts[i].letIf(model.hasTimer) {
-                          // Change minutes to milliseconds if set has timer
-                          it.minutes.inWholeMilliseconds.toInt()
-                        },
-                        unit = model.setUnit,
-                        valueType = ifElse(
-                          condition = model.hasTimer,
-                          ifTrue = { ExerciseSet.ValueType.COUNTDOWN },
-                          ifFalse = { ExerciseSet.ValueType.REPETITION })
-                      )
-                    }
-                  }
-                })
-            ).let { result ->
-              (result > 0).onTrue {
-                onSaved(exerciseId)
-              }
-            }
-          }
-        }, deleteData = {
-          (dao.getExercise(exerciseId) ?: throw Exception("Failed to fetch data")).let { result ->
-            (dao.delete(result) > 0).onTrue {
-              onDeleted()
-            }
-          }
-        })
-      }
-    })
-    val uiState = viewmodel.uiState
-
-    ExerciseFormScreen(
-      uiState = uiState,
-      onBack = onBack,
-      onSave = { viewmodel.save() },
-      onDelete = { viewmodel.delete() })
+        },
+        hasTimer = (sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN),
+        isNew = false
+      )
+    }
   }
 }
 
@@ -393,7 +394,7 @@ fun ExerciseFormScreen(
       if (!uiState.isNew) {
         IconButton(onClick = { openDeleteDialog = true }) {
           Icon(
-            imageVector = Icons.Filled.Delete,
+            painter = painterResource(R.drawable.rounded_delete_24),
             contentDescription = stringResource(R.string.cd_delete_exercise)
           )
         }
@@ -404,7 +405,7 @@ fun ExerciseFormScreen(
         enabled = uiState.savingState.canSave()
       ) {
         Icon(
-          imageVector = Icons.Filled.Done,
+          painter = painterResource(R.drawable.round_done_24),
           contentDescription = stringResource(R.string.cd_save_exercise)
         )
       }
@@ -524,7 +525,7 @@ private fun DismissBoxBackgroundContent(
     else -> Color.Transparent
   }
   val icon = when (state.dismissDirection) {
-    deleteDirection -> Icons.Filled.Delete
+    deleteDirection -> painterResource(R.drawable.rounded_delete_24)
     else -> null
   }
   val alignment = when (deleteDirection) {
@@ -540,7 +541,7 @@ private fun DismissBoxBackgroundContent(
   ) {
     if (icon != null) {
       Icon(
-        imageVector = icon,
+        painter = icon,
         contentDescription = null,
         modifier = Modifier.minimumInteractiveComponentSize()
       )

@@ -19,8 +19,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -38,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -269,7 +268,7 @@ fun DailiesScreen(
                       Text(text = routine.routine.name, fontWeight = FontWeight.Bold)
                       if (isFinished) {
                         Icon(
-                          imageVector = Icons.Filled.Done,
+                          painter = painterResource(R.drawable.rounded_done_all_24),
                           contentDescription = stringResource(R.string.cd_done)
                         )
                       }
@@ -305,9 +304,11 @@ fun DailiesScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 16.dp)
             )
-            LazyColumn(modifier = Modifier
-              .padding(horizontal = 16.dp)
-              .padding(bottom = 8.dp)) {
+            LazyColumn(
+              modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 8.dp)
+            ) {
               items(items = progresses, key = { it.id }) { progress ->
                 Button(
                   onClick = { onTrackedProgressSelected(progress.id) },

@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -250,13 +248,13 @@ fun TrackedProgressRecordListScreen(
                 Row {
                   IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
-                      imageVector = Icons.Filled.Delete,
+                      painter = painterResource(R.drawable.rounded_delete_24),
                       contentDescription = stringResource(R.string.cd_delete_record)
                     )
                   }
                   IconButton(onClick = { showEditRecordDialog = true }) {
                     Icon(
-                      imageVector = Icons.Filled.Edit,
+                      painter = painterResource(R.drawable.rounded_edit_24),
                       contentDescription = stringResource(R.string.cd_edit_record)
                     )
                   }

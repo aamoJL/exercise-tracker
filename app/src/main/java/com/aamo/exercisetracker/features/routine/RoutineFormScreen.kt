@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -53,6 +51,7 @@ import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
+import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.UnsavedDialog
 import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
 import com.aamo.exercisetracker.utility.extensions.date.Day
@@ -103,6 +102,7 @@ class RoutineFormViewModel(
     }
   }
 
+  var isLoading by mutableStateOf(true)
   val uiState = UiState()
 
   init {
@@ -115,6 +115,7 @@ class RoutineFormViewModel(
           savingState = savingState.copy(unsavedChanges = false)
         }
       }
+      isLoading = false
     }
   }
 
@@ -224,11 +225,13 @@ fun NavGraphBuilder.routineFormScreen(
       }
     })
 
-    RoutineFormScreen(
-      uiState = viewmodel.uiState,
-      onBack = onBack,
-      onSave = { viewmodel.save() },
-      onDelete = { viewmodel.delete() })
+    LoadingScreen(enabled = viewmodel.isLoading) {
+      RoutineFormScreen(
+        uiState = viewmodel.uiState,
+        onBack = onBack,
+        onSave = { viewmodel.save() },
+        onDelete = { viewmodel.delete() })
+    }
   }
 }
 
@@ -286,7 +289,7 @@ fun RoutineFormScreen(
       if (!uiState.isNew) {
         IconButton(onClick = { openDeleteDialog = true }) {
           Icon(
-            imageVector = Icons.Filled.Delete,
+            painter = painterResource(R.drawable.rounded_delete_24),
             contentDescription = stringResource(R.string.cd_delete_routine)
           )
         }
@@ -297,7 +300,7 @@ fun RoutineFormScreen(
         enabled = uiState.savingState.canSave()
       ) {
         Icon(
-          imageVector = Icons.Filled.Done,
+          painter = painterResource(R.drawable.round_done_24),
           contentDescription = stringResource(R.string.cd_save_routine)
         )
       }

@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.aamo.exercisetracker.features.exercise.ExercisePage
+import com.aamo.exercisetracker.features.exercise.ExerciseScreen
 import com.aamo.exercisetracker.features.exercise.exercisePage
 import com.aamo.exercisetracker.features.progressTracking.progressTrackingPage
 import com.aamo.exercisetracker.features.routine.routinePage
@@ -23,7 +23,7 @@ fun HomePage() {
         navController = navController,
         onBack = { navController.navigateUp() },
         onSelectExercise = { id ->
-          navController.navigate(ExercisePage(id = id)) {
+          navController.navigate(ExerciseScreen(id = id)) {
             launchSingleTop = true
           }
         })

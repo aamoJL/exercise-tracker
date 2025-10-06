@@ -1,14 +1,12 @@
 package com.aamo.exercisetracker.ui.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
@@ -21,12 +19,17 @@ fun SearchTextField(
     value = value,
     onValueChange = onValueChange,
     placeholder = { Text(stringResource(R.string.ph_search)) },
-    leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
+    leadingIcon = {
+      Icon(
+        painter = painterResource(R.drawable.rounded_search_24), contentDescription = null
+      )
+    },
     trailingIcon = {
       if (value.isNotEmpty()) {
         IconButton(onClick = { onValueChange(String.EMPTY) }) {
           Icon(
-            imageVector = Icons.Filled.Clear, contentDescription = stringResource(R.string.cd_clear)
+            painter = painterResource(R.drawable.round_clear_24),
+            contentDescription = stringResource(R.string.cd_clear)
           )
         }
       }

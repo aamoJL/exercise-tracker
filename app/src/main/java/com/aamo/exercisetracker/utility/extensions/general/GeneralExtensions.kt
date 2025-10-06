@@ -51,3 +51,7 @@ inline fun <T> T.onNull(block: () -> Unit): T {
 inline fun <T> ifElse(condition: Boolean, ifTrue: () -> T, ifFalse: () -> T): T {
   return if (condition) ifTrue() else ifFalse()
 }
+
+fun <T> T.equalsAny(vararg values: T): Boolean {
+  return values.any { it?.equals(this) == true }
+}
