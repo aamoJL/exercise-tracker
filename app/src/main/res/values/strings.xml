@@ -50,6 +50,7 @@
     <string name="cd_save_routine">Save routine</string>
     <string name="label_schedule">Schedule</string>
     <string name="dialog_title_delete_routine">Delete routine?</string>
+    <string name="dialog_title_delete_routines">Delete routines?</string>
     <string name="cd_add_routine">Add routine</string>
     <string name="label_inactive">Inactive</string>
     <string name="label_every_day">Every day</string>
@@ -59,13 +60,14 @@
     <string name="cd_clear">Clear</string>
     <string name="dialog_title_unsaved_changes">Unsaved changes</string>
     <string name="dialog_text_unsaved_changes">Go back without saving?</string>
-    <string name="cd_progress_tracking_tab">Monthly progress tab</string>
+    <string name="cd_progress_tracking_tab">Tracked progress tab</string>
     <string name="label_progress">Progress</string>
-    <string name="cd_add_tracked_progress">Add monthly progress</string>
+    <string name="cd_add_tracked_progress">Add tracked progress</string>
     <string name="label_untimed">Untimed</string>
     <string name="label_weekly">Weekly</string>
     <string name="label_every_x_weeks">Every %1$d weeks</string>
     <string name="dialog_title_delete_tracked_progress">Delete tracked progress?</string>
+    <string name="dialog_title_delete_tracked_progresses">Delete tracked progresses?</string>
     <string name="title_new_tracked_progress">New Tracked Progress</string>
     <string name="title_edit_tracked_progress">Edit Tracked Progress</string>
     <string name="cd_delete_tracked_progress">Delete tracked progress</string>
@@ -97,4 +99,5 @@
     <string name="title_timer">Timer</string>
     <string name="title_stopwatch">Stopwatch</string>
     <string name="title_scheduled_trackers">Scheduled trackers</string>
+    <string name="x_count_selected">%1$d selected</string>
 </resources>

@@ -50,6 +50,7 @@
     <string name="cd_save_routine">Tallenna ohjelma</string>
     <string name="label_schedule">Aikataulu</string>
     <string name="dialog_title_delete_routine">Poista ohjelma?</string>
+    <string name="dialog_title_delete_routines">Poista ohjelmat?</string>
     <string name="cd_add_routine">Lisää uusi ohjelma</string>
     <string name="label_inactive">Epäaktiivinen</string>
     <string name="label_every_day">Päivittäin</string>
@@ -61,11 +62,12 @@
     <string name="dialog_text_unsaved_changes">Palaa takaisin tallentamatta muutoksia?</string>
     <string name="cd_progress_tracking_tab">Kehitys välilehti</string>
     <string name="label_progress">Kehitys</string>
-    <string name="cd_add_tracked_progress">Lisää uusi kehitys</string>
+    <string name="cd_add_tracked_progress">Lisää uusi kehityksen seuranta</string>
     <string name="label_untimed">Ajastamaton</string>
     <string name="label_weekly">Viikoittain</string>
     <string name="label_every_x_weeks">%1$d viikon välein</string>
     <string name="dialog_title_delete_tracked_progress">Poista kehityksen seuranta?</string>
+    <string name="dialog_title_delete_tracked_progresses">Poista kehityksen seurannat?</string>
     <string name="title_new_tracked_progress">Uusi kehityksen seuranta</string>
     <string name="title_edit_tracked_progress">Muokkaa kehityksen seurantaa</string>
     <string name="cd_delete_tracked_progress">Poista kehityksen seuranta</string>
@@ -97,4 +99,5 @@
     <string name="title_timer">Ajastin</string>
     <string name="title_stopwatch">Sekuntikello</string>
     <string name="title_scheduled_trackers">Ajastetut seurannat</string>
+    <string name="x_count_selected">%1$d valittu</string>
 </resources>

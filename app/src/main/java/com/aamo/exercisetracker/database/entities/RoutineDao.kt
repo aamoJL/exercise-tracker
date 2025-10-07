@@ -128,7 +128,7 @@ interface RoutineDao {
 
   // region DELETE
   @Delete
-  suspend fun delete(routine: Routine): Int
+  suspend fun delete(vararg routine: Routine): Int
 
   @Delete
   suspend fun delete(routineSchedule: RoutineSchedule)

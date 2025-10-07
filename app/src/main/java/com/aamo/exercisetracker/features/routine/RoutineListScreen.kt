@@ -1,7 +1,8 @@
 package com.aamo.exercisetracker.features.routine
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +25,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,10 +46,12 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
+import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
-import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
@@ -65,15 +71,29 @@ import java.util.Calendar
 @Serializable
 object RoutineListScreen
 
-class RoutineListScreenViewModel(fetchData: () -> Flow<List<RoutineWithSchedule>>) : ViewModel() {
+class RoutineListScreenViewModel(
+  private val fetchData: () -> Flow<List<RoutineModel>>,
+  private val deleteData: suspend (List<Routine>) -> Boolean
+) : ViewModel() {
+  data class RoutineModel(
+    val routine: Routine, val schedule: RoutineSchedule?, val isSelected: Boolean = false
+  )
+
+  init {
+    viewModelScope.launch {
+      runCatching {
+        fetchData().collect { list ->
+          _routines.update { list.sortedBy { it.routine.name } }
+          isLoading = false
+        }
+      }
+    }
+  }
+
   var isLoading by mutableStateOf(true)
     private set
 
-  private val _routines = fetchData().map { list -> list.sortedBy { it.routine.name } }.also {
-    viewModelScope.launch {
-      it.collect { isLoading = false }
-    }
-  }
+  private var _routines = MutableStateFlow<List<RoutineModel>>(emptyList())
 
   private var _filterWord = MutableStateFlow(String.EMPTY)
   val filterWord = _filterWord.asStateFlow()
@@ -85,18 +105,51 @@ class RoutineListScreenViewModel(fetchData: () -> Flow<List<RoutineWithSchedule>
   fun setFilterWord(word: String) {
     _filterWord.update { word }
   }
+
+  fun switchRoutineSelection(models: List<RoutineModel>, state: Boolean) {
+    _routines.update { list ->
+      list.toMutableList().apply {
+        models.forEach { model ->
+          this.indexOf(model).also { index ->
+            if (index != -1) {
+              this[index] = this[index].copy(isSelected = state)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  fun deleteRoutines(routines: List<Routine>) {
+    if (routines.isEmpty()) return
+
+    viewModelScope.launch {
+      runCatching { deleteData(routines) }
+    }
+  }
 }
 
 fun NavGraphBuilder.routineListScreen(
   onSelectRoutine: (id: Long) -> Unit, onAddRoutine: () -> Unit
 ) {
   composable<RoutineListScreen> {
-    val context = LocalContext.current.applicationContext
+    val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
     val viewmodel: RoutineListScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        RoutineListScreenViewModel(fetchData = {
-          RoutineDatabase.getDatabase(context).routineDao().getRoutinesWithScheduleFlow()
-        })
+        RoutineListScreenViewModel(
+          fetchData = {
+            dao.getRoutinesWithScheduleFlow().map { list ->
+              list.map {
+                RoutineListScreenViewModel.RoutineModel(
+                  routine = it.routine, schedule = it.schedule
+                )
+              }
+            }
+          },
+          deleteData = { routines ->
+            dao.delete(*routines.toTypedArray()) > 0
+          },
+        )
       }
     })
     val routines by viewmodel.filteredRoutines.collectAsStateWithLifecycle()
@@ -108,63 +161,91 @@ fun NavGraphBuilder.routineListScreen(
       isLoading = viewmodel.isLoading,
       onSelectRoutine = onSelectRoutine,
       onFilterChanged = { viewmodel.setFilterWord(it) },
-      onAdd = onAddRoutine
+      onAdd = onAddRoutine,
+      onDeleteRoutines = { viewmodel.deleteRoutines(it) },
+      onSwitchSelection = { models, state ->
+        viewmodel.switchRoutineSelection(models, state)
+      },
     )
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutineListScreen(
-  routines: List<RoutineWithSchedule>,
+  routines: List<RoutineListScreenViewModel.RoutineModel>,
   filterWord: String,
   isLoading: Boolean,
   onFilterChanged: (String) -> Unit,
   onSelectRoutine: (id: Long) -> Unit,
-  onAdd: () -> Unit
+  onAdd: () -> Unit,
+  onDeleteRoutines: (List<Routine>) -> Unit,
+  onSwitchSelection: (List<RoutineListScreenViewModel.RoutineModel>, Boolean) -> Unit
 ) {
+  val itemsSelected by remember(routines) { mutableStateOf(routines.any { it.isSelected }) }
+  var openDeleteDialog by remember { mutableStateOf(false) }
+
+  if (openDeleteDialog) {
+    DeleteDialog(
+      title = stringResource(R.string.dialog_title_delete_routines),
+      onDismiss = { openDeleteDialog = false },
+      onConfirm = {
+        openDeleteDialog = false
+        onDeleteRoutines(routines.filter { it.isSelected }.map { it.routine })
+      })
+  }
+
+  BackHandler(enabled = itemsSelected) {
+    onSwitchSelection(routines, false)
+  }
+
   Surface {
     Column(
       modifier = Modifier
         .fillMaxSize()
         .imePadding()
     ) {
-      TopAppBar(title = { null }, actions = {
-        SearchTextField(value = filterWord, onValueChange = onFilterChanged)
-        IconButton(onClick = onAdd) {
-          Icon(
-            painter = painterResource(R.drawable.rounded_add_24),
-            contentDescription = stringResource(R.string.cd_add_routine)
-          )
-        }
-      })
+      if (itemsSelected) SelectionTopBar(
+        selectionCount = routines.count { it.isSelected },
+        onDeleteSelected = { openDeleteDialog = true })
+      else UnselectionTopBar(
+        filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
+      )
       LoadingScreen(enabled = isLoading) {
         LazyColumn(
           userScrollEnabled = true,
           verticalArrangement = Arrangement.spacedBy(4.dp),
           modifier = Modifier
-            .padding(top = 4.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
+            .padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
             .clip(RoundedCornerShape(8.dp))
         ) {
-          items(routines) { (routine, schedule) ->
+          items(routines) { model ->
             Box(
               modifier = Modifier
                 .fillMaxWidth()
                 .background(color = MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { onSelectRoutine(routine.id) }) {
-              Text(
-                text = routine.name,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 28.dp)
-              )
-              if (schedule != null) {
+                .combinedClickable(onClick = {
+                  if (!itemsSelected) onSelectRoutine(model.routine.id)
+                  else onSwitchSelection(listOf(model), !model.isSelected)
+                }, onLongClick = { if (!itemsSelected) onSwitchSelection(listOf(model), true) })
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
+              ) {
+                if (itemsSelected) {
+                  Checkbox(checked = model.isSelected, onCheckedChange = null)
+                }
+                Text(text = model.routine.name, fontWeight = FontWeight.Bold)
+              }
+              if (model.schedule != null) {
                 Box(
                   contentAlignment = Alignment.TopEnd,
                   modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                  ScheduleTrailing(schedule = schedule)
+                  ScheduleTrailing(schedule = model.schedule)
                 }
               }
             }
@@ -173,6 +254,39 @@ fun RoutineListScreen(
       }
     }
   }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UnselectionTopBar(
+  filterWord: String,
+  onFilterChanged: (String) -> Unit,
+  onAdd: () -> Unit,
+) {
+  TopAppBar(title = { null }, actions = {
+    SearchTextField(value = filterWord, onValueChange = onFilterChanged)
+    IconButton(onClick = onAdd) {
+      Icon(
+        painter = painterResource(R.drawable.rounded_add_24),
+        contentDescription = stringResource(R.string.cd_add_routine)
+      )
+    }
+  })
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionTopBar(selectionCount: Int, onDeleteSelected: () -> Unit) {
+  TopAppBar(title = {
+    Text(text = stringResource(R.string.x_count_selected, selectionCount))
+  }, actions = {
+    IconButton(onClick = onDeleteSelected) {
+      Icon(
+        painter = painterResource(R.drawable.rounded_delete_24),
+        contentDescription = stringResource(R.string.cd_delete_routine)
+      )
+    }
+  })
 }
 
 @Composable
@@ -218,5 +332,32 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
         )
       }
     }
+  }
+}
+
+@Suppress("HardCodedStringLiteral")
+@Preview
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme(darkTheme = true) {
+    RoutineListScreen(
+      routines = listOf(
+      RoutineListScreenViewModel.RoutineModel(
+        routine = Routine(id = 0, name = "Routine 1"),
+        schedule = RoutineSchedule(id = 0, routineId = 0, monday = true),
+        isSelected = true
+      ), RoutineListScreenViewModel.RoutineModel(
+        routine = Routine(id = 1, name = "Routine 2"),
+        schedule = RoutineSchedule(id = 1, routineId = 0, monday = true),
+        isSelected = false
+      )
+    ),
+      filterWord = String.EMPTY,
+      isLoading = false,
+      onFilterChanged = {},
+      onSelectRoutine = {},
+      onAdd = {},
+      onDeleteRoutines = {},
+      onSwitchSelection = { _, _ -> })
   }
 }

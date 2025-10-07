@@ -32,7 +32,7 @@ interface TrackedProgressDao {
   suspend fun upsert(trackedProgressValue: TrackedProgressValue): Long
 
   @Delete
-  suspend fun delete(trackedProgress: TrackedProgress): Int
+  suspend fun delete(vararg trackedProgress: TrackedProgress): Int
 
   @Query("DELETE FROM tracked_progress_value WHERE id = :trackedProgressId")
   suspend fun deleteValueById(trackedProgressId: Long)
