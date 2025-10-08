@@ -10,7 +10,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,30 +17,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -76,15 +69,16 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
+import com.aamo.exercisetracker.features.progressTracking.ProgressTrackingScreenViewModel.StopwatchTimerState
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.services.StopwatchTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.GesturelessModalBottomSheet
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.trimFirst
-import com.aamo.exercisetracker.utility.extensions.modal.SheetVisibility
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.extensions.format
@@ -353,29 +347,7 @@ fun ProgressTrackingScreen(
   onCancelStopwatch: () -> Unit,
 ) {
   var showNewRecordDialog by remember { mutableStateOf(false) }
-  var timerSheetVisibility by remember { mutableStateOf(SheetVisibility.HIDDEN) }
-  val timerSheetState = rememberModalBottomSheetState(
-    skipPartiallyExpanded = true, confirmValueChange = {
-      /* Prevents closing by pressing outside the sheet */
-      if (it == SheetValue.Hidden) {
-        timerSheetVisibility == SheetVisibility.CLOSING
-      }
-      else true
-    })
-
-  LaunchedEffect(timerSheetVisibility) {
-    if (timerSheetVisibility == SheetVisibility.CLOSING) {
-      timerSheetState.hide()
-      timerSheetVisibility = SheetVisibility.HIDDEN
-    }
-  }
-
-  LaunchedEffect(uiState.countDownTimerState.isFinished) {
-    if (uiState.countDownTimerState.isFinished) {
-      timerSheetVisibility = SheetVisibility.CLOSING
-      showNewRecordDialog = true
-    }
-  }
+  var showTimerModal by remember { mutableStateOf(false) }
 
   if (showNewRecordDialog) {
     when (uiState.recordType) {
@@ -429,7 +401,7 @@ fun ProgressTrackingScreen(
           FloatingActionButton(
             shape = CircleShape,
             containerColor = ButtonDefaults.buttonColors().containerColor,
-            onClick = { timerSheetVisibility = SheetVisibility.VISIBLE },
+            onClick = { showTimerModal = true },
             modifier = Modifier.padding(8.dp)
           ) {
             Icon(
@@ -469,75 +441,109 @@ fun ProgressTrackingScreen(
     }
     when (uiState.recordType) {
       ProgressTrackingScreenViewModel.Model.RecordType.TIMER -> TimerSheet(
-        isVisible = timerSheetVisibility != SheetVisibility.HIDDEN,
+        show = showTimerModal,
         timerTitle = stringResource(R.string.title_timer),
-        countDownTimerState = uiState.countDownTimerState,
-        sheetState = timerSheetState,
+        timerState = uiState.countDownTimerState,
         onDismissRequest = {
-          timerSheetVisibility = SheetVisibility.CLOSING
+          showTimerModal = false
           onCancelTimer()
-        }) {
-        Button(
+        },
+      ) {
+        IconButton(
           onClick = {
-            timerSheetVisibility = SheetVisibility.CLOSING
+            showTimerModal = false
             onCancelTimer()
-          }, colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.error
-          ), modifier = Modifier.weight(1f)
+          }, colors = IconButtonDefaults.iconButtonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError,
+          ), modifier = Modifier.size(64.dp)
         ) {
-          Text(stringResource(R.string.btn_cancel))
+          Icon(
+            painter = painterResource(R.drawable.rounded_cancel_24),
+            contentDescription = stringResource(R.string.btn_cancel),
+            modifier = Modifier.size(32.dp)
+          )
         }
-        Button(
+        IconButton(
           enabled = !uiState.countDownTimerState.isActive.value,
-          onClick = onStartTimer,
-          colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondary
+          onClick = { onStartTimer() },
+          colors = IconButtonDefaults.iconButtonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = .38f),
+            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = .38f),
           ),
-          modifier = Modifier.weight(1f)
+          modifier = Modifier.size(64.dp)
         ) {
-          Text(stringResource(R.string.btn_start))
+          Icon(
+            painter = painterResource(R.drawable.rounded_timer_play_24),
+            contentDescription = stringResource(R.string.btn_start),
+            modifier = Modifier.size(32.dp)
+          )
         }
       }
 
       ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> StopwatchSheet(
-        isVisible = timerSheetVisibility != SheetVisibility.HIDDEN,
-        isActive = uiState.stopwatchTimerState.isActive.value,
+        show = showTimerModal,
         timerTitle = stringResource(R.string.title_stopwatch),
-        sheetState = timerSheetState,
+        timerState = uiState.stopwatchTimerState,
         onDismissRequest = {
-          timerSheetVisibility = SheetVisibility.CLOSING
+          showTimerModal = false
           onCancelStopwatch()
         },
       ) {
-        Button(
+        IconButton(
           onClick = {
-            timerSheetVisibility = SheetVisibility.CLOSING
+            showTimerModal = false
             onCancelStopwatch()
-          }, colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.error
-          ), modifier = Modifier.weight(1f)
+          }, colors = IconButtonDefaults.iconButtonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError,
+          ), modifier = Modifier.size(64.dp)
         ) {
-          Text(stringResource(R.string.btn_cancel))
+          Icon(
+            painter = painterResource(R.drawable.rounded_cancel_24),
+            contentDescription = stringResource(R.string.btn_cancel),
+            modifier = Modifier.size(32.dp)
+          )
         }
         ifElse(condition = uiState.stopwatchTimerState.isActive.value, ifTrue = {
-          OutlinedButton(
+          // Stop button
+          IconButton(
             onClick = {
-              timerSheetVisibility = SheetVisibility.CLOSING
+              showTimerModal = false
               onStopStopwatch()
               showNewRecordDialog = true
-            }, colors = ButtonDefaults.outlinedButtonColors(
-              contentColor = MaterialTheme.colorScheme.secondary
-            ), modifier = Modifier.weight(1f)
+            }, colors = IconButtonDefaults.iconButtonColors(
+              containerColor = MaterialTheme.colorScheme.secondary,
+              contentColor = MaterialTheme.colorScheme.onSecondary,
+              disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = .38f),
+              disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = .38f),
+            ), modifier = Modifier.size(64.dp)
           ) {
-            Text(stringResource(R.string.btn_stop))
+            Icon(
+              painter = painterResource(R.drawable.rounded_stop_circle_24),
+              contentDescription = stringResource(R.string.btn_stop),
+              modifier = Modifier.size(32.dp)
+            )
           }
         }, ifFalse = {
-          Button(
-            onClick = { onStartStopwatch() }, colors = ButtonDefaults.buttonColors(
-              containerColor = MaterialTheme.colorScheme.secondary
-            ), modifier = Modifier.weight(1f)
+          // Start button
+          IconButton(
+            onClick = {
+              onStartStopwatch()
+            }, colors = IconButtonDefaults.iconButtonColors(
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary,
+              disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = .38f),
+              disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = .38f),
+            ), modifier = Modifier.size(64.dp)
           ) {
-            Text(stringResource(R.string.btn_start))
+            Icon(
+              painter = painterResource(R.drawable.rounded_timer_play_24),
+              contentDescription = stringResource(R.string.btn_start),
+              modifier = Modifier.size(32.dp)
+            )
           }
         })
       }
@@ -632,104 +638,89 @@ fun RecordChart(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerSheet(
-  isVisible: Boolean,
+  show: Boolean,
   timerTitle: String,
-  countDownTimerState: ProgressTrackingScreenViewModel.CountDownTimerState,
-  sheetState: SheetState,
+  timerState: ProgressTrackingScreenViewModel.CountDownTimerState?,
   onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
   content: @Composable RowScope.() -> Unit,
 ) {
-  if (isVisible) {
-    val isActive = countDownTimerState.isActive.value
-    val duration = countDownTimerState.duration
+  val isActive = timerState?.isActive?.value == true
+  val duration = timerState?.duration ?: 0.seconds
 
-    val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
-    var clockText by rememberSaveable { mutableStateOf(duration.toClockString()) }
-    val progress = remember {
-      if (duration.inWholeMilliseconds <= 0) Animatable(1f)
-      else Animatable(initialValue = ((System.currentTimeMillis() - startTime).toFloat() / duration.inWholeMilliseconds.toFloat()))
-    }
+  val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
+  var clockText by rememberSaveable(duration) { mutableStateOf(duration.toClockString()) }
+  val progress = remember {
+    if (duration.inWholeMilliseconds <= 0) Animatable(1f)
+    else Animatable(initialValue = ((System.currentTimeMillis() - startTime).toFloat() / duration.inWholeMilliseconds.toFloat()))
+  }
 
-    LaunchedEffect(isActive) {
-      if (isActive) {
-        val remainingMillis =
-          duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
+  LaunchedEffect(isActive) {
+    // Animate progress indicator
+    if (isActive) {
+      val remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
 
-        progress.animateTo(
-          targetValue = 1f, animationSpec = tween(
-            durationMillis = remainingMillis.toInt(), easing = LinearEasing
-          )
+      progress.animateTo(
+        targetValue = 1f, animationSpec = tween(
+          durationMillis = remainingMillis.toInt(), easing = LinearEasing
         )
-      }
+      )
     }
+  }
 
-    DisposableEffect(isActive) {
-      val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
-        val remainingMillis =
-          duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
+  DisposableEffect(isActive) {
+    // Update clock text
+    val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
+      val remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
 
-        clockText = remainingMillis.milliseconds.toClockString()
-      }
-      else null
-
-      onDispose {
-        timer?.cancel()
-        timer?.purge()
-      }
+      clockText = remainingMillis.milliseconds.toClockString()
     }
+    else null
 
-    ModalBottomSheet(
-      sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
+    onDispose {
+      timer?.cancel()
+      timer?.purge()
+    }
+  }
+
+  GesturelessModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
+    Box(
+      contentAlignment = Alignment.BottomCenter, modifier = Modifier
+        .fillMaxWidth(.7f)
+        .weight(3f)
     ) {
-      Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-          .fillMaxWidth()
-          .fillMaxHeight(.8f)
-          .pointerInput(Unit) {
-            detectVerticalDragGestures(onVerticalDrag = { change, _ -> change.consume() })
-          }) {
-        Box(
-          contentAlignment = Alignment.BottomCenter,
-          modifier = Modifier
-            .fillMaxWidth(.7f)
-            .weight(3f)
-        ) {
-          Box(
-            contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
-          ) {
-            CircularProgressIndicator(
-              progress = { progress.value },
-              strokeWidth = 20.dp,
-              gapSize = 0.dp,
-              strokeCap = StrokeCap.Butt,
-              modifier = Modifier.fillMaxSize()
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text(timerTitle, style = MaterialTheme.typography.titleMedium)
-              Text(
-                text = clockText,
-                style = MaterialTheme.typography.displayLarge,
-                textAlign = TextAlign.Center
-              )
-              Spacer(Modifier.height(with(LocalDensity.current) {
-                // Centers the text inside the progress indicator
-                MaterialTheme.typography.titleMedium.lineHeight.toDp()
-              }))
-            }
-          }
-        }
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-          modifier = Modifier
-            .fillMaxWidth()
-            .weight(2f)
-            .padding(horizontal = 16.dp)
-        ) {
-          content()
+      Box(
+        contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
+      ) {
+        CircularProgressIndicator(
+          progress = { progress.value },
+          strokeWidth = 20.dp,
+          gapSize = 0.dp,
+          strokeCap = StrokeCap.Butt,
+          modifier = Modifier.fillMaxSize()
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(timerTitle, style = MaterialTheme.typography.titleMedium)
+          Text(
+            text = clockText,
+            style = MaterialTheme.typography.displayLarge,
+            textAlign = TextAlign.Center
+          )
+          Spacer(Modifier.height(with(LocalDensity.current) {
+            // Centers the text inside the progress indicator
+            MaterialTheme.typography.titleMedium.lineHeight.toDp()
+          }))
         }
       }
+    }
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceEvenly,
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(2f)
+        .padding(horizontal = 16.dp)
+    ) {
+      content()
     }
   }
 }
@@ -737,83 +728,71 @@ fun TimerSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StopwatchSheet(
-  isVisible: Boolean,
-  isActive: Boolean,
+  show: Boolean,
   timerTitle: String,
-  sheetState: SheetState,
+  timerState: StopwatchTimerState?,
   onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
   content: @Composable RowScope.() -> Unit,
 ) {
-  if (isVisible) {
-    val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
-    var clockText by rememberSaveable(isActive) {
-      mutableStateOf((System.currentTimeMillis() - startTime).milliseconds.toClockString())
+  val isActive = timerState?.isActive?.value == true
+
+  val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
+  var clockText by rememberSaveable(isActive) {
+    mutableStateOf((System.currentTimeMillis() - startTime).milliseconds.toClockString())
+  }
+
+  DisposableEffect(isActive) {
+    // Update clock text
+    val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
+      clockText = (System.currentTimeMillis() - startTime).milliseconds.toClockString()
     }
+    else null
 
-    DisposableEffect(isActive) {
-      val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
-        clockText = (System.currentTimeMillis() - startTime).milliseconds.toClockString()
-      }
-      else null
-
-      onDispose {
-        timer?.cancel()
-        timer?.purge()
-      }
+    onDispose {
+      timer?.cancel()
+      timer?.purge()
     }
+  }
 
-    ModalBottomSheet(
-      sheetState = sheetState, onDismissRequest = onDismissRequest, dragHandle = null
+  GesturelessModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
+    Box(
+      contentAlignment = Alignment.BottomCenter, modifier = Modifier
+        .fillMaxWidth(.7f)
+        .weight(3f)
     ) {
-      Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-          .fillMaxWidth()
-          .fillMaxHeight(.8f)
-          .pointerInput(Unit) {
-            detectVerticalDragGestures(onVerticalDrag = { change, _ -> change.consume() })
-          }) {
-        Box(
-          contentAlignment = Alignment.BottomCenter,
-          modifier = Modifier
-            .fillMaxWidth(.7f)
-            .weight(3f)
-        ) {
-          Box(
-            contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
-          ) {
-            CircularProgressIndicator(
-              progress = { if (isActive) 1f else 0f },
-              strokeWidth = 20.dp,
-              gapSize = 0.dp,
-              strokeCap = StrokeCap.Butt,
-              modifier = Modifier.fillMaxSize()
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text(timerTitle, style = MaterialTheme.typography.titleMedium)
-              Text(
-                text = clockText,
-                style = MaterialTheme.typography.displayLarge,
-                textAlign = TextAlign.Center
-              )
-              Spacer(Modifier.height(with(LocalDensity.current) {
-                // Centers the text inside the progress indicator
-                MaterialTheme.typography.titleMedium.lineHeight.toDp()
-              }))
-            }
-          }
-        }
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-          modifier = Modifier
-            .fillMaxWidth()
-            .weight(2f)
-            .padding(horizontal = 16.dp)
-        ) {
-          content()
+      Box(
+        contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
+      ) {
+        CircularProgressIndicator(
+          progress = { if (isActive) 1f else 0f },
+          strokeWidth = 20.dp,
+          gapSize = 0.dp,
+          strokeCap = StrokeCap.Butt,
+          modifier = Modifier.fillMaxSize()
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(timerTitle, style = MaterialTheme.typography.titleMedium)
+          Text(
+            text = clockText,
+            style = MaterialTheme.typography.displayLarge,
+            textAlign = TextAlign.Center
+          )
+          Spacer(Modifier.height(with(LocalDensity.current) {
+            // Centers the text inside the progress indicator
+            MaterialTheme.typography.titleMedium.lineHeight.toDp()
+          }))
         }
       }
+    }
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceEvenly,
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(2f)
+        .padding(horizontal = 16.dp)
+    ) {
+      content()
     }
   }
 }
