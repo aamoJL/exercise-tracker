@@ -39,6 +39,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -88,6 +89,7 @@ import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
+import com.aamo.exercisetracker.utility.extensions.modal.SheetVisibility
 import com.aamo.exercisetracker.utility.tags.ERROR_TAG
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
@@ -366,33 +368,56 @@ fun ExerciseScreen(
   onStopRest: () -> Unit,
   onFinishExercise: () -> Unit,
 ) {
+  var restSheetVisibility by remember { mutableStateOf(SheetVisibility.HIDDEN) }
+  var setTimerSheetVisibility by remember { mutableStateOf(SheetVisibility.HIDDEN) }
+
   val restTimerSheetState = rememberModalBottomSheetState(
-    skipPartiallyExpanded = true,
-    confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
+    skipPartiallyExpanded = true, confirmValueChange = {
+      /* Prevents closing by pressing outside the sheet */
+      if (it == SheetValue.Hidden) {
+        restSheetVisibility == SheetVisibility.CLOSING
+      }
+      else true
+    })
   val setTimerSheetState = rememberModalBottomSheetState(
-    skipPartiallyExpanded = true,
-    confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
-  var showRestSheet by remember { mutableStateOf(false) }
-  var showSetTimerSheet by remember { mutableStateOf(false) }
+    skipPartiallyExpanded = true, confirmValueChange = {
+      /* Prevents closing by pressing outside the sheet */
+      if (it == SheetValue.Hidden) {
+        setTimerSheetVisibility == SheetVisibility.CLOSING
+      }
+      else true
+    })
+
+  LaunchedEffect(restSheetVisibility) {
+    if (restSheetVisibility == SheetVisibility.CLOSING) {
+      restTimerSheetState.hide()
+      restSheetVisibility = SheetVisibility.HIDDEN
+    }
+  }
+
+  LaunchedEffect(setTimerSheetVisibility) {
+    if (setTimerSheetVisibility == SheetVisibility.CLOSING) {
+      setTimerSheetState.hide()
+      setTimerSheetVisibility = SheetVisibility.HIDDEN
+    }
+  }
 
   LaunchedEffect(uiState.setState.value.restTimer?.isActive?.value) {
-    // sheet state can't be checked with SheetState.currentValue, because confirmValueChange
-    //  is always false, so the state will not change when closing the sheet.
-    showRestSheet = restTimerSheetState.let { sheetState ->
-      uiState.setState.value.restTimer?.isActive?.value.also { active ->
-        if (active == true) sheetState.show() else sheetState.hide()
-      }
-    } ?: false
+    if (uiState.setState.value.restTimer?.isActive?.value == true) {
+      restSheetVisibility = SheetVisibility.VISIBLE
+    }
+    else if (restSheetVisibility != SheetVisibility.HIDDEN) {
+      restSheetVisibility = SheetVisibility.CLOSING
+    }
   }
 
   LaunchedEffect(uiState.setState.value.setTimer?.isActive?.value) {
-    // sheet state can't be checked with SheetState.currentValue, because confirmValueChange
-    //  is always false, so the state will not change when closing the sheet.
-    showSetTimerSheet = setTimerSheetState.let { sheetState ->
-      uiState.setState.value.setTimer?.isActive?.value.also { active ->
-        if (active == true) sheetState.show() else sheetState.hide()
-      }
-    } ?: false
+    if (uiState.setState.value.setTimer?.isActive?.value == true) {
+      setTimerSheetVisibility = SheetVisibility.VISIBLE
+    }
+    else if (setTimerSheetVisibility != SheetVisibility.HIDDEN) {
+      setTimerSheetVisibility = SheetVisibility.CLOSING
+    }
   }
 
   Scaffold(
@@ -440,7 +465,7 @@ fun ExerciseScreen(
   // Visibility needs to be checked with showRestSheet because
   //  otherwise the sheet closing animation will not work correctly.
   TimerSheet(
-    isVisible = showSetTimerSheet,
+    isVisible = setTimerSheetVisibility != SheetVisibility.HIDDEN,
     timerTitle = stringResource(R.string.title_set_timer),
     timerState = uiState.setState.value.setTimer,
     sheetState = setTimerSheetState,
@@ -462,7 +487,7 @@ fun ExerciseScreen(
     }
   }
   TimerSheet(
-    isVisible = showRestSheet,
+    isVisible = restSheetVisibility != SheetVisibility.HIDDEN,
     timerTitle = stringResource(R.string.title_rest),
     timerState = uiState.setState.value.restTimer,
     sheetState = restTimerSheetState,

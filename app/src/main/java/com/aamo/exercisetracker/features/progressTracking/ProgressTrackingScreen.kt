@@ -37,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -83,6 +84,7 @@ import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.trimFirst
+import com.aamo.exercisetracker.utility.extensions.modal.SheetVisibility
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.extensions.format
@@ -351,10 +353,29 @@ fun ProgressTrackingScreen(
   onCancelStopwatch: () -> Unit,
 ) {
   var showNewRecordDialog by remember { mutableStateOf(false) }
-  var showTimerSheet by remember { mutableStateOf(false) }
+  var timerSheetVisibility by remember { mutableStateOf(SheetVisibility.HIDDEN) }
   val timerSheetState = rememberModalBottomSheetState(
-    skipPartiallyExpanded = true,
-    confirmValueChange = { false /* Prevents closing by pressing outside the sheet */ })
+    skipPartiallyExpanded = true, confirmValueChange = {
+      /* Prevents closing by pressing outside the sheet */
+      if (it == SheetValue.Hidden) {
+        timerSheetVisibility == SheetVisibility.CLOSING
+      }
+      else true
+    })
+
+  LaunchedEffect(timerSheetVisibility) {
+    if (timerSheetVisibility == SheetVisibility.CLOSING) {
+      timerSheetState.hide()
+      timerSheetVisibility = SheetVisibility.HIDDEN
+    }
+  }
+
+  LaunchedEffect(uiState.countDownTimerState.isFinished) {
+    if (uiState.countDownTimerState.isFinished) {
+      timerSheetVisibility = SheetVisibility.CLOSING
+      showNewRecordDialog = true
+    }
+  }
 
   if (showNewRecordDialog) {
     when (uiState.recordType) {
@@ -386,13 +407,6 @@ fun ProgressTrackingScreen(
     }
   }
 
-  LaunchedEffect(uiState.countDownTimerState.isFinished) {
-    if (uiState.countDownTimerState.isFinished) {
-      showTimerSheet = false
-      showNewRecordDialog = true
-    }
-  }
-
   LoadingScreen(enabled = uiState.isLoading) {
     Scaffold(topBar = {
       TopAppBar(title = { Text(uiState.progressName) }, actions = {
@@ -415,7 +429,7 @@ fun ProgressTrackingScreen(
           FloatingActionButton(
             shape = CircleShape,
             containerColor = ButtonDefaults.buttonColors().containerColor,
-            onClick = { showTimerSheet = true },
+            onClick = { timerSheetVisibility = SheetVisibility.VISIBLE },
             modifier = Modifier.padding(8.dp)
           ) {
             Icon(
@@ -455,17 +469,17 @@ fun ProgressTrackingScreen(
     }
     when (uiState.recordType) {
       ProgressTrackingScreenViewModel.Model.RecordType.TIMER -> TimerSheet(
-        isVisible = showTimerSheet,
+        isVisible = timerSheetVisibility != SheetVisibility.HIDDEN,
         timerTitle = stringResource(R.string.title_timer),
         countDownTimerState = uiState.countDownTimerState,
         sheetState = timerSheetState,
         onDismissRequest = {
-          showTimerSheet = false
+          timerSheetVisibility = SheetVisibility.CLOSING
           onCancelTimer()
         }) {
         Button(
           onClick = {
-            showTimerSheet = false
+            timerSheetVisibility = SheetVisibility.CLOSING
             onCancelTimer()
           }, colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error
@@ -486,18 +500,18 @@ fun ProgressTrackingScreen(
       }
 
       ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH -> StopwatchSheet(
-        isVisible = showTimerSheet,
+        isVisible = timerSheetVisibility != SheetVisibility.HIDDEN,
         isActive = uiState.stopwatchTimerState.isActive.value,
         timerTitle = stringResource(R.string.title_stopwatch),
         sheetState = timerSheetState,
         onDismissRequest = {
-          showTimerSheet = false
+          timerSheetVisibility = SheetVisibility.CLOSING
           onCancelStopwatch()
         },
       ) {
         Button(
           onClick = {
-            showTimerSheet = false
+            timerSheetVisibility = SheetVisibility.CLOSING
             onCancelStopwatch()
           }, colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error
@@ -508,7 +522,7 @@ fun ProgressTrackingScreen(
         ifElse(condition = uiState.stopwatchTimerState.isActive.value, ifTrue = {
           OutlinedButton(
             onClick = {
-              showTimerSheet = false
+              timerSheetVisibility = SheetVisibility.CLOSING
               onStopStopwatch()
               showNewRecordDialog = true
             }, colors = ButtonDefaults.outlinedButtonColors(

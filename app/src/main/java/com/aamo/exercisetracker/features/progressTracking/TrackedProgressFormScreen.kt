@@ -112,11 +112,10 @@ class TrackedProgressFormScreenViewModel(
     }
 
     private fun canSave(): Boolean {
-      return when {
-        savingState.state == SavingState.State.SAVING -> false
-        progressName.value.isEmpty() -> false
-        else -> true
-      }
+      if (progressType.value == ProgressType.TIMER && timerDuration.value < 1.seconds) return false
+      if (savingState.state == SavingState.State.SAVING) return false
+      if (progressName.value.isEmpty()) return false
+      return true
     }
   }
 
