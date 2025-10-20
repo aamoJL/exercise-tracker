@@ -1,12 +1,14 @@
-package com.aamo.exercisetracker.utility.extensions.date
+package com.aamo.exercisetracker.tests.utility.extensions.date
 
+import com.aamo.exercisetracker.utility.extensions.date.toClockString
+import com.aamo.exercisetracker.utility.extensions.date.weeks
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-class DurationTests {
+class DurationExtensions {
   @Test
   fun `toClockString returns correct string`() {
     assertEquals("00:55", 55.seconds.toClockString())

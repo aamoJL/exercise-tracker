@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.dailies.use_cases
+package com.aamo.exercisetracker.tests.features.dailies.use_cases
 
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
@@ -7,6 +7,7 @@ import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithScheduleAndExerciseProgresses
 import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel
+import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.first
@@ -17,7 +18,7 @@ import java.time.LocalDate
 import java.util.Calendar
 
 @Suppress("HardCodedStringLiteral")
-class FetchWeeklyRoutineScheduleTests {
+class FetchWeeklyRoutineSchedule {
   @Test
   fun `returns correct items`() = runBlocking {
     val currentTime = Calendar.getInstance().time

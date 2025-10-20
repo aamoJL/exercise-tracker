@@ -1,10 +1,11 @@
-package com.aamo.exercisetracker.database.converters
+package com.aamo.exercisetracker.tests.database.converters
 
+import com.aamo.exercisetracker.database.converters.ExerciseSetValueTypeConverter
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import org.junit.Assert
 import org.junit.Test
 
-class ExerciseSetValueTypeConverterTests {
+class ExerciseSetValueTypeConverter {
   @Test
   fun `to returns right value type`() {
     ExerciseSetValueTypeConverter().apply {

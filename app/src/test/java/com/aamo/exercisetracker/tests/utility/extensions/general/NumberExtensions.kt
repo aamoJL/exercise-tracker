@@ -1,9 +1,10 @@
-package com.aamo.exercisetracker.utility.extensions.general
+package com.aamo.exercisetracker.tests.utility.extensions.general
 
+import com.aamo.exercisetracker.utility.extensions.general.digits
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 
-class NumberExtensionsTests {
+class NumberExtensions {
   @Test
   fun `digits returns the correct amount of digits`() {
     assertEquals(1, 0.digits())

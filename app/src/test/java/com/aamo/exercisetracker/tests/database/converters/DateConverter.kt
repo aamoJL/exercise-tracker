@@ -1,10 +1,11 @@
-package com.aamo.exercisetracker.database.converters
+package com.aamo.exercisetracker.tests.database.converters
 
+import com.aamo.exercisetracker.database.converters.DateConverter
 import org.junit.Assert
 import org.junit.Test
 import java.util.Date
 
-class DateConverterTests {
+class DateConverter {
   @Test
   fun `from timestamp returns right date`() {
     val timestamp = System.currentTimeMillis()

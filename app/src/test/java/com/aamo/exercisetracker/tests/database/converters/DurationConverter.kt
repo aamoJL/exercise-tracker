@@ -1,10 +1,11 @@
-package com.aamo.exercisetracker.database.converters
+package com.aamo.exercisetracker.tests.database.converters
 
+import com.aamo.exercisetracker.database.converters.DurationConverter
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.time.Duration.Companion.milliseconds
 
-class DurationConverterTests {
+class DurationConverter {
   @Test
   fun `milliseconds converted to duration correctly`() {
     val value = 1400L

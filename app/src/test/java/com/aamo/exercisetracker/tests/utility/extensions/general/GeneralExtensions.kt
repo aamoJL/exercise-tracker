@@ -1,14 +1,22 @@
 @file:Suppress("KotlinConstantConditions")
 
-package com.aamo.exercisetracker.utility.extensions.general
+package com.aamo.exercisetracker.tests.utility.extensions.general
 
+import com.aamo.exercisetracker.utility.extensions.general.applyIf
+import com.aamo.exercisetracker.utility.extensions.general.equalsAny
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import com.aamo.exercisetracker.utility.extensions.general.letIf
+import com.aamo.exercisetracker.utility.extensions.general.onFalse
+import com.aamo.exercisetracker.utility.extensions.general.onNotNull
+import com.aamo.exercisetracker.utility.extensions.general.onNull
+import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-class GeneralExtensionsTests {
+class GeneralExtensions {
   @Test
   fun `applyIf test`() {
     assertEquals(1, applyIf(condition = true, value = { 1 }))

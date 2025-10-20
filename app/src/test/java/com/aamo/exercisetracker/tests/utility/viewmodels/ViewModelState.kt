@@ -1,12 +1,13 @@
-package com.aamo.exercisetracker.utility.viewmodels
+package com.aamo.exercisetracker.tests.utility.viewmodels
 
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
+import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 
-class ViewModelStateTests {
+class ViewModelState {
   @Test
   fun `update test`() {
     ViewModelState(0).apply {

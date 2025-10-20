@@ -1,9 +1,10 @@
-package com.aamo.exercisetracker.utility.viewmodels
+package com.aamo.exercisetracker.tests.utility.viewmodels
 
+import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 
-class SavingStateTests {
+class SavingState {
   @Test
   fun `getAsSaving test`() {
     val state = SavingState(canSave = { false }, unsavedChanges = true)

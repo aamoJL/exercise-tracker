@@ -1,11 +1,13 @@
-package com.aamo.exercisetracker.utility.extensions.date
+package com.aamo.exercisetracker.tests.utility.extensions.date
 
+import com.aamo.exercisetracker.utility.extensions.date.Day
+import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Calendar
 
-class DayTests {
+class CalendarExtensions {
   @Test
   fun `getDayNumber returns correct number`() {
     Day.entries.forEachIndexed { i, entry ->
@@ -16,12 +18,10 @@ class DayTests {
   @Test
   fun `getByDayNumber returns correct day`() {
     (1..7).forEach { i ->
-      assertEquals(Day.entries[i - 1], Day.getByDayNumber(i))
+      assertEquals(Day.entries[i - 1], Day.Companion.getByDayNumber(i))
     }
   }
-}
 
-class CalendarExtensionsTests {
   @Test
   fun `getLocalDayOrder returns ordered list of days`() {
     Calendar.getInstance().let { calendar ->

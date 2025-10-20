@@ -1,11 +1,12 @@
-package com.aamo.exercisetracker.database.entities
+package com.aamo.exercisetracker.tests.database.entities
 
+import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import junit.framework.TestCase.assertTrue
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 
-class RoutineScheduleTests {
+class Routine {
   @Test
   fun `isDaySelected test`() {
     assertTrue(RoutineSchedule(routineId = 0L, sunday = true).isDaySelected(1))

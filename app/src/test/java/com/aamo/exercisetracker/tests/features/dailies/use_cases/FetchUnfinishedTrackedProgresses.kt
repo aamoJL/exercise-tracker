@@ -1,7 +1,8 @@
-package com.aamo.exercisetracker.features.dailies.use_cases
+package com.aamo.exercisetracker.tests.features.dailies.use_cases
 
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
+import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
