@@ -54,56 +54,57 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.database.entities.Exercise
-import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
 import com.aamo.exercisetracker.database.entities.Routine
-import com.aamo.exercisetracker.database.entities.RoutineSchedule
-import com.aamo.exercisetracker.database.entities.RoutineWithScheduleAndExerciseProgresses
 import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel.RoutineModel
+import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
+import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
-import com.aamo.exercisetracker.utility.extensions.date.weeks
-import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.applyIf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
-import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.absoluteValue
-import kotlin.time.Duration.Companion.seconds
+
+typealias WeeklySchedule = List<List<RoutineModel>>
 
 @Serializable
 data class DailiesScreen(val initialDay: Day)
 
 class DailiesScreenViewModel(
-  fetchRoutineData: () -> Flow<List<RoutineWithScheduleAndExerciseProgresses>>,
+  fetchWeeklySchedule: () -> Flow<WeeklySchedule>,
   fetchTrackedProgresses: () -> Flow<List<TrackedProgress>>
 ) : ViewModel() {
-  private val _routines =
-    MutableStateFlow<List<RoutineWithScheduleAndExerciseProgresses>>(emptyList())
-  val routines = _routines.asStateFlow()
+  data class RoutineModel(
+    val routine: Routine, val progress: Progress
+  ) {
+    data class Progress(val finishedCount: Int, val totalCount: Int)
+  }
+
+  private val _weeklySchedule = MutableStateFlow<WeeklySchedule>(emptyList())
+  val weeklySchedule = _weeklySchedule.asStateFlow()
 
   private val _trackedProgresses = MutableStateFlow<List<TrackedProgress>>(emptyList())
   val trackedProgresses = _trackedProgresses.asStateFlow()
 
-  private var routinesLoading by mutableStateOf(true)
+  private var weeklyScheduleLoading by mutableStateOf(true)
   private var progressesLoading by mutableStateOf(true)
 
-  val isLoading by derivedStateOf { routinesLoading || progressesLoading }
+  val isLoading by derivedStateOf { weeklyScheduleLoading || progressesLoading }
 
   init {
     viewModelScope.launch {
-      fetchRoutineData().collect {
-        _routines.value = it
-        routinesLoading = false
+      fetchWeeklySchedule().collect {
+        _weeklySchedule.value = it
+        weeklyScheduleLoading = false
       }
     }
     viewModelScope.launch {
@@ -127,27 +128,27 @@ fun NavGraphBuilder.dailiesScreen(
 
     val viewmodel: DailiesScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        DailiesScreenViewModel(fetchRoutineData = {
-          routineDao.getRoutinesWithScheduleAndProgressesFlow()
+        DailiesScreenViewModel(fetchWeeklySchedule = {
+          fetchWeeklyRoutineScheduleFlow(
+            getDataFlow = { routineDao.getRoutinesWithScheduleAndProgressesFlow() },
+            weekDays = Calendar.getInstance().getLocalDayOrder(),
+            currentDate = LocalDate.now(),
+            today = Day.today()
+          )
         }, fetchTrackedProgresses = {
-          trackedProgressDao.getProgressesWithValuesFlow().map { map ->
-            map.filter { item ->
-              if (item.key.intervalWeeks == 0) false
-              else {
-                item.value.maxByOrNull { value -> value.addedDate }?.addedDate?.time?.let { addedMillis -> System.currentTimeMillis() - addedMillis >= item.key.intervalWeeks.weeks.inWholeMilliseconds }
-                  ?: true
-              }
-            }.map { it.key }
-          }
+          fetchUnfinishedTrackedProgressesFlow(
+            getDataFlow = { trackedProgressDao.getProgressesWithValuesFlow() },
+            currentTimeMillis = System.currentTimeMillis()
+          )
         })
       }
     })
-    val routines by viewmodel.routines.collectAsStateWithLifecycle()
+    val weeklySchedule by viewmodel.weeklySchedule.collectAsStateWithLifecycle()
     val progresses by viewmodel.trackedProgresses.collectAsStateWithLifecycle()
 
     DailiesScreen(
-      routines = routines,
-      progresses = progresses,
+      weeklySchedule = weeklySchedule,
+      trackedProgresses = progresses,
       isLoading = viewmodel.isLoading,
       initialDay = initialDay,
       onRoutineSelected = onSelectRoutine,
@@ -160,8 +161,8 @@ fun NavGraphBuilder.dailiesScreen(
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun DailiesScreen(
-  routines: List<RoutineWithScheduleAndExerciseProgresses>,
-  progresses: List<TrackedProgress>,
+  weeklySchedule: WeeklySchedule,
+  trackedProgresses: List<TrackedProgress>,
   isLoading: Boolean,
   initialDay: Day,
   onRoutineSelected: (routineId: Long) -> Unit,
@@ -190,27 +191,15 @@ fun DailiesScreen(
           .weight(1f)
       ) { pageIndex ->
         val isToday = pageIndex == todayIndex
-        val pageDateMillis = remember {
-          LocalDate.now().atStartOfDay().plusDays((pageIndex - todayIndex).toLong())
-            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        }
-        val dayRoutines = remember(routines) {
-          routines.filter { it.schedule?.isDaySelected(days[pageIndex].getDayNumber()) == true }
-            .map { (routine, _, progresses) ->
-              object {
-                val routine = routine
-                val finishedExerciseCount = progresses.count { (_, progress) ->
-                  progress?.finishedDate?.time?.compareTo(pageDateMillis)?.let { it > 0 } == true
-                }
-                val totalExerciseCount = progresses.size
-              }
-            }.sortedWith(
-              comparator = compareBy(
-                { it.finishedExerciseCount == it.totalExerciseCount },
-                { it.routine.name },
-              )
+
+        val dayRoutines = remember(weeklySchedule) {
+          weeklySchedule.elementAtOrNull(pageIndex)?.sortedWith(
+            comparator = compareBy(
+              { it.progress.finishedCount == it.progress.totalCount },
+              { it.routine.name },
             )
-        }
+          )
+        } ?: emptyList()
 
         val pageOffset =
           ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
@@ -239,7 +228,7 @@ fun DailiesScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)
               ) {
                 items(dayRoutines, key = { it.routine.id }) { routine ->
-                  val isFinished = routine.finishedExerciseCount == routine.totalExerciseCount
+                  val isFinished = routine.progress.finishedCount == routine.progress.totalCount
 
                   Button(
                     enabled = pagerState.currentPage == pageIndex,
@@ -274,7 +263,7 @@ fun DailiesScreen(
                       }
                       else {
                         Text(
-                          text = "${routine.finishedExerciseCount}/${routine.totalExerciseCount}",
+                          text = "${routine.progress.finishedCount}/${routine.progress.totalCount}",
                           fontWeight = FontWeight.Normal
                         )
                       }
@@ -286,7 +275,7 @@ fun DailiesScreen(
           }
         }
       }
-      if (progresses.isNotEmpty()) {
+      if (trackedProgresses.isNotEmpty()) {
         Surface(
           tonalElevation = 2.dp,
           shape = RoundedCornerShape(8.dp),
@@ -309,7 +298,7 @@ fun DailiesScreen(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 8.dp)
             ) {
-              items(items = progresses, key = { it.id }) { progress ->
+              items(items = trackedProgresses, key = { it.id }) { progress ->
                 Button(
                   onClick = { onTrackedProgressSelected(progress.id) },
                   shape = RoundedCornerShape(8.dp),
@@ -333,117 +322,24 @@ fun DailiesScreen(
 @Suppress("HardCodedStringLiteral")
 @Preview(showSystemUi = true)
 @Composable
-private fun PreviewLight() {
-  ExerciseTrackerTheme(darkTheme = false) {
-    Scaffold { paddingValues ->
-      DailiesScreen(
-        initialDay = Day.TUESDAY,
-        routines = listOf(
-          RoutineWithScheduleAndExerciseProgresses(
-            routine = Routine(
-              id = 0, name = "Routine 1"
-            ), schedule = RoutineSchedule(
-              id = 0,
-              routineId = 0,
-              sunday = true,
-              monday = true,
-              tuesday = true,
-              wednesday = true,
-              thursday = true,
-              friday = true,
-              saturday = true
-            ), exerciseProgresses = listOf(
-              ExerciseWithProgress(
-                exercise = Exercise(
-                  id = 0, routineId = 0, name = String.EMPTY, restDuration = 0.seconds
-                ), progress = null
-              )
-            )
-          ), RoutineWithScheduleAndExerciseProgresses(
-            routine = Routine(
-              id = 1, name = "Routine 2"
-            ), schedule = RoutineSchedule(
-              id = 1,
-              routineId = 1,
-              sunday = true,
-              monday = true,
-              tuesday = true,
-              wednesday = true,
-              thursday = true,
-              friday = true,
-              saturday = true
-            ), exerciseProgresses = emptyList()
-          )
-        ),
-        progresses = listOf(
-          TrackedProgress(id = 0, name = "Progress 1"),
-          TrackedProgress(id = 1, name = "Progress 2"),
-          TrackedProgress(id = 2, name = "Progress 3"),
-          TrackedProgress(id = 3, name = "Progress 3"),
-          TrackedProgress(id = 4, name = "Progress 3"),
-          TrackedProgress(id = 5, name = "Progress 3"),
-          TrackedProgress(id = 6, name = "Progress 3"),
-          TrackedProgress(id = 7, name = "Progress 3"),
-        ),
-        isLoading = false,
-        onRoutineSelected = {},
-        onTrackedProgressSelected = {},
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(paddingValues)
-      )
-    }
-  }
-}
-
-@Suppress("HardCodedStringLiteral")
-@Preview(showSystemUi = true)
-@Composable
-private fun PreviewDark() {
+private fun Preview() {
   ExerciseTrackerTheme(darkTheme = true) {
     Scaffold { paddingValues ->
       DailiesScreen(
-        initialDay = Day.TUESDAY,
-        routines = listOf(
-          RoutineWithScheduleAndExerciseProgresses(
-            routine = Routine(
-              id = 0, name = "Routine 1"
-            ), schedule = RoutineSchedule(
-              id = 0,
-              routineId = 0,
-              sunday = true,
-              monday = true,
-              tuesday = true,
-              wednesday = true,
-              thursday = true,
-              friday = true,
-              saturday = true
-            ), exerciseProgresses = listOf(
-              ExerciseWithProgress(
-                exercise = Exercise(
-                  id = 0, routineId = 0, name = String.EMPTY, restDuration = 0.seconds
-                ), progress = null
+        initialDay = Day.MONDAY,
+        weeklySchedule = listOf(
+          listOf(
+            RoutineModel(
+              routine = Routine(id = 0, name = "Routine 1"), progress = RoutineModel.Progress(
+                finishedCount = 2, totalCount = 2
               )
             )
-          ), RoutineWithScheduleAndExerciseProgresses(
-            routine = Routine(
-              id = 1, name = "Routine 2"
-            ), schedule = RoutineSchedule(
-              id = 1,
-              routineId = 1,
-              sunday = true,
-              monday = true,
-              tuesday = true,
-              wednesday = true,
-              thursday = true,
-              friday = true,
-              saturday = true
-            ), exerciseProgresses = emptyList()
           )
         ),
-        progresses = listOf(
+        trackedProgresses = listOf(
           TrackedProgress(id = 0, name = "Progress 1"),
           TrackedProgress(id = 1, name = "Progress 2"),
+          TrackedProgress(id = 2, name = "Progress 3"),
         ),
         isLoading = false,
         onRoutineSelected = {},
