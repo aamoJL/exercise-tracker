@@ -1,7 +1,7 @@
 package com.aamo.exercisetracker.tests.features.exercise.use_cases
 
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
-import com.aamo.exercisetracker.features.exercise.use_cases.updateExerciseProgress
+import com.aamo.exercisetracker.features.exercise.use_cases.saveExerciseProgress
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.runBlocking
@@ -9,13 +9,13 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.util.Date
 
-class UpdateExerciseProgress {
+class SaveExerciseProgress {
   @Test
   fun `updates correctly when null`() = runBlocking {
     val newId = 2L
     var result = false
 
-    updateExerciseProgress(
+    saveExerciseProgress(
       exerciseId = newId,
       finishedDate = Date(),
       fetchData = { null },
@@ -30,7 +30,7 @@ class UpdateExerciseProgress {
     var newProgress: ExerciseProgress? = null
     val newDate = Date(10)
 
-    updateExerciseProgress(
+    saveExerciseProgress(
       exerciseId = 0,
       finishedDate = newDate,
       fetchData = { oldProgress },

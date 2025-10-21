@@ -8,7 +8,7 @@ import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import kotlin.time.Duration.Companion.minutes
 
-suspend fun updateExercise(
+suspend fun saveExercise(
   exerciseId: Long,
   routineId: Long,
   model: ExerciseFormViewModel.Model,

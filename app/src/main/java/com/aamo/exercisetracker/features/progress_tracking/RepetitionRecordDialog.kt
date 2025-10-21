@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progressTracking
+package com.aamo.exercisetracker.features.progress_tracking
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +17,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,23 +29,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
-import com.aamo.exercisetracker.ui.components.DurationNumberField
+import com.aamo.exercisetracker.ui.components.IntNumberField
 import java.text.SimpleDateFormat
 import java.util.Date
-import kotlin.time.Duration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DurationRecordDialog(
+fun RepetitionRecordDialog(
   label: String,
-  initDuration: Duration,
+  value: Int,
+  valueUnit: String,
   date: Date,
-  onConfirm: (duration: Duration, date: Date) -> Unit,
+  onConfirm: (value: Int, date: Date) -> Unit,
   onDismiss: () -> Unit
 ) {
   val focusRequester = remember { FocusRequester() }
   var showDatePicker by remember { mutableStateOf(false) }
-  var fieldValue by remember { mutableStateOf(initDuration) }
+  var fieldValue by remember { mutableIntStateOf(value) }
   val datePickerState = rememberDatePickerState(initialSelectedDateMillis = date.time)
 
   LaunchedEffect(Unit) {
@@ -53,9 +54,10 @@ fun DurationRecordDialog(
 
   AlertDialog(title = { Text(text = label) }, text = {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      DurationNumberField(
+      IntNumberField(
         value = fieldValue,
         onValueChange = { fieldValue = it },
+        suffix = { Text(text = valueUnit) },
         modifier = Modifier.focusRequester(focusRequester)
       )
       Row(

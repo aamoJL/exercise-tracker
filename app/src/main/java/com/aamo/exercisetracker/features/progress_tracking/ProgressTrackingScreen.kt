@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progressTracking
+package com.aamo.exercisetracker.features.progress_tracking
 
 import android.content.ComponentName
 import android.content.Context
@@ -69,7 +69,9 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
-import com.aamo.exercisetracker.features.progressTracking.ProgressTrackingScreenViewModel.StopwatchTimerState
+import com.aamo.exercisetracker.features.progress_tracking.ProgressTrackingScreenViewModel.StopwatchTimerState
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressFlow
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.services.StopwatchTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
@@ -90,7 +92,6 @@ import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.PopupProperties
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Date
@@ -108,13 +109,13 @@ import kotlin.time.toDuration
 data class ProgressTrackingScreen(val progressId: Long)
 
 class ProgressTrackingScreenViewModel(
-  private val fetchData: suspend () -> Model,
+  private val fetchData: () -> Flow<Model>,
   private val addValue: suspend (value: Int, date: Date) -> Unit,
 ) : ViewModel() {
   data class Model(
     val progressName: String,
     val recordValueUnit: String,
-    val records: Flow<List<Int>>,
+    val records: List<Int>,
     val recordType: RecordType,
     val countDownTime: Duration?
   ) {
@@ -153,7 +154,7 @@ class ProgressTrackingScreenViewModel(
   init {
     viewModelScope.launch {
       runCatching {
-        fetchData().let { result ->
+        fetchData().collect { result ->
           uiState.apply {
             progressName = result.progressName
             recordValueUnit = result.recordValueUnit
@@ -161,13 +162,7 @@ class ProgressTrackingScreenViewModel(
             result.countDownTime?.also {
               countDownTimerState = CountDownTimerState(duration = result.countDownTime)
             }
-
-            viewModelScope.launch {
-              result.records.collect {
-                records = it
-              }
-            }
-
+            records = result.records
             isLoading = false
           }
         }
@@ -234,24 +229,14 @@ fun NavGraphBuilder.progressTrackingScreen(
       initializer {
         ProgressTrackingScreenViewModel(
           fetchData = {
-            (dao.getTrackedProgress(progressId)
-              ?: throw Exception("Failed to fetch data")).let { progress ->
-              ProgressTrackingScreenViewModel.Model(
-                progressName = progress.name,
-                records = dao.getProgressValuesFlow(progressId = progressId)
-                  .map { list -> list.sortedBy { it.addedDate }.map { it.value } },
-                recordValueUnit = progress.unit,
-                recordType = when {
-                  progress.hasStopWatch -> ProgressTrackingScreenViewModel.Model.RecordType.STOPWATCH
-                  progress.timerTime?.let { it > 0 } == true -> ProgressTrackingScreenViewModel.Model.RecordType.TIMER
-                  else -> ProgressTrackingScreenViewModel.Model.RecordType.REPETITION
-                },
-                countDownTime = progress.timerTime?.milliseconds)
-            }
+            fetchTrackedProgressFlow(fetchData = { dao.getProgressWithValuesFlow(progressId) })
           },
           addValue = { value, date ->
-            dao.upsert(
-              TrackedProgressValue(progressId = progressId, value = value, addedDate = date)
+            saveTrackedProgressValue(
+              value = TrackedProgressValue(
+                id = 0L, progressId = progressId, value = value, addedDate = date
+              ),
+              saveData = { model -> dao.upsert(model) > 0 },
             )
           },
         )

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progressTracking
+package com.aamo.exercisetracker.features.progress_tracking
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -46,6 +46,8 @@ import androidx.navigation.compose.composable
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressesFlow
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
@@ -55,7 +57,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -131,13 +132,11 @@ fun NavGraphBuilder.trackedProgressListScreen(
     val viewmodel: TrackedProgressListScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         TrackedProgressListScreenViewModel(fetchData = {
-          dao.getProgressesFlow().map { list ->
-            list.map {
-              TrackedProgressListScreenViewModel.ProgressModel(progress = it, isSelected = false)
-            }
-          }
+          fetchTrackedProgressesFlow(fetchData = { dao.getProgressesFlow() })
         }, deleteData = { progresses ->
-          dao.delete(*progresses.toTypedArray()) > 0
+          deleteTrackedProgress(*progresses.toTypedArray(), deleteData = {
+            dao.delete(*progresses.toTypedArray()) > 0
+          })
         })
       }
     })

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progressTracking
+package com.aamo.exercisetracker.features.progress_tracking
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +47,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressFormData
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgress
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.DurationNumberField
@@ -68,7 +70,6 @@ import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Serializable
@@ -189,51 +190,27 @@ fun NavGraphBuilder.trackedProgressFormScreen(
     val viewmodel: TrackedProgressFormScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         TrackedProgressFormScreenViewModel(fetchData = {
-          ifElse(condition = progressId == 0L, ifTrue = {
-            TrackedProgressFormScreenViewModel.Model(
-              trackedProgressName = String.EMPTY,
-              weeklyInterval = 0,
-              progressValueUnit = progressUnitDefault,
-              hasStopWatch = false,
-              timerDuration = null,
-              isNew = true
-            )
-          }, ifFalse = {
-            (dao.getTrackedProgress(progressId)
-              ?: throw Exception("Failed to fetch data")).let { progress ->
-              TrackedProgressFormScreenViewModel.Model(
-                trackedProgressName = progress.name,
-                weeklyInterval = progress.intervalWeeks,
-                progressValueUnit = progress.unit,
-                hasStopWatch = progress.hasStopWatch,
-                timerDuration = progress.timerTime?.milliseconds,
-                isNew = false
-              )
-            }
-          })
+          fetchTrackedProgressFormData(
+            progressId = progressId,
+            defaultUnit = progressUnitDefault,
+            fetchData = { dao.getTrackedProgress(it) })
         }, saveData = { model ->
-          dao.upsert(
-            trackedProgress = TrackedProgress(
-              id = progressId,
-              name = model.trackedProgressName,
-              intervalWeeks = model.weeklyInterval,
-              unit = model.progressValueUnit,
-              hasStopWatch = model.hasStopWatch,
-              timerTime = model.timerDuration?.inWholeMilliseconds
-            )
-          ).also { result ->
-            ifElse(
-              condition = result == -1L,
-              ifTrue = { progressId },
-              ifFalse = { result }).also { onSaved(it) }
-          }.let { true }
+          saveTrackedProgress(
+            progressId = progressId, model = model, saveData = {
+              dao.upsert(it).let { result ->
+                ifElse(condition = result != -1L, ifTrue = {
+                  onSaved(result); true
+                }, ifFalse = {
+                  onSaved(it.id); true
+                })
+              }
+            })
         }, deleteData = {
-          (dao.getTrackedProgress(progressId)
-            ?: throw Exception("Failed to fetch data")).let { result ->
-            (dao.delete(result) > 0).onTrue {
-              onDeleted()
-            }
-          }
+          dao.getTrackedProgress(progressId)?.let { progress ->
+            deleteTrackedProgress(progress, deleteData = {
+              dao.delete(*it.toTypedArray()) > 0
+            }).onTrue { onDeleted() }
+          } ?: throw Exception("Failed to fetch data")
         })
       }
     })

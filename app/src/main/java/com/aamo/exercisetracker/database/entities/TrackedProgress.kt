@@ -3,10 +3,12 @@
 package com.aamo.exercisetracker.database.entities
 
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import java.util.Date
 
@@ -36,3 +38,9 @@ data class TrackedProgressValue(
   @ColumnInfo(name = "added_date") val addedDate: Date,
 )
 // endregion
+
+data class TrackedProgressWithValues(
+  @Embedded val trackedProgress: TrackedProgress,
+  @Relation(parentColumn = "id", entityColumn = "tracked_progress_id")
+  val values: List<TrackedProgressValue>
+)

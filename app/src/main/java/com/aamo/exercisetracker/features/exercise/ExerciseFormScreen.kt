@@ -59,7 +59,7 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.features.exercise.use_cases.deleteExercise
 import com.aamo.exercisetracker.features.exercise.use_cases.fetchExerciseFormData
-import com.aamo.exercisetracker.features.exercise.use_cases.updateExercise
+import com.aamo.exercisetracker.features.exercise.use_cases.saveExercise
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.FormList
@@ -217,19 +217,18 @@ fun NavGraphBuilder.exerciseFormScreen(
             fetchData = { dao.getExerciseWithSets(it) },
           )
         }, saveData = { model ->
-          updateExercise(
+          saveExercise(
             exerciseId = exerciseId,
             routineId = routineId,
             model = model,
             fetchData = { dao.getExerciseWithSets(it) },
             saveData = { model ->
               dao.upsert(model).let { result ->
-                (result != -1L).onTrue {
-                  ifElse(
-                    condition = exerciseId == 0L,
-                    ifTrue = { onAdd(result) },
-                    ifFalse = { onUpdate(result) })
-                }
+                ifElse(condition = result != -1L, ifTrue = {
+                  onAdd(result); true
+                }, ifFalse = {
+                  onUpdate(exerciseId); true
+                })
               }
             })
         }, deleteData = {

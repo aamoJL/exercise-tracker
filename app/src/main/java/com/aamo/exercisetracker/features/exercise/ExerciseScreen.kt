@@ -71,7 +71,7 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.features.exercise.use_cases.fetchExercise
-import com.aamo.exercisetracker.features.exercise.use_cases.updateExerciseProgress
+import com.aamo.exercisetracker.features.exercise.use_cases.saveExerciseProgress
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.GesturelessModalBottomSheet
@@ -238,7 +238,7 @@ fun NavGraphBuilder.exerciseScreen(
         ExerciseScreenViewModel(fetchData = {
           fetchExercise(fetchData = { dao.getExerciseWithProgressAndSets(exerciseId) })
         }, saveProgress = {
-          updateExerciseProgress(
+          saveExerciseProgress(
             exerciseId = exerciseId,
             finishedDate = Calendar.getInstance().time,
             fetchData = { dao.getExerciseProgressByExerciseId(exerciseId) },

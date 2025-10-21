@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progressTracking
+package com.aamo.exercisetracker.features.progress_tracking
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -35,6 +35,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
@@ -54,20 +57,22 @@ import kotlin.time.toDuration
 data class TrackedProgressRecordListScreen(val progressId: Long)
 
 class TrackedProgressRecordListScreenViewModel(
-  private val fetchData: suspend () -> Model,
+  private val fetchData: suspend () -> Flow<Model>,
   private val deleteRecordData: suspend (RecordModel) -> Unit,
   private val saveRecordData: suspend (RecordModel) -> Unit,
 ) : ViewModel() {
   data class Model(
     val progressName: String,
     val valueUnit: String,
-    val values: Flow<List<RecordModel>>,
+    val values: List<RecordModel>,
     val valueType: ValueType
   ) {
     enum class ValueType {
       DEFAULT,
       DURATION
     }
+
+    companion object
   }
 
   data class RecordModel(
@@ -87,18 +92,12 @@ class TrackedProgressRecordListScreenViewModel(
   init {
     viewModelScope.launch {
       runCatching {
-        fetchData().let { result ->
+        fetchData().collect { result ->
           uiState.apply {
             progressName = result.progressName
             valueUnit = result.valueUnit
             valueType = result.valueType
-
-            viewModelScope.launch {
-              result.values.collect { list ->
-                values = list.sortedByDescending { it.date }
-              }
-            }
-
+            values = result.values
             isLoading = false
           }
         }
@@ -129,30 +128,16 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
       initializer {
         TrackedProgressRecordListScreenViewModel(
           fetchData = {
-            (dao.getTrackedProgress(progressId)
-              ?: throw Exception("Failed to fetch data")).let { progress ->
-              TrackedProgressRecordListScreenViewModel.Model(
-                progressName = progress.name,
-                values = dao.getProgressValuesFlow(progressId = progressId).map { list ->
-                  list.sortedBy { it.addedDate }.map {
-                    TrackedProgressRecordListScreenViewModel.RecordModel(
-                      value = it.value, date = it.addedDate, key = it.id
-                    )
-                  }
-                },
-                valueUnit = progress.unit,
-                valueType = if (progress.hasStopWatch) TrackedProgressRecordListScreenViewModel.Model.ValueType.DURATION else TrackedProgressRecordListScreenViewModel.Model.ValueType.DEFAULT
-              )
+            dao.getProgressWithValuesFlow(progressId).map {
+              TrackedProgressRecordListScreenViewModel.Model.fromDao(it)
             }
           },
           deleteRecordData = { record ->
-            dao.deleteValueById(trackedProgressId = record.key)
+            dao.delete(record.toDao(progressId))
           },
           saveRecordData = { record ->
-            (dao.getProgressValueById(record.key)
-              ?: throw Exception("Failed to fetch data")).let { value ->
-              dao.upsert(value.copy(value = record.value, addedDate = record.date))
-            }
+            saveTrackedProgressValue(
+              value = record.toDao(progressId), saveData = { dao.upsert(it) > 0 })
           },
         )
       }

@@ -4,14 +4,14 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.features.exercise.ExerciseFormViewModel
-import com.aamo.exercisetracker.features.exercise.use_cases.updateExercise
+import com.aamo.exercisetracker.features.exercise.use_cases.saveExercise
 import junit.framework.TestCase
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import kotlin.time.Duration.Companion.minutes
 
 @Suppress("HardCodedStringLiteral")
-class UpdateExercise {
+class SaveExercise {
   @Test
   fun `returns correct model when saving new`() = runBlocking {
     val model = ExerciseFormViewModel.Model(
@@ -25,7 +25,7 @@ class UpdateExercise {
     var result: ExerciseWithSets? = null
 
     assert(
-      updateExercise(
+      saveExercise(
         exerciseId = 0L,
         routineId = 0L,
         model = model,
@@ -75,7 +75,7 @@ class UpdateExercise {
     var result: ExerciseWithSets? = null
 
     assert(
-      updateExercise(
+      saveExercise(
         exerciseId = existing.exercise.id,
         routineId = existing.exercise.routineId,
         model = model,

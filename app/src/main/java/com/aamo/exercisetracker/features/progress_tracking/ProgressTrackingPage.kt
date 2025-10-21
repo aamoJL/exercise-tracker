@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progressTracking
+package com.aamo.exercisetracker.features.progress_tracking
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder

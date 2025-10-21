@@ -3,7 +3,7 @@ package com.aamo.exercisetracker.features.exercise.use_cases
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import java.util.Date
 
-suspend fun updateExerciseProgress(
+suspend fun saveExerciseProgress(
   exerciseId: Long,
   finishedDate: Date,
   fetchData: suspend () -> ExerciseProgress?,
