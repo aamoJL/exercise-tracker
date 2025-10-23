@@ -70,7 +70,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.features.exercise.use_cases.fetchExercise
+import com.aamo.exercisetracker.database.entities.ExerciseProgress
+import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExerciseProgress
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
@@ -113,6 +114,8 @@ class ExerciseScreenViewModel(
       val restDuration: Duration?,
       val unit: String
     )
+
+    companion object
   }
 
   class TimerState(val duration: Duration) {
@@ -236,13 +239,14 @@ fun NavGraphBuilder.exerciseScreen(
     val viewmodel: ExerciseScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseScreenViewModel(fetchData = {
-          fetchExercise(fetchData = { dao.getExerciseWithProgressAndSets(exerciseId) })
+          ExerciseScreenViewModel.Model.fromDao(
+            fetchExercise = { dao.getExercise(exerciseId) },
+            fetchSets = { dao.getExerciseSets(it) })
         }, saveProgress = {
-          saveExerciseProgress(
-            exerciseId = exerciseId,
-            finishedDate = Calendar.getInstance().time,
-            fetchData = { dao.getExerciseProgressByExerciseId(exerciseId) },
-            saveData = { dao.upsert(it) > 0 }).onTrue { onBack() }
+          saveExerciseProgress(finishedDate = Calendar.getInstance().time, fetchData = {
+            dao.getExerciseProgressByExerciseId(exerciseId)
+              ?: ExerciseProgress(exerciseId = exerciseId)
+          }, saveData = { dao.upsert(it) > 0 }).onTrue { onBack() }
         })
       }
     })

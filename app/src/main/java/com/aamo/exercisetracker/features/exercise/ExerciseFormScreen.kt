@@ -57,9 +57,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
+import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.features.exercise.use_cases.deleteExercise
-import com.aamo.exercisetracker.features.exercise.use_cases.fetchExerciseFormData
+import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExercise
+import com.aamo.exercisetracker.features.exercise.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.FormList
@@ -97,7 +100,9 @@ class ExerciseFormViewModel(
     val setAmounts: List<Int>,
     val hasTimer: Boolean,
     val isNew: Boolean,
-  )
+  ) {
+    companion object
+  }
 
   class UiState {
     inner class SetAmount(value: Int = 0) {
@@ -212,34 +217,26 @@ fun NavGraphBuilder.exerciseFormScreen(
     val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseFormViewModel(fetchData = {
-          fetchExerciseFormData(
-            id = exerciseId,
-            fetchData = { dao.getExerciseWithSets(it) },
-          )
+          ExerciseFormViewModel.Model.fromDao(fetchExercise = {
+            if (exerciseId == 0L) Exercise(routineId = routineId) else dao.getExercise(exerciseId)
+          }, fetchSets = {
+            if (exerciseId == 0L) listOf(ExerciseSet(exerciseId = it)) else dao.getExerciseSets(it)
+          })
         }, saveData = { model ->
           saveExercise(
-            exerciseId = exerciseId,
-            routineId = routineId,
-            model = model,
-            fetchData = { dao.getExerciseWithSets(it) },
-            saveData = { model ->
-              dao.upsert(model).let { result ->
-                ifElse(condition = result != -1L, ifTrue = {
-                  onAdd(result); true
-                }, ifFalse = {
-                  onUpdate(exerciseId); true
-                })
+            data = model.toDao(exerciseId = exerciseId, routineId = routineId),
+            saveData = { (exercise, sets) ->
+              dao.upsert(exercise, sets).let { result ->
+                (result > 0).onTrue { if (model.isNew) onAdd(result) else onUpdate(result) }
               }
             })
         }, deleteData = {
           deleteExercise(
-            exerciseId = exerciseId,
-            fetchData = { dao.getExercise(it) },
+            fetchData = { Exercise(id = exerciseId, routineId = routineId) },
             deleteData = { dao.delete(it) > 0 }).onTrue { onDeleted() }
         })
       }
     })
-
     val uiState = viewmodel.uiState
 
     LoadingScreen(enabled = viewmodel.isLoading) {

@@ -2,9 +2,11 @@ package com.aamo.exercisetracker.tests.utility.extensions.date
 
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
+import com.aamo.exercisetracker.utility.extensions.date.toDay
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.DayOfWeek
 import java.util.Calendar
 
 class CalendarExtensions {
@@ -36,5 +38,16 @@ class CalendarExtensions {
         }
       }
     }
+  }
+
+  @Test
+  fun `day of week returns correct day`() {
+    assertEquals(Day.SUNDAY, DayOfWeek.SUNDAY.toDay())
+    assertEquals(Day.MONDAY, DayOfWeek.MONDAY.toDay())
+    assertEquals(Day.TUESDAY, DayOfWeek.TUESDAY.toDay())
+    assertEquals(Day.WEDNESDAY, DayOfWeek.WEDNESDAY.toDay())
+    assertEquals(Day.THURSDAY, DayOfWeek.THURSDAY.toDay())
+    assertEquals(Day.FRIDAY, DayOfWeek.FRIDAY.toDay())
+    assertEquals(Day.SATURDAY, DayOfWeek.SATURDAY.toDay())
   }
 }

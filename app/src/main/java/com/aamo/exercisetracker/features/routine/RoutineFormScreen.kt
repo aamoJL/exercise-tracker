@@ -158,7 +158,7 @@ fun NavGraphBuilder.routineFormScreen(
   onBack: () -> Unit, onSaved: (id: Long) -> Unit, onDeleted: () -> Unit
 ) {
   composable<RoutineFormScreen> { navStack ->
-    var (routineId) = navStack.toRoute<RoutineFormScreen>()
+    val (routineId) = navStack.toRoute<RoutineFormScreen>()
     val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
 
     val viewmodel: RoutineFormViewModel = viewModel(factory = viewModelFactory {
@@ -174,7 +174,7 @@ fun NavGraphBuilder.routineFormScreen(
                 ?: throw Exception("Failed to fetch data")).let { result ->
                 RoutineFormViewModel.Model(
                   routineName = result.routine.name,
-                  selectedDays = result.schedule?.asListOfDays() ?: emptyList(),
+                  selectedDays = result.schedule.asListOfDays(),
                   isNew = false
                 )
               }
@@ -183,33 +183,29 @@ fun NavGraphBuilder.routineFormScreen(
           saveData = { model ->
             ifElse(condition = model.isNew, ifTrue = {
               RoutineWithSchedule(
-                routine = Routine(name = String.EMPTY), schedule = null
+                routine = Routine(name = String.EMPTY),
+                schedule = RoutineSchedule(routineId = routineId)
               )
             }, ifFalse = {
               dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
             }).let { result ->
               result.copy(
                 routine = result.routine.copy(name = model.routineName),
-                schedule = result.schedule.let { schedule ->
-                  (schedule?.copy() ?: RoutineSchedule(routineId = result.routine.id)).copy(
-                    sunday = model.selectedDays.contains(Day.SUNDAY),
-                    monday = model.selectedDays.contains(Day.MONDAY),
-                    tuesday = model.selectedDays.contains(Day.TUESDAY),
-                    wednesday = model.selectedDays.contains(Day.WEDNESDAY),
-                    thursday = model.selectedDays.contains(Day.THURSDAY),
-                    friday = model.selectedDays.contains(Day.FRIDAY),
-                    saturday = model.selectedDays.contains(Day.SATURDAY),
-                  )
-                })
-            }.let { routine ->
-              dao.upsertAndGet(routine).let { result ->
-                (result != null).onTrue {
-                  result?.also {
-                    routineId = result.routine.id
-                    onSaved(routineId)
-                  }
-                }
-              }
+                schedule = result.schedule.copy(
+                  sunday = model.selectedDays.contains(Day.SUNDAY),
+                  monday = model.selectedDays.contains(Day.MONDAY),
+                  tuesday = model.selectedDays.contains(Day.TUESDAY),
+                  wednesday = model.selectedDays.contains(Day.WEDNESDAY),
+                  thursday = model.selectedDays.contains(Day.THURSDAY),
+                  friday = model.selectedDays.contains(Day.FRIDAY),
+                  saturday = model.selectedDays.contains(Day.SATURDAY),
+                )
+              )
+            }.let { (routine, schedule) ->
+              checkNotNull(schedule)
+              dao.upsert(routine, schedule).also {
+                onSaved(routineId)
+              }.first > 0L
             }
           },
           deleteData = {

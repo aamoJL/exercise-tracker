@@ -130,10 +130,9 @@ fun NavGraphBuilder.dailiesScreen(
       initializer {
         DailiesScreenViewModel(fetchWeeklySchedule = {
           fetchWeeklyRoutineScheduleFlow(
-            getDataFlow = { routineDao.getRoutinesWithScheduleAndProgressesFlow() },
+            getDataFlow = { routineDao.getRoutineScheduleWithProgressFlow() },
             weekDays = Calendar.getInstance().getLocalDayOrder(),
             currentDate = LocalDate.now(),
-            today = Day.today()
           )
         }, fetchTrackedProgresses = {
           fetchUnfinishedTrackedProgressesFlow(

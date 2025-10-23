@@ -5,39 +5,24 @@ import com.aamo.exercisetracker.features.exercise.use_cases.deleteExercise
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DeleteExercise {
   @Test
   fun `returns true when deleted`() = runBlocking {
-    val result = deleteExercise(exerciseId = 1L, fetchData = { id ->
-      Exercise(id = id, routineId = 1L)
-    }, deleteData = { exercise -> true })
+    val result = deleteExercise(
+      fetchData = { Exercise(id = 1L, routineId = 1L) },
+      deleteData = { exercise -> true })
 
     assertTrue(result)
   }
 
   @Test
-  fun `returns false when new`() = runBlocking {
-    val result = deleteExercise(exerciseId = 0L, fetchData = { id ->
-      Exercise(id = id, routineId = 1L)
-    }, deleteData = { exercise -> true })
+  fun `returns false when not deleted`() = runBlocking {
+    val result = deleteExercise(
+      fetchData = { Exercise(id = 0L, routineId = 1L) },
+      deleteData = { exercise -> false })
 
     assertFalse(result)
-  }
-
-  @Test
-  fun `throws when fetch error`() = runBlocking {
-    assertThrows(Exception::class.java) {
-      runBlocking {
-        deleteExercise(
-          exerciseId = 1L,
-          fetchData = { id -> null },
-          deleteData = { exercise -> true })
-      }
-    }
-
-    return@runBlocking
   }
 }

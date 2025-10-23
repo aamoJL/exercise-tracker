@@ -42,7 +42,7 @@ data class ExerciseSet(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "exercise_id") val exerciseId: Long,
   @ColumnInfo(name = "value") val value: Int = 0,
-  @ColumnInfo(name = "unit") val unit: String = "reps",
+  @ColumnInfo(name = "unit") val unit: String = String.EMPTY,
   @ColumnInfo(name = "value_type", defaultValue = "0")
   val valueType: ValueType = ValueType.REPETITION,
 ) {
@@ -63,13 +63,13 @@ data class ExerciseSet(
 data class ExerciseProgress(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   @ColumnInfo(name = "exercise_id") val exerciseId: Long,
-  @ColumnInfo(name = "finished_date") val finishedDate: Date,
+  @ColumnInfo(name = "finished_date") val finishedDate: Date = Date(),
 )
 // endregion
 
 data class ExerciseWithSets(
   @Embedded val exercise: Exercise,
-  @Relation(parentColumn = "id", entityColumn = "exercise_id") val sets: List<ExerciseSet>
+  @Relation(parentColumn = "id", entityColumn = "exercise_id") val sets: List<ExerciseSet>,
 )
 
 data class ExerciseWithProgress(

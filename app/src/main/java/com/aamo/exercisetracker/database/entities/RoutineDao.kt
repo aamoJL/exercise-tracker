@@ -4,11 +4,13 @@ package com.aamo.exercisetracker.database.entities
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 
 @Dao
 interface RoutineDao {
@@ -22,6 +24,13 @@ interface RoutineDao {
   @Query("SELECT * FROM exercise WHERE id = :exerciseId")
   suspend fun getExercise(exerciseId: Long): Exercise?
 
+  @Query("SELECT * FROM exercise_set WHERE exercise_id = :exerciseId")
+  suspend fun getExerciseSets(exerciseId: Long): List<ExerciseSet>
+
+  @Transaction
+  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
+  suspend fun getExerciseWithSets(exerciseId: Long): ExerciseWithSets?
+
   @Query("SELECT * FROM exercise_progress WHERE exercise_id = :exerciseId")
   suspend fun getExerciseProgressByExerciseId(exerciseId: Long): ExerciseProgress?
 
@@ -34,16 +43,21 @@ interface RoutineDao {
   fun getRoutinesWithScheduleFlow(): Flow<List<RoutineWithSchedule>>
 
   @Transaction
-  @Query("SELECT * FROM routine")
-  fun getRoutinesWithScheduleAndProgressesFlow(): Flow<List<RoutineWithScheduleAndExerciseProgresses>>
-
-  @Transaction
-  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
-  suspend fun getExerciseWithSets(exerciseId: Long): ExerciseWithSets?
-
-  @Transaction
   @Query("SELECT * FROM routine WHERE id = :routineId")
   fun getRoutineWithProgressesFlow(routineId: Long): Flow<RoutineWithExerciseProgresses?>
+
+  @Transaction
+  @Query(
+    """
+    SELECT routine.*, progress.finished_date
+    FROM routine 
+    JOIN exercise ON exercise.routine_id = routine.id
+    LEFT OUTER JOIN exercise_progress AS progress ON progress.exercise_id = exercise.id
+  """
+  )
+  fun getRoutineScheduleWithProgressFlow(): Flow<Map<RoutineWithSchedule, List<@MapColumn(
+    columnName = "finished_date", tableName = "progress"
+  ) Date?>>>
 
   @Transaction
   @Query("SELECT * FROM exercise WHERE id = :exerciseId")
@@ -70,18 +84,14 @@ interface RoutineDao {
    * @return exerciseId
    */
   @Transaction
-  suspend fun upsert(exerciseWithSets: ExerciseWithSets): Long {
-    val (exercise, sets) = exerciseWithSets
-
+  suspend fun upsert(exercise: Exercise, sets: List<ExerciseSet>): Long {
     // Upsert exercise
-    val exerciseId = upsert(exercise).letIf({ it < 0L }) { exercise.id }
+    val exerciseId = upsert(exercise).letIf({ it == -1L }) { exercise.id }
 
-    getExerciseWithSets(exerciseId)?.let { existingEws ->
-      // Delete removed sets
-      delete(existingEws.sets.filter { !sets.contains(it) })
-    }
+    // Delete old sets
+    delete(*getExerciseSets(exerciseId).toTypedArray())
 
-    // Upsert sets
+    // Upsert new sets
     upsert(*sets.map { it.copy(exerciseId = exerciseId) }.toTypedArray())
 
     return exerciseId
@@ -91,38 +101,13 @@ interface RoutineDao {
    * @return routine ID and schedule ID as a pair
    */
   @Transaction
-  suspend fun upsert(routineWithSchedule: RoutineWithSchedule): Pair<Long, Long?> {
-    val (routine, schedule) = routineWithSchedule
-
-    // Upsert routine
-    val routineId = upsert(routine).letIf({ it < 0L }) { routine.id }
-
-    //val routineId = upsertReturnValueOrOldId(returnValue = upsert(routine), oldId = routine.id)
-    var scheduleId = schedule?.id
-
-    getScheduleByRoutineId(routineId)?.let { existingSchedule ->
-      // Schedule exists
-      scheduleId = if (schedule != null) existingSchedule.id else null
-
-      if (schedule == null) {
-        // Delete old schedule if current is null
-        delete(existingSchedule)
-      }
+  suspend fun upsert(routine: Routine, schedule: RoutineSchedule): Pair<Long, Long> {
+    val routine = upsert(routine).let { id -> routine.letIf(id != -1L) { routine.copy(id = id) } }
+    val schedule = upsert(schedule.copy(routineId = routine.id)).let { id ->
+      schedule.letIf(id != -1L) { schedule.copy(id = id) }
     }
 
-    if (schedule != null && scheduleId != null) {
-      // Upsert schedule
-      scheduleId = upsert(
-        schedule.copy(id = scheduleId, routineId = routineId)
-      ).letIf({ it < 0L }) { schedule.id }
-    }
-
-    return Pair(routineId, scheduleId)
-  }
-
-  @Transaction
-  suspend fun upsertAndGet(routineWithSchedule: RoutineWithSchedule): RoutineWithSchedule? {
-    return getRoutineWithSchedule(upsert(routineWithSchedule).first)
+    return Pair(routine.id, schedule.id)
   }
   // endregion
 
@@ -137,6 +122,6 @@ interface RoutineDao {
   suspend fun delete(exercise: Exercise): Int
 
   @Delete
-  suspend fun delete(exerciseSets: List<ExerciseSet>)
+  suspend fun delete(vararg exerciseSet: ExerciseSet)
   // endregion
 }

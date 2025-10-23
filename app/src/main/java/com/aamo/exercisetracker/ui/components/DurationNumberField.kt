@@ -51,10 +51,10 @@ data class DurationNumberFieldFields(
 fun DurationNumberField(
   value: Duration,
   onValueChange: (Duration) -> Unit,
+  modifier: Modifier = Modifier,
   enabled: Boolean = true,
   fields: DurationNumberFieldFields = DurationNumberFieldFields(),
   hideZeroOnDisabled: Boolean = true,
-  modifier: Modifier = Modifier,
   shape: Shape = TextFieldDefaults.shape,
   colors: TextFieldColors = TextFieldDefaults.colors(),
   keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
