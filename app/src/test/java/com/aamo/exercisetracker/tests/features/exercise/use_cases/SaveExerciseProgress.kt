@@ -6,7 +6,6 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.util.Date
 
@@ -21,7 +20,7 @@ class SaveExerciseProgress {
     assert(runBlocking {
       saveExerciseProgress(
         finishedDate = date,
-        fetchData = { progress },
+        progress = progress,
         saveData = { value -> true.also { result = value } })
     })
 
@@ -38,20 +37,11 @@ class SaveExerciseProgress {
 
     saveExerciseProgress(
       finishedDate = newDate,
-      fetchData = { oldProgress },
+      progress = oldProgress,
       saveData = { value -> true.also { updatedProgress = value } })
 
     assertNotNull(updatedProgress)
     assertNotEquals(oldProgress, updatedProgress)
     assertEquals(newDate, updatedProgress?.finishedDate)
-  }
-
-  @Test
-  fun `throws when fetch error`() {
-    assertThrows(Exception::class.java) {
-      runBlocking {
-        saveExerciseProgress(finishedDate = Date(), fetchData = { null }, saveData = { false })
-      }
-    }
   }
 }

@@ -2,7 +2,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.use_cases
 
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressListScreenViewModel
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressesFlow
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -17,7 +17,9 @@ class FetchTrackedProgresses {
       TrackedProgressListScreenViewModel.ProgressModel(progress = it, isSelected = false)
     }
 
-    val result = fetchTrackedProgressesFlow(fetchData = { flow { emit(items) } }).first()
+    val result = TrackedProgressListScreenViewModel.ProgressModel.fromDao {
+      flow { emit(items) }
+    }.first()
 
     assertEquals(expected, result)
   }

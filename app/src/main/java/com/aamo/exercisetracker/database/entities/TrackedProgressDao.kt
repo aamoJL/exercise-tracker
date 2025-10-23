@@ -14,6 +14,9 @@ interface TrackedProgressDao {
   suspend fun getTrackedProgress(id: Long): TrackedProgress?
 
   @Query("SELECT * FROM tracked_progress WHERE id = :progressId")
+  fun getProgressWithValues(progressId: Long): TrackedProgressWithValues?
+
+  @Query("SELECT * FROM tracked_progress WHERE id = :progressId")
   fun getProgressWithValuesFlow(progressId: Long): Flow<TrackedProgressWithValues?>
 
   @Query("SELECT * FROM tracked_progress")

@@ -11,10 +11,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
 
+typealias ProgressDate = Date
+
 fun fetchWeeklyRoutineScheduleFlow(
   currentDate: LocalDate,
   weekDays: List<Day>,
-  getDataFlow: () -> Flow<Map<RoutineWithSchedule, List<Date?>>>,
+  getDataFlow: () -> Flow<Map<RoutineWithSchedule, List<ProgressDate?>>>,
 ): Flow<WeeklySchedule> {
   val todayIndex = weekDays.indexOf(currentDate.dayOfWeek.toDay())
 

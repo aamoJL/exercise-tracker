@@ -239,14 +239,18 @@ fun NavGraphBuilder.exerciseScreen(
     val viewmodel: ExerciseScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseScreenViewModel(fetchData = {
-          ExerciseScreenViewModel.Model.fromDao(
-            fetchExercise = { dao.getExercise(exerciseId) },
-            fetchSets = { dao.getExerciseSets(it) })
+          ExerciseScreenViewModel.Model.fromDao {
+            dao.getExerciseWithSets(exerciseId) ?: throw Exception("Failed to fetch data")
+          }
         }, saveProgress = {
-          saveExerciseProgress(finishedDate = Calendar.getInstance().time, fetchData = {
-            dao.getExerciseProgressByExerciseId(exerciseId)
-              ?: ExerciseProgress(exerciseId = exerciseId)
-          }, saveData = { dao.upsert(it) > 0 }).onTrue { onBack() }
+          saveExerciseProgress(
+            finishedDate = Calendar.getInstance().time,
+            progress = dao.getExerciseProgressByExerciseId(exerciseId) ?: ExerciseProgress(
+              exerciseId = exerciseId
+            )
+          ) {
+            dao.upsert(it).let { true }
+          }.onTrue { onBack() }
         })
       }
     })

@@ -4,18 +4,18 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressFormScreenViewModel
 
 suspend fun saveTrackedProgress(
-  progressId: Long,
-  model: TrackedProgressFormScreenViewModel.Model,
-  saveData: suspend (TrackedProgress) -> Boolean
+  data: TrackedProgress, saveData: suspend (TrackedProgress) -> Boolean
 ): Boolean {
-  return saveData(
-    TrackedProgress(
-      id = progressId,
-      name = model.trackedProgressName,
-      intervalWeeks = model.weeklyInterval,
-      unit = model.progressValueUnit,
-      hasStopWatch = model.hasStopWatch,
-      timerTime = model.timerDuration?.inWholeMilliseconds
-    )
+  return saveData(data)
+}
+
+fun TrackedProgressFormScreenViewModel.Model.toDao(progressId: Long): TrackedProgress {
+  return TrackedProgress(
+    id = progressId,
+    name = this.trackedProgressName,
+    intervalWeeks = this.weeklyInterval,
+    unit = this.progressValueUnit,
+    hasStopWatch = this.hasStopWatch,
+    timerTime = this.timerDuration?.inWholeMilliseconds
   )
 }

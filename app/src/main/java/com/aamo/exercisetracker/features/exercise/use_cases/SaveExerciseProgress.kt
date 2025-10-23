@@ -5,10 +5,8 @@ import java.util.Date
 
 suspend fun saveExerciseProgress(
   finishedDate: Date,
-  fetchData: suspend () -> ExerciseProgress?,
+  progress: ExerciseProgress,
   saveData: suspend (ExerciseProgress) -> Boolean,
 ): Boolean {
-  return saveData(
-    (fetchData() ?: throw Exception("Failed to fetch data")).copy(finishedDate = finishedDate)
-  )
+  return saveData(progress.copy(finishedDate = finishedDate))
 }

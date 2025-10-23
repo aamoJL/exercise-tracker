@@ -70,7 +70,7 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.ProgressTrackingScreenViewModel.StopwatchTimerState
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressFlow
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.services.StopwatchTimerService
@@ -92,6 +92,7 @@ import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.PopupProperties
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Date
@@ -124,6 +125,8 @@ class ProgressTrackingScreenViewModel(
       TIMER,
       STOPWATCH
     }
+
+    companion object
   }
 
   class CountDownTimerState(val duration: Duration) {
@@ -229,15 +232,17 @@ fun NavGraphBuilder.progressTrackingScreen(
       initializer {
         ProgressTrackingScreenViewModel(
           fetchData = {
-            fetchTrackedProgressFlow(fetchData = { dao.getProgressWithValuesFlow(progressId) })
+            ProgressTrackingScreenViewModel.Model.fromDao {
+              dao.getProgressWithValuesFlow(progressId)
+                .map { it ?: throw Exception("Failed to fetch data") }
+            }
           },
           addValue = { value, date ->
             saveTrackedProgressValue(
               value = TrackedProgressValue(
                 id = 0L, progressId = progressId, value = value, addedDate = date
-              ),
-              saveData = { model -> dao.upsert(model) > 0 },
-            )
+              )
+            ) { dao.upsert(it).let { true } }
           },
         )
       }

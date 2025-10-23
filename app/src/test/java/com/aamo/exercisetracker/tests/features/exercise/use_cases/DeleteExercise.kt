@@ -11,8 +11,7 @@ class DeleteExercise {
   @Test
   fun `returns true when deleted`() = runBlocking {
     val result = deleteExercise(
-      fetchData = { Exercise(id = 1L, routineId = 1L) },
-      deleteData = { exercise -> true })
+      exercise = Exercise(id = 1L, routineId = 1L), deleteData = { exercise -> true })
 
     assertTrue(result)
   }
@@ -20,8 +19,7 @@ class DeleteExercise {
   @Test
   fun `returns false when not deleted`() = runBlocking {
     val result = deleteExercise(
-      fetchData = { Exercise(id = 0L, routineId = 1L) },
-      deleteData = { exercise -> false })
+      exercise = Exercise(id = 0L, routineId = 1L), deleteData = { exercise -> false })
 
     assertFalse(result)
   }

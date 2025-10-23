@@ -2,23 +2,22 @@ package com.aamo.exercisetracker.features.exercise.use_cases
 
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.features.exercise.ExerciseFormViewModel
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import kotlin.time.Duration.Companion.minutes
 
-data class ExerciseData(val exercise: Exercise, val sets: List<ExerciseSet>)
-
 suspend fun saveExercise(
-  data: ExerciseData,
-  saveData: suspend (ExerciseData) -> Boolean,
+  data: ExerciseWithSets,
+  saveData: suspend (ExerciseWithSets) -> Boolean,
 ): Boolean {
   return saveData(data)
 }
 
 fun ExerciseFormViewModel.Model.toDao(
   exerciseId: Long, routineId: Long
-): ExerciseData {
+): ExerciseWithSets {
   val exercise = Exercise(
     id = exerciseId,
     routineId = routineId,
@@ -37,5 +36,5 @@ fun ExerciseFormViewModel.Model.toDao(
     }))
   }
 
-  return ExerciseData(exercise = exercise, sets = sets)
+  return ExerciseWithSets(exercise = exercise, sets = sets)
 }

@@ -2,8 +2,8 @@ package com.aamo.exercisetracker.tests.features.exercise.use_cases
 
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.features.exercise.ExerciseFormViewModel
-import com.aamo.exercisetracker.features.exercise.use_cases.ExerciseData
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExercise
 import com.aamo.exercisetracker.features.exercise.use_cases.toDao
 import junit.framework.TestCase.assertEquals
@@ -23,7 +23,7 @@ class SaveExercise {
       hasTimer = false,
       isNew = true
     )
-    var result: ExerciseData? = null
+    var result: ExerciseWithSets? = null
 
     assert(runBlocking {
       saveExercise(
@@ -31,7 +31,7 @@ class SaveExercise {
     })
 
     assertEquals(
-      ExerciseData(
+      ExerciseWithSets(
         exercise = Exercise(
           id = 0L, routineId = 1L, name = model.exerciseName, restDuration = model.restDuration
         ), sets = model.setAmounts.map {
@@ -56,7 +56,7 @@ class SaveExercise {
       hasTimer = true,
       isNew = false
     )
-    val existing = ExerciseData(
+    val existing = ExerciseWithSets(
       exercise = Exercise(
         id = 1L, routineId = 1L, name = "Name", restDuration = 2.minutes
       ), sets = listOf(
@@ -69,7 +69,7 @@ class SaveExercise {
         )
       )
     )
-    var result: ExerciseData? = null
+    var result: ExerciseWithSets? = null
 
     assert(runBlocking {
       saveExercise(
@@ -79,7 +79,7 @@ class SaveExercise {
     })
 
     assertEquals(
-      ExerciseData(
+      ExerciseWithSets(
         exercise = Exercise(
           id = existing.exercise.id,
           routineId = existing.exercise.routineId,

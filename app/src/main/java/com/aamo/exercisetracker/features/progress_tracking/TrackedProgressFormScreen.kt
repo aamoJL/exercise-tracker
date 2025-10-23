@@ -47,9 +47,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
+import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressFormData
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.DurationNumberField
@@ -87,7 +89,9 @@ class TrackedProgressFormScreenViewModel(
     val hasStopWatch: Boolean,
     val timerDuration: Duration?,
     val isNew: Boolean,
-  )
+  ) {
+    companion object
+  }
 
   class UiState {
     enum class ProgressType {
@@ -190,26 +194,21 @@ fun NavGraphBuilder.trackedProgressFormScreen(
     val viewmodel: TrackedProgressFormScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         TrackedProgressFormScreenViewModel(fetchData = {
-          fetchTrackedProgressFormData(
-            progressId = progressId,
-            defaultUnit = progressUnitDefault,
-            fetchData = { dao.getTrackedProgress(it) })
+          TrackedProgressFormScreenViewModel.Model.fromDao(defaultUnit = progressUnitDefault) {
+            dao.getTrackedProgress(progressId) ?: TrackedProgress()
+          }
         }, saveData = { model ->
-          saveTrackedProgress(
-            progressId = progressId, model = model, saveData = {
-              dao.upsert(it).let { result ->
-                ifElse(condition = result != -1L, ifTrue = {
-                  onSaved(result); true
-                }, ifFalse = {
-                  onSaved(it.id); true
-                })
-              }
-            })
+          saveTrackedProgress(data = model.toDao(progressId)) {
+            dao.upsert(it).let { result ->
+              ifElse(
+                condition = result != -1L,
+                ifTrue = { onSaved(result) },
+                ifFalse = { onSaved(it.id) })
+            }.let { true }
+          }
         }, deleteData = {
           dao.getTrackedProgress(progressId)?.let { progress ->
-            deleteTrackedProgress(progress, deleteData = {
-              dao.delete(*it.toTypedArray()) > 0
-            }).onTrue { onDeleted() }
+            deleteTrackedProgress(progress) { dao.delete(*it.toTypedArray()) > 0 }.onTrue { onDeleted() }
           } ?: throw Exception("Failed to fetch data")
         })
       }

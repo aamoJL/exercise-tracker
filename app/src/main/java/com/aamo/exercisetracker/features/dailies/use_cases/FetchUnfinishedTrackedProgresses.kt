@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 fun fetchUnfinishedTrackedProgressesFlow(
-  getDataFlow: () -> Flow<Map<TrackedProgress, List<TrackedProgressValue>>>, currentTimeMillis: Long
+  currentTimeMillis: Long, getDataFlow: () -> Flow<Map<TrackedProgress, List<TrackedProgressValue>>>
 ): Flow<List<TrackedProgress>> {
   return getDataFlow().map { map ->
     map.filter { item ->

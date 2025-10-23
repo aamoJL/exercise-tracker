@@ -47,7 +47,7 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressesFlow
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
@@ -71,7 +71,9 @@ class TrackedProgressListScreenViewModel(
 ) : ViewModel() {
   data class ProgressModel(
     val progress: TrackedProgress, val isSelected: Boolean
-  )
+  ) {
+    companion object
+  }
 
   init {
     viewModelScope.launch {
@@ -132,11 +134,13 @@ fun NavGraphBuilder.trackedProgressListScreen(
     val viewmodel: TrackedProgressListScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         TrackedProgressListScreenViewModel(fetchData = {
-          fetchTrackedProgressesFlow(fetchData = { dao.getProgressesFlow() })
+          TrackedProgressListScreenViewModel.ProgressModel.fromDao {
+            dao.getProgressesFlow()
+          }
         }, deleteData = { progresses ->
-          deleteTrackedProgress(*progresses.toTypedArray(), deleteData = {
+          deleteTrackedProgress(*progresses.toTypedArray()) {
             dao.delete(*progresses.toTypedArray()) > 0
-          })
+          }
         })
       }
     })

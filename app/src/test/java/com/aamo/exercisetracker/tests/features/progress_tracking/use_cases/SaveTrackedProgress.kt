@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.use_cases
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressFormScreenViewModel
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -30,9 +31,9 @@ class SaveTrackedProgress {
       timerTime = model.timerDuration?.inWholeMilliseconds
     )
 
-    assert(saveTrackedProgress(progressId = expected.id, model = model, saveData = {
-      result = it; true
-    }))
+    assert(saveTrackedProgress(data = model.toDao(expected.id)) { saveModel ->
+      true.also { result = saveModel }
+    })
 
     assertEquals(expected, result)
   }
@@ -57,9 +58,9 @@ class SaveTrackedProgress {
       timerTime = model.timerDuration?.inWholeMilliseconds
     )
 
-    assert(saveTrackedProgress(progressId = expected.id, model = model, saveData = {
-      result = it; true
-    }))
+    assert(saveTrackedProgress(data = model.toDao(expected.id)) { saveModel ->
+      true.also { result = saveModel }
+    })
 
     assertEquals(expected, result)
   }

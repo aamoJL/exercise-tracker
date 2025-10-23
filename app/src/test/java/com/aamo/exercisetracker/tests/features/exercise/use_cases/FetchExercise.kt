@@ -2,13 +2,13 @@ package com.aamo.exercisetracker.tests.features.exercise.use_cases
 
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.features.exercise.ExerciseFormViewModel
 import com.aamo.exercisetracker.features.exercise.ExerciseScreenViewModel
 import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertThrows
 import org.junit.Test
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -23,8 +23,7 @@ class ExerciseScreenViewModelTests {
     )
 
     val result = ExerciseScreenViewModel.Model.fromDao(
-      fetchExercise = { exercise },
-      fetchSets = { listOf(set) })
+      fetchData = { ExerciseWithSets(exercise, listOf(set)) })
 
     assertEquals(
       ExerciseScreenViewModel.Model(
@@ -51,8 +50,7 @@ class ExerciseScreenViewModelTests {
     )
 
     val result = ExerciseScreenViewModel.Model.fromDao(
-      fetchExercise = { exercise },
-      fetchSets = { listOf(set) })
+      fetchData = { ExerciseWithSets(exercise, listOf(set)) })
 
     assertEquals(
       ExerciseScreenViewModel.Model(
@@ -67,15 +65,6 @@ class ExerciseScreenViewModelTests {
       ), result
     )
   }
-
-  @Test
-  fun `throws when fetch error`() {
-    assertThrows(Exception::class.java) {
-      runBlocking {
-        ExerciseScreenViewModel.Model.fromDao(fetchExercise = { null }, fetchSets = { emptyList() })
-      }
-    }
-  }
 }
 
 @Suppress("HardCodedStringLiteral")
@@ -86,7 +75,8 @@ class ExerciseFormViewModelTests {
     val set = ExerciseSet(exerciseId = exercise.id, value = 0)
 
     val result = runBlocking {
-      ExerciseFormViewModel.Model.fromDao(fetchExercise = { exercise }, fetchSets = { listOf(set) })
+      ExerciseFormViewModel.Model.fromDao(
+        fetchData = { ExerciseWithSets(exercise, listOf(set)) })
     }
 
     assertEquals(
@@ -112,7 +102,8 @@ class ExerciseFormViewModelTests {
     )
 
     val result = runBlocking {
-      ExerciseFormViewModel.Model.fromDao(fetchExercise = { exercise }, fetchSets = { listOf(set) })
+      ExerciseFormViewModel.Model.fromDao(
+        fetchData = { ExerciseWithSets(exercise, listOf(set)) })
     }
 
     assertEquals(
@@ -138,7 +129,8 @@ class ExerciseFormViewModelTests {
     )
 
     val result = runBlocking {
-      ExerciseFormViewModel.Model.fromDao(fetchExercise = { exercise }, fetchSets = { listOf(set) })
+      ExerciseFormViewModel.Model.fromDao(
+        fetchData = { ExerciseWithSets(exercise, listOf(set)) })
     }
 
     assertEquals(
@@ -151,14 +143,5 @@ class ExerciseFormViewModelTests {
         isNew = false
       ), result
     )
-  }
-
-  @Test
-  fun `throws when fetch error`() {
-    assertThrows(Exception::class.java) {
-      runBlocking {
-        ExerciseFormViewModel.Model.fromDao(fetchExercise = { null }, fetchSets = { emptyList() })
-      }
-    }
   }
 }

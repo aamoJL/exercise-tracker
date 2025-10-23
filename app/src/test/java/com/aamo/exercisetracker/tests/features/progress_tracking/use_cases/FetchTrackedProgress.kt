@@ -4,19 +4,20 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.database.entities.TrackedProgressWithValues
 import com.aamo.exercisetracker.features.progress_tracking.ProgressTrackingScreenViewModel
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fetchTrackedProgressFlow
+import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressFormScreenViewModel
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.util.Date
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 @Suppress("HardCodedStringLiteral")
-class FetchTrackedProgress {
+class ProgressTrackingScreenViewModelTests {
   @Test
   fun `returns correct model when timer`() = runBlocking {
     val item = TrackedProgressWithValues(
@@ -33,7 +34,9 @@ class FetchTrackedProgress {
         TrackedProgressValue(id = 3L, progressId = 2L, value = 12, addedDate = Date(12))
       )
     )
-    val result = fetchTrackedProgressFlow(fetchData = { flow { emit(item) } }).first()
+    val result = ProgressTrackingScreenViewModel.Model.fromDao {
+      flow { emit(item) }
+    }.first()
 
     assertEquals(
       ProgressTrackingScreenViewModel.Model(
@@ -62,7 +65,9 @@ class FetchTrackedProgress {
         TrackedProgressValue(id = 3L, progressId = 2L, value = 12, addedDate = Date(12))
       )
     )
-    val result = fetchTrackedProgressFlow(fetchData = { flow { emit(item) } }).first()
+    val result = ProgressTrackingScreenViewModel.Model.fromDao {
+      flow { emit(item) }
+    }.first()
 
     assertEquals(
       ProgressTrackingScreenViewModel.Model(
@@ -91,7 +96,9 @@ class FetchTrackedProgress {
         TrackedProgressValue(id = 3L, progressId = 2L, value = 12, addedDate = Date(12))
       )
     )
-    val result = fetchTrackedProgressFlow(fetchData = { flow { emit(item) } }).first()
+    val result = ProgressTrackingScreenViewModel.Model.fromDao {
+      flow { emit(item) }
+    }.first()
 
     assertEquals(
       ProgressTrackingScreenViewModel.Model(
@@ -103,13 +110,52 @@ class FetchTrackedProgress {
       ), result
     )
   }
+}
+
+@Suppress("HardCodedStringLiteral")
+class TrackedProgressFormScreenViewModelTests {
+  @Test
+  fun `returns correct model when new`() = runBlocking {
+    val defaultUnit = "Default Unit"
+    val model = TrackedProgressFormScreenViewModel.Model(
+      trackedProgressName = String.EMPTY,
+      weeklyInterval = 0,
+      progressValueUnit = defaultUnit,
+      hasStopWatch = false,
+      timerDuration = null,
+      isNew = true
+    )
+
+    val result = TrackedProgressFormScreenViewModel.Model.fromDao(defaultUnit = defaultUnit) {
+      TrackedProgress()
+    }
+
+    assertEquals(model, result)
+  }
 
   @Test
-  fun `throws when fetch error`() {
-    assertThrows(Exception::class.java) {
-      runBlocking {
-        fetchTrackedProgressFlow(fetchData = { flow { emit(null) } }).first()
-      }
+  fun `returns correct model when existing`() = runBlocking {
+    val existing = TrackedProgress(
+      id = 1L,
+      name = "Name",
+      intervalWeeks = 3,
+      unit = "Unit",
+      hasStopWatch = false,
+      timerTime = 4.minutes.inWholeMilliseconds
+    )
+    val expected = TrackedProgressFormScreenViewModel.Model(
+      trackedProgressName = existing.name,
+      weeklyInterval = existing.intervalWeeks,
+      progressValueUnit = existing.unit,
+      hasStopWatch = existing.hasStopWatch,
+      timerDuration = existing.timerTime?.milliseconds,
+      isNew = false
+    )
+
+    val actual = TrackedProgressFormScreenViewModel.Model.fromDao(defaultUnit = String.EMPTY) {
+      existing
     }
+
+    assertEquals(expected, actual)
   }
 }

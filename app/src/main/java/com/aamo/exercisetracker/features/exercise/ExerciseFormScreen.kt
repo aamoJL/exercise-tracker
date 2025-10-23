@@ -59,6 +59,7 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.features.exercise.use_cases.deleteExercise
 import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExercise
@@ -217,23 +218,26 @@ fun NavGraphBuilder.exerciseFormScreen(
     val viewmodel: ExerciseFormViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseFormViewModel(fetchData = {
-          ExerciseFormViewModel.Model.fromDao(fetchExercise = {
-            if (exerciseId == 0L) Exercise(routineId = routineId) else dao.getExercise(exerciseId)
-          }, fetchSets = {
-            if (exerciseId == 0L) listOf(ExerciseSet(exerciseId = it)) else dao.getExerciseSets(it)
-          })
+          ExerciseFormViewModel.Model.fromDao(
+            fetchData = {
+              if (exerciseId == 0L) ExerciseWithSets(
+                exercise = Exercise(routineId = routineId),
+                sets = listOf(ExerciseSet(exerciseId = exerciseId))
+              )
+              else (dao.getExerciseWithSets(exerciseId) ?: throw Exception("Failed to fetch data"))
+            })
         }, saveData = { model ->
           saveExercise(
-            data = model.toDao(exerciseId = exerciseId, routineId = routineId),
-            saveData = { (exercise, sets) ->
-              dao.upsert(exercise, sets).let { result ->
-                (result > 0).onTrue { if (model.isNew) onAdd(result) else onUpdate(result) }
-              }
-            })
+            data = model.toDao(exerciseId = exerciseId, routineId = routineId)
+          ) { (exercise, sets) ->
+            dao.upsert(exercise, sets).let { result ->
+              (result > 0).onTrue { if (model.isNew) onAdd(result) else onUpdate(result) }
+            }
+          }
         }, deleteData = {
-          deleteExercise(
-            fetchData = { Exercise(id = exerciseId, routineId = routineId) },
-            deleteData = { dao.delete(it) > 0 }).onTrue { onDeleted() }
+          deleteExercise(exercise = Exercise(id = exerciseId, routineId = routineId)) {
+            dao.delete(it) > 0
+          }.onTrue { onDeleted() }
         })
       }
     })

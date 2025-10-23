@@ -35,6 +35,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
+import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
@@ -128,16 +129,20 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
       initializer {
         TrackedProgressRecordListScreenViewModel(
           fetchData = {
-            dao.getProgressWithValuesFlow(progressId).map {
-              TrackedProgressRecordListScreenViewModel.Model.fromDao(it)
+            TrackedProgressRecordListScreenViewModel.Model.fromDao {
+              dao.getProgressWithValuesFlow(progressId)
+                .map { it ?: throw Exception("Failed to fetch data") }
             }
           },
           deleteRecordData = { record ->
-            dao.delete(record.toDao(progressId))
+            deleteTrackedProgressValue(record.toDao(progressId)) {
+              dao.delete(*it.toTypedArray()) > 0
+            }
           },
           saveRecordData = { record ->
-            saveTrackedProgressValue(
-              value = record.toDao(progressId), saveData = { dao.upsert(it) > 0 })
+            saveTrackedProgressValue(value = record.toDao(progressId)) {
+              dao.upsert(it).let { true }
+            }
           },
         )
       }

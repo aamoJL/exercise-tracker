@@ -5,7 +5,7 @@ import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressListSc
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-fun fetchTrackedProgressesFlow(
+fun TrackedProgressListScreenViewModel.ProgressModel.Companion.fromDao(
   fetchData: () -> Flow<List<TrackedProgress>>
 ): Flow<List<TrackedProgressListScreenViewModel.ProgressModel>> {
   return fetchData().map { list ->
