@@ -46,8 +46,10 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
-import com.aamo.exercisetracker.database.entities.RoutineSchedule
-import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
+import com.aamo.exercisetracker.features.routine.use_cases.fromDao
+import com.aamo.exercisetracker.features.routine.use_cases.saveRoutine
+import com.aamo.exercisetracker.features.routine.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingIconButton
@@ -79,7 +81,9 @@ class RoutineFormViewModel(
     val routineName: String,
     val selectedDays: List<Day>,
     val isNew: Boolean,
-  )
+  ) {
+    companion object
+  }
 
   class UiState {
     val routineName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
@@ -165,57 +169,21 @@ fun NavGraphBuilder.routineFormScreen(
       initializer {
         RoutineFormViewModel(
           fetchData = {
-            ifElse(condition = routineId == 0L, ifTrue = {
-              RoutineFormViewModel.Model(
-                routineName = String.EMPTY, selectedDays = emptyList(), isNew = true
-              )
-            }, ifFalse = {
-              (dao.getRoutineWithSchedule(routineId)
-                ?: throw Exception("Failed to fetch data")).let { result ->
-                RoutineFormViewModel.Model(
-                  routineName = result.routine.name,
-                  selectedDays = result.schedule.asListOfDays(),
-                  isNew = false
-                )
-              }
-            })
+            RoutineFormViewModel.Model.fromDao {
+              dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
+            }
           },
           saveData = { model ->
-            ifElse(condition = model.isNew, ifTrue = {
-              RoutineWithSchedule(
-                routine = Routine(name = String.EMPTY),
-                schedule = RoutineSchedule(routineId = routineId)
-              )
-            }, ifFalse = {
-              dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
-            }).let { result ->
-              result.copy(
-                routine = result.routine.copy(name = model.routineName),
-                schedule = result.schedule.copy(
-                  sunday = model.selectedDays.contains(Day.SUNDAY),
-                  monday = model.selectedDays.contains(Day.MONDAY),
-                  tuesday = model.selectedDays.contains(Day.TUESDAY),
-                  wednesday = model.selectedDays.contains(Day.WEDNESDAY),
-                  thursday = model.selectedDays.contains(Day.THURSDAY),
-                  friday = model.selectedDays.contains(Day.FRIDAY),
-                  saturday = model.selectedDays.contains(Day.SATURDAY),
-                )
-              )
-            }.let { (routine, schedule) ->
-              checkNotNull(schedule)
+            saveRoutine(model = model.toDao(routineId)) { (routine, schedule) ->
               dao.upsert(routine, schedule).also {
-                onSaved(routineId)
-              }.first > 0L
+                onSaved(it.routineId)
+              }.let { true }
             }
           },
           deleteData = {
-            if (routineId == 0L) false
-
-            (dao.getRoutine(routineId) ?: throw Exception("Failed to fetch data")).let { result ->
-              (dao.delete(result) > 0).onTrue {
-                onDeleted()
-              }
-            }
+            deleteRoutine(Routine(id = routineId)) {
+              dao.delete(*it.toTypedArray()) > 0
+            }.onTrue { onDeleted() }
           },
         )
       }

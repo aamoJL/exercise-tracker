@@ -25,7 +25,7 @@ fun fetchWeeklyRoutineScheduleFlow(
       val dayMillis = currentDate.atStartOfDay().plusDays((i - todayIndex).toLong())
         .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-      map.filter { it.key.schedule.isDaySelected(day.getDayNumber()) }.map { item ->
+      map.filter { it.key.schedule?.isDaySelected(day.getDayNumber()) == true }.map { item ->
         RoutineModel(
           routine = item.key.routine, progress = RoutineModel.Progress(
             finishedCount = item.value.count { date ->

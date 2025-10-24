@@ -48,6 +48,8 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
+import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
+import com.aamo.exercisetracker.features.routine.use_cases.fromDao
 import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SearchTextField
@@ -61,7 +63,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -77,7 +78,9 @@ class RoutineListScreenViewModel(
 ) : ViewModel() {
   data class RoutineModel(
     val routine: Routine, val schedule: RoutineSchedule?, val isSelected: Boolean = false
-  )
+  ) {
+    companion object
+  }
 
   init {
     viewModelScope.launch {
@@ -138,16 +141,14 @@ fun NavGraphBuilder.routineListScreen(
       initializer {
         RoutineListScreenViewModel(
           fetchData = {
-            dao.getRoutinesWithScheduleFlow().map { list ->
-              list.map {
-                RoutineListScreenViewModel.RoutineModel(
-                  routine = it.routine, schedule = it.schedule
-                )
-              }
+            RoutineListScreenViewModel.RoutineModel.fromDao {
+              dao.getRoutinesWithScheduleFlow()
             }
           },
           deleteData = { routines ->
-            dao.delete(*routines.toTypedArray()) > 0
+            deleteRoutine(*routines.toTypedArray()) {
+              dao.delete(*it.toTypedArray()) > 0
+            }
           },
         )
       }

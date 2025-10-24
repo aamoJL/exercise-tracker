@@ -45,6 +45,7 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineWithExerciseProgresses
+import com.aamo.exercisetracker.features.routine.use_cases.fetchRoutineWithSetsAndProgressesFlow
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
@@ -90,13 +91,14 @@ fun NavGraphBuilder.routineScreen(
 ) {
   composable<RoutineScreen> { navStack ->
     val (routineId: Long, showProgress: Boolean) = navStack.toRoute<RoutineScreen>()
-    val context = LocalContext.current.applicationContext
+    val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
     val viewmodel: RoutineScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         RoutineScreenViewModel(
           fetchData = {
-            RoutineDatabase.getDatabase(context).routineDao()
-              .getRoutineWithProgressesFlow(routineId)
+            fetchRoutineWithSetsAndProgressesFlow {
+              dao.getRoutineWithProgressesFlow(routineId)
+            }
           },
         )
       }

@@ -316,7 +316,7 @@ class RoutineDaoTests {
       dao.upsert(progress).let { progress.copy(id = it) }
     }
 
-    val result = dao.getRoutineScheduleWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
 
     checkNotNull(result)
     assertEquals(routine, result.key.routine)
@@ -325,7 +325,7 @@ class RoutineDaoTests {
   }
 
   @Test
-  fun `get schedules with progress without progresses`() = runTest {
+  fun `get schedules should return routines with schedules`() = runTest {
     val routine = Routine(name = "Name").let { routine ->
       dao.upsert(routine).let { routine.copy(id = it) }
     }
@@ -336,7 +336,7 @@ class RoutineDaoTests {
       dao.upsert(schedule).let { schedule.copy(id = it) }
     }
 
-    val result = dao.getRoutineScheduleWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
 
     checkNotNull(result)
     assertEquals(routine, result.key.routine)
@@ -345,7 +345,7 @@ class RoutineDaoTests {
   }
 
   @Test
-  fun `get schedules with progress without exercises`() = runTest {
+  fun `get schedules should not return routines without exercises`() = runTest {
     val routine = Routine(name = "Name").let { routine ->
       dao.upsert(routine).let { routine.copy(id = it) }
     }
@@ -353,7 +353,21 @@ class RoutineDaoTests {
       dao.upsert(schedule).let { schedule.copy(id = it) }
     }
 
-    val result = dao.getRoutineScheduleWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
+
+    assertEquals(null, result)
+  }
+
+  @Test
+  fun `get schedules should not return routines without schedules`() = runTest {
+    val routine = Routine(name = "Name").let { routine ->
+      dao.upsert(routine).let { routine.copy(id = it) }
+    }
+    Exercise(routineId = routine.id).let { exercise ->
+      dao.upsert(exercise).let { exercise.copy(id = it) }
+    }
+
+    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
 
     assertEquals(null, result)
   }

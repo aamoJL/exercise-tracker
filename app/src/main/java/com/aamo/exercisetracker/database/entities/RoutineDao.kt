@@ -9,8 +9,11 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.aamo.exercisetracker.utility.extensions.general.letIf
+import com.aamo.exercisetracker.utility.extensions.general.onNull
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
+
+data class RoutineScheduleIds(val routineId: Long, val scheduleId: Long?)
 
 @Dao
 interface RoutineDao {
@@ -51,11 +54,12 @@ interface RoutineDao {
     """
     SELECT routine.*, progress.finished_date
     FROM routine 
+    JOIN routine_schedule AS schedule ON schedule.routine_id = routine.id 
     JOIN exercise ON exercise.routine_id = routine.id
     LEFT OUTER JOIN exercise_progress AS progress ON progress.exercise_id = exercise.id
   """
   )
-  fun getRoutineScheduleWithProgressFlow(): Flow<Map<RoutineWithSchedule, List<@MapColumn(
+  fun getRoutineSchedulesWithProgressFlow(): Flow<Map<RoutineWithSchedule, List<@MapColumn(
     columnName = "finished_date", tableName = "progress"
   ) Date?>>>
 
@@ -98,16 +102,32 @@ interface RoutineDao {
   }
 
   /**
+   * Inserts or updates routine and it's schedule.
+   * If the new schedule is null, the old schedule will be deleted
+   *
    * @return routine ID and schedule ID as a pair
    */
   @Transaction
-  suspend fun upsert(routine: Routine, schedule: RoutineSchedule): Pair<Long, Long> {
-    val routine = upsert(routine).let { id -> routine.letIf(id != -1L) { routine.copy(id = id) } }
-    val schedule = upsert(schedule.copy(routineId = routine.id)).let { id ->
-      schedule.letIf(id != -1L) { schedule.copy(id = id) }
+  suspend fun upsert(routine: Routine, schedule: RoutineSchedule?): RoutineScheduleIds {
+    val updatedRoutine =
+      upsert(routine).let { id -> routine.letIf(id != -1L) { routine.copy(id = id) } }
+
+    val schedule = schedule.let { new ->
+      this.getScheduleByRoutineId(routineId = updatedRoutine.id)?.let { old ->
+        // update old schedule
+        new?.copy(id = old.id).onNull {
+          // Delete old schedule if the routine does not have new schedule
+          this.delete(old)
+        }
+      } ?: new
+    }?.let { s ->
+      // Save schedule
+      upsert(s.copy(routineId = updatedRoutine.id)).let { id ->
+        s.letIf(id != -1L) { s.copy(id = id) }
+      }
     }
 
-    return Pair(routine.id, schedule.id)
+    return RoutineScheduleIds(updatedRoutine.id, schedule?.id)
   }
   // endregion
 
