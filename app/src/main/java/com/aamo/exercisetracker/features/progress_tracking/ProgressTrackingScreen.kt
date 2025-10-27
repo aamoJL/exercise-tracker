@@ -451,7 +451,7 @@ fun ProgressTrackingScreen(
           Icon(
             painter = painterResource(R.drawable.rounded_cancel_24),
             contentDescription = stringResource(R.string.btn_cancel),
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(48.dp)
           )
         }
         IconButton(
@@ -466,9 +466,9 @@ fun ProgressTrackingScreen(
           modifier = Modifier.size(64.dp)
         ) {
           Icon(
-            painter = painterResource(R.drawable.rounded_timer_play_24),
+            painter = painterResource(R.drawable.rounded_play_circle_24),
             contentDescription = stringResource(R.string.btn_start),
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(48.dp)
           )
         }
       }
@@ -494,7 +494,7 @@ fun ProgressTrackingScreen(
           Icon(
             painter = painterResource(R.drawable.rounded_cancel_24),
             contentDescription = stringResource(R.string.btn_cancel),
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(48.dp)
           )
         }
         ifElse(condition = uiState.stopwatchTimerState.isActive.value, ifTrue = {
@@ -514,7 +514,7 @@ fun ProgressTrackingScreen(
             Icon(
               painter = painterResource(R.drawable.rounded_stop_circle_24),
               contentDescription = stringResource(R.string.btn_stop),
-              modifier = Modifier.size(32.dp)
+              modifier = Modifier.size(48.dp)
             )
           }
         }, ifFalse = {
@@ -530,9 +530,9 @@ fun ProgressTrackingScreen(
             ), modifier = Modifier.size(64.dp)
           ) {
             Icon(
-              painter = painterResource(R.drawable.rounded_timer_play_24),
+              painter = painterResource(R.drawable.rounded_play_circle_24),
               contentDescription = stringResource(R.string.btn_start),
-              modifier = Modifier.size(32.dp)
+              modifier = Modifier.size(48.dp)
             )
           }
         })

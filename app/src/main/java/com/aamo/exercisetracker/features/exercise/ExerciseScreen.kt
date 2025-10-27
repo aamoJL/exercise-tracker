@@ -406,7 +406,7 @@ fun ExerciseScreen(
       Icon(
         painter = painterResource(R.drawable.rounded_cancel_24),
         contentDescription = stringResource(R.string.btn_cancel),
-        modifier = Modifier.size(32.dp)
+        modifier = Modifier.size(48.dp)
       )
     }
     IconButton(
@@ -420,7 +420,7 @@ fun ExerciseScreen(
       Icon(
         painter = painterResource(R.drawable.rounded_stop_circle_24),
         contentDescription = stringResource(R.string.btn_stop),
-        modifier = Modifier.size(32.dp)
+        modifier = Modifier.size(48.dp)
       )
     }
   }
@@ -440,7 +440,7 @@ fun ExerciseScreen(
       Icon(
         painter = painterResource(R.drawable.rounded_stop_circle_24),
         contentDescription = stringResource(R.string.btn_stop),
-        modifier = Modifier.size(32.dp)
+        modifier = Modifier.size(48.dp)
       )
     }
   }
