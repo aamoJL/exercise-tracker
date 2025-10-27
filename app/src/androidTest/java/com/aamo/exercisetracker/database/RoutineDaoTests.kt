@@ -9,13 +9,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseSet
-import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
-import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineDao
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
-import com.aamo.exercisetracker.database.entities.RoutineWithScheduleAndExerciseProgresses
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -153,43 +150,6 @@ class RoutineDaoTests {
   }
 
   @Test
-  fun `get routines with schedule and progresses flow`() = runTest {
-    val routine = Routine(id = 0, name = "New routine")
-
-    dao.upsert(routine = routine).also { insertRoutineId ->
-      val schedule = RoutineSchedule(id = 0, routineId = insertRoutineId)
-
-      dao.upsert(schedule).also { insertScheduleId ->
-        val exercise = Exercise(routineId = insertRoutineId)
-
-        dao.upsert(exercise).also { insertExerciseId ->
-          val progress = ExerciseProgress(
-            exerciseId = insertExerciseId, finishedDate = Calendar.getInstance().time
-          )
-
-          dao.upsert(progress).also { insertProgressId ->
-            dao.getRoutinesWithScheduleAndProgressesFlow().first().also { result ->
-              assertEquals(1, result.size)
-              assertEquals(
-                RoutineWithScheduleAndExerciseProgresses(
-                  routine = routine.copy(id = insertRoutineId),
-                  schedule = schedule.copy(id = insertScheduleId),
-                  exerciseProgresses = listOf(
-                    ExerciseWithProgress(
-                      exercise = exercise.copy(id = insertExerciseId),
-                      progress = progress.copy(id = insertProgressId),
-                    )
-                  ),
-                ), result.first()
-              )
-            }
-          }
-        }
-      }
-    }
-  }
-
-  @Test
   fun `get exercise with sets`() = runTest {
     dao.upsert(routine = Routine(name = "Name")).also { insertRoutineId ->
       val exercise = Exercise(routineId = insertRoutineId)
@@ -270,15 +230,14 @@ class RoutineDaoTests {
       val exercise = Exercise(routineId = insertRoutineId)
       val set = ExerciseSet(exerciseId = 0L)
 
-      dao.upsert(exerciseWithSets = ExerciseWithSets(exercise = exercise, sets = listOf(set)))
-        .also { insertExerciseId ->
-          dao.getExerciseWithSets(exerciseId = insertExerciseId).also { result ->
-            checkNotNull(result)
-            assertEquals(exercise.copy(id = insertExerciseId), result.exercise)
-            assertEquals(1, result.sets.size)
-            result.sets.forEach { assertEquals(insertExerciseId, it.exerciseId) }
-          }
+      dao.upsert(exercise = exercise, sets = listOf(set)).also { insertExerciseId ->
+        dao.getExerciseWithSets(exerciseId = insertExerciseId).also { result ->
+          checkNotNull(result)
+          assertEquals(exercise.copy(id = insertExerciseId), result.exercise)
+          assertEquals(1, result.sets.size)
+          result.sets.forEach { assertEquals(insertExerciseId, it.exerciseId) }
         }
+      }
     }
   }
 
@@ -287,19 +246,18 @@ class RoutineDaoTests {
     val routine = Routine(id = 0, name = "New routine")
     val schedule = RoutineSchedule(id = 0, routineId = 0L)
 
-    dao.upsert(routineWithSchedule = RoutineWithSchedule(routine = routine, schedule = schedule))
-      .also { (insertRoutineId, insertScheduleId) ->
-        checkNotNull(insertScheduleId)
-        dao.getRoutineWithSchedule(routineId = insertRoutineId).also { result ->
-          checkNotNull(result)
-          assertEquals(
-            RoutineWithSchedule(
-              routine = routine.copy(id = insertRoutineId),
-              schedule = schedule.copy(id = insertScheduleId, routineId = insertRoutineId)
-            ), result
-          )
-        }
+    dao.upsert(routine = routine, schedule = schedule).also { (insertRoutineId, insertScheduleId) ->
+      checkNotNull(insertScheduleId)
+      dao.getRoutineWithSchedule(routineId = insertRoutineId).also { result ->
+        checkNotNull(result)
+        assertEquals(
+          RoutineWithSchedule(
+            routine = routine.copy(id = insertRoutineId),
+            schedule = schedule.copy(id = insertScheduleId, routineId = insertRoutineId)
+          ), result
+        )
       }
+    }
   }
 
   @Test
@@ -307,16 +265,16 @@ class RoutineDaoTests {
     val routine = Routine(id = 0, name = "New routine")
     val schedule = RoutineSchedule(id = 0, routineId = 0L)
 
-    dao.upsertAndGet(
-      routineWithSchedule = RoutineWithSchedule(routine = routine, schedule = schedule)
-    ).also { result ->
-      checkNotNull(result)
-      checkNotNull(result.schedule)
-      assertEquals(
-        RoutineWithSchedule(
-          routine = routine.copy(id = 1L), schedule = schedule.copy(id = 1L, routineId = 1L)
-        ), result
-      )
+    dao.upsert(routine = routine, schedule = schedule).also { (rId, _) ->
+      dao.getRoutineWithSchedule(routineId = rId).also { result ->
+        checkNotNull(result)
+        checkNotNull(result.schedule)
+        assertEquals(
+          RoutineWithSchedule(
+            routine = routine.copy(id = 1L), schedule = schedule.copy(id = 1L, routineId = 1L)
+          ), result
+        )
+      }
     }
   }
   // endregion
@@ -342,4 +300,82 @@ class RoutineDaoTests {
     dao.upsert(ExerciseSet(exerciseId = 1L))
   }
   // endregion
+
+  @Test
+  fun `get schedules with progress with progresses`() = runTest {
+    val routine = Routine(name = "Name").let { routine ->
+      dao.upsert(routine).let { routine.copy(id = it) }
+    }
+    val schedule = RoutineSchedule(routineId = routine.id).let { schedule ->
+      dao.upsert(schedule).let { schedule.copy(id = it) }
+    }
+    val exercise = Exercise(routineId = routine.id).let { exercise ->
+      dao.upsert(exercise).let { exercise.copy(id = it) }
+    }
+    val progress = ExerciseProgress(exerciseId = exercise.id).let { progress ->
+      dao.upsert(progress).let { progress.copy(id = it) }
+    }
+
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
+
+    checkNotNull(result)
+    assertEquals(routine, result.key.routine)
+    assertEquals(schedule, result.key.schedule)
+    assertEquals(progress.finishedDate, result.value.first().progress?.finishedDate)
+  }
+
+  @Test
+  fun `get schedules should return routines with schedules`() = runTest {
+    val routine = Routine(name = "Name").let { routine ->
+      dao.upsert(routine).let { routine.copy(id = it) }
+    }
+    val exercises = listOf(
+      Exercise(routineId = routine.id), Exercise(routineId = routine.id)
+    ).also { exercises ->
+      exercises.forEach { dao.upsert(it) }
+    }
+
+    ExerciseProgress(exerciseId = 1L).let { progress ->
+      dao.upsert(progress).let { progress.copy(id = it) }
+    }
+
+    val schedule = RoutineSchedule(routineId = routine.id).let { schedule ->
+      dao.upsert(schedule).let { schedule.copy(id = it) }
+    }
+
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
+
+    checkNotNull(result)
+    assertEquals(routine, result.key.routine)
+    assertEquals(schedule, result.key.schedule)
+    assertEquals(exercises.size, result.value.size)
+  }
+
+  @Test
+  fun `get schedules should not return routines without exercises`() = runTest {
+    val routine = Routine(name = "Name").let { routine ->
+      dao.upsert(routine).let { routine.copy(id = it) }
+    }
+    RoutineSchedule(routineId = routine.id).let { schedule ->
+      dao.upsert(schedule).let { schedule.copy(id = it) }
+    }
+
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
+
+    assertEquals(null, result)
+  }
+
+  @Test
+  fun `get schedules should not return routines without schedules`() = runTest {
+    val routine = Routine(name = "Name").let { routine ->
+      dao.upsert(routine).let { routine.copy(id = it) }
+    }
+    Exercise(routineId = routine.id).let { exercise ->
+      dao.upsert(exercise).let { exercise.copy(id = it) }
+    }
+
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
+
+    assertEquals(null, result)
+  }
 }

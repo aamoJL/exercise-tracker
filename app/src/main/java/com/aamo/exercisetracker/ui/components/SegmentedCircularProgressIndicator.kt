@@ -47,8 +47,8 @@ import kotlin.math.max
 @Composable
 fun SegmentedCircularProgressIndicator(
   progress: () -> Float,
-  segments: Int = 1,
   modifier: Modifier = Modifier,
+  segments: Int = 1,
   color: Color = ProgressIndicatorDefaults.circularColor,
   strokeWidth: Dp = ProgressIndicatorDefaults.CircularStrokeWidth,
   trackColor: Color = ProgressIndicatorDefaults.circularDeterminateTrackColor,

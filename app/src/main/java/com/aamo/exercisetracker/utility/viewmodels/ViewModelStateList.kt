@@ -51,7 +51,6 @@ class ViewModelStateList<T> {
   /**
    * Adds validation predicate to the state
    */
-  @Suppress("unused", "HardCodedStringLiteral")
   fun validation(predicate: (T) -> T?): ViewModelStateList<T> {
     val oldPredicate = validationPredicate
 

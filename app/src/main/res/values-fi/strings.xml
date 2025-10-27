@@ -27,7 +27,6 @@
     <string name="ph_reps">toistoa</string>
     <string name="ph_minutes">minuuttia</string>
     <string name="cd_edit_exercise">Muokkaa treeniä</string>
-    <string name="btn_finish">Lopeta</string>
     <string name="title_rest">Tauko</string>
     <string name="btn_stop">Pysäytä</string>
     <string name="title_set_timer">Sarjan ajastin</string>
@@ -76,7 +75,6 @@
     <string name="label_progress_unit">Kehityksen yksikkö</string>
     <string name="label_weekly_interval_optional">Aikaväli (vapaaehtoinen)</string>
     <string name="cd_edit_tracked_progress">Muokkaa kehityksen seurantaa</string>
-    <string name="btn_add">Lisää</string>
     <string name="dialog_title_add_new_record">Lisää uusi merkintä</string>
     <string name="cd_add">Lisää</string>
     <string name="cd_show_records">Näytä merkinnät</string>
@@ -87,7 +85,6 @@
     <string name="btn_save">Tallenna</string>
     <string name="cd_edit_record">Muokkaa merkintää</string>
     <string name="btn_select">Valitse</string>
-    <string name="btn_change">Vaihda</string>
     <string name="cd_change_date">Vaihda päivämäärää</string>
     <string name="label_hours">Tuntia</string>
     <string name="label_minutes">Minuuttia</string>

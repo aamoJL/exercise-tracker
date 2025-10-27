@@ -27,7 +27,6 @@
     <string name="ph_reps">reps</string>
     <string name="ph_minutes">minutes</string>
     <string name="cd_edit_exercise">Edit exercise</string>
-    <string name="btn_finish">Finish</string>
     <string name="title_rest">Rest</string>
     <string name="btn_stop">Stop</string>
     <string name="title_set_timer">Set timer</string>
@@ -76,7 +75,6 @@
     <string name="suffix_weeks">weeks</string>
     <string name="label_progress_unit">Progress unit</string>
     <string name="cd_edit_tracked_progress">Edit tracked progress</string>
-    <string name="btn_add">Add</string>
     <string name="dialog_title_add_new_record">Add new record</string>
     <string name="cd_add">Add</string>
     <string name="cd_show_records">Show records</string>
@@ -87,7 +85,6 @@
     <string name="btn_save">Save</string>
     <string name="cd_edit_record">Edit record</string>
     <string name="btn_select">Select</string>
-    <string name="btn_change">Change</string>
     <string name="cd_change_date">Change date</string>
     <string name="label_hours">Hours</string>
     <string name="label_minutes">Minutes</string>

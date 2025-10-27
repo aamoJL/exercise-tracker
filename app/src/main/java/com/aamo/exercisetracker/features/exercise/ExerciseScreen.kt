@@ -71,7 +71,8 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
-import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
+import com.aamo.exercisetracker.features.exercise.use_cases.saveExerciseProgress
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.GesturelessModalBottomSheet
@@ -113,6 +114,8 @@ class ExerciseScreenViewModel(
       val restDuration: Duration?,
       val unit: String
     )
+
+    companion object
   }
 
   class TimerState(val duration: Duration) {
@@ -236,33 +239,18 @@ fun NavGraphBuilder.exerciseScreen(
     val viewmodel: ExerciseScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         ExerciseScreenViewModel(fetchData = {
-          (dao.getExerciseWithProgressAndSets(exerciseId)
-            ?: throw Exception("Failed to fetch data")).let { result ->
-            ExerciseScreenViewModel.Model(
-              exerciseName = result.exercise.name,
-              routineId = result.exercise.routineId,
-              sets = result.sets.map { set ->
-                ExerciseScreenViewModel.Model.SetModel(
-                  repetitions = ifElse(
-                    condition = set.valueType == ExerciseSet.ValueType.REPETITION,
-                    ifTrue = { set.value },
-                    ifFalse = { null }),
-                  setDuration = ifElse(
-                    condition = set.valueType == ExerciseSet.ValueType.COUNTDOWN,
-                    ifTrue = { set.value.milliseconds },
-                    ifFalse = { null }),
-                  restDuration = result.exercise.restDuration,
-                  unit = set.unit
-                )
-              })
+          ExerciseScreenViewModel.Model.fromDao {
+            dao.getExerciseWithSets(exerciseId) ?: throw Exception("Failed to fetch data")
           }
         }, saveProgress = {
-          dao.upsert(Calendar.getInstance().time.let { finishedDate ->
-            dao.getExerciseProgressByExerciseId(exerciseId)?.copy(finishedDate = finishedDate)
-              ?: ExerciseProgress(exerciseId = exerciseId, finishedDate = finishedDate)
-          }).also {
-            onBack()
-          }
+          saveExerciseProgress(
+            finishedDate = Calendar.getInstance().time,
+            progress = dao.getExerciseProgressByExerciseId(exerciseId) ?: ExerciseProgress(
+              exerciseId = exerciseId
+            )
+          ) {
+            dao.upsert(it).let { true }
+          }.onTrue { onBack() }
         })
       }
     })

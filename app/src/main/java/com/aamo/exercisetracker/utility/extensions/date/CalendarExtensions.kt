@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.utility.extensions.date
 import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import com.aamo.exercisetracker.R
+import java.time.DayOfWeek
 import java.util.Calendar
 
 @Keep
@@ -54,4 +55,16 @@ fun Calendar.getLocalDayOrder(): List<Day> {
   val beforeLocalFistDay = listOfDays.slice(firstDayOfWeekIndex..listOfDays.count() - 1)
 
   return beforeLocalFistDay.plus(afterLocalFirstDay)
+}
+
+fun DayOfWeek.toDay(): Day {
+  return when (this) {
+    DayOfWeek.FRIDAY -> Day.FRIDAY
+    DayOfWeek.MONDAY -> Day.MONDAY
+    DayOfWeek.SATURDAY -> Day.SATURDAY
+    DayOfWeek.SUNDAY -> Day.SUNDAY
+    DayOfWeek.THURSDAY -> Day.THURSDAY
+    DayOfWeek.TUESDAY -> Day.TUESDAY
+    DayOfWeek.WEDNESDAY -> Day.WEDNESDAY
+  }
 }

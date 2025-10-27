@@ -10,11 +10,12 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.aamo.exercisetracker.utility.extensions.date.Day
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 
 @Entity(tableName = "routine")
 data class Routine(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
-  @ColumnInfo(name = "name") val name: String,
+  @ColumnInfo(name = "name") val name: String = String.EMPTY,
 )
 
 @Entity(
@@ -62,14 +63,6 @@ data class RoutineWithSchedule(
 
 data class RoutineWithExerciseProgresses(
   @Embedded val routine: Routine,
-  @Relation(entity = Exercise::class, parentColumn = "id", entityColumn = "routine_id")
-  val exerciseProgresses: List<ExerciseWithProgress>
-)
-
-data class RoutineWithScheduleAndExerciseProgresses(
-  @Embedded val routine: Routine,
-  @Relation(entity = RoutineSchedule::class, parentColumn = "id", entityColumn = "routine_id")
-  val schedule: RoutineSchedule?,
   @Relation(entity = Exercise::class, parentColumn = "id", entityColumn = "routine_id")
   val exerciseProgresses: List<ExerciseWithProgress>
 )
