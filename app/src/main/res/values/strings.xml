@@ -97,4 +97,5 @@
     <string name="title_stopwatch">Stopwatch</string>
     <string name="title_scheduled_trackers">Scheduled trackers</string>
     <string name="x_count_selected">%1$d selected</string>
+    <string name="cd_show_unfinished_tracked_progresses">Show unfinished tracked progresses</string>
 </resources>

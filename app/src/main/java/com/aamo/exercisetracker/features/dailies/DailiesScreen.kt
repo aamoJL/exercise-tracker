@@ -2,6 +2,7 @@ package com.aamo.exercisetracker.features.dailies
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -19,20 +19,26 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +65,7 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel.RoutineModel
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
+import com.aamo.exercisetracker.ui.components.CustomModalBottomSheet
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
@@ -156,7 +163,7 @@ fun NavGraphBuilder.dailiesScreen(
   }
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun DailiesScreen(
   weeklySchedule: WeeklySchedule,
@@ -171,6 +178,8 @@ fun DailiesScreen(
   val todayIndex = days.indexOf(Day.today())
   val pagerState =
     rememberPagerState(pageCount = { days.size }, initialPage = days.indexOf(initialDay))
+
+  var showTrackedProgressSheet by remember { mutableStateOf(false) }
 
   Surface(modifier = modifier) {
     Column(
@@ -271,46 +280,73 @@ fun DailiesScreen(
               }
             }
           }
-        }
-      }
-      if (trackedProgresses.isNotEmpty()) {
-        Surface(
-          tonalElevation = 2.dp,
-          shape = RoundedCornerShape(8.dp),
-          modifier = Modifier
-            .padding(horizontal = 8.dp)
-            .fillMaxWidth()
-            .heightIn(max = 250.dp)
-        ) {
-          Column {
-            Text(
-              text = stringResource(R.string.title_scheduled_trackers),
-              textAlign = TextAlign.Center,
-              style = MaterialTheme.typography.headlineSmall,
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 16.dp)
-            )
-            LazyColumn(
-              modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 8.dp)
-            ) {
-              items(items = trackedProgresses, key = { it.id }) { progress ->
-                Button(
-                  onClick = { onTrackedProgressSelected(progress.id) },
-                  shape = RoundedCornerShape(8.dp),
-                  colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                  ),
-                  modifier = Modifier.fillMaxWidth()
-                ) {
-                  Text(text = progress.name, fontWeight = FontWeight.Bold)
+
+          if (isToday && trackedProgresses.isNotEmpty()) {
+            Box(contentAlignment = Alignment.BottomEnd, modifier = Modifier.padding(16.dp)) {
+              FloatingActionButton(
+                onClick = { showTrackedProgressSheet = true },
+                containerColor = ButtonDefaults.buttonColors().containerColor,
+                modifier = Modifier.minimumInteractiveComponentSize()
+              ) {
+                BadgedBox(
+                  badge = {
+                    Badge(
+                      containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                      contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    ) { Text(trackedProgresses.size.toString()) }
+                  }) {
+                  Icon(
+                    painter = painterResource(R.drawable.rounded_bar_chart_24),
+                    contentDescription = stringResource(R.string.cd_show_unfinished_tracked_progresses)
+                  )
                 }
               }
             }
           }
+        }
+      }
+    }
+    UnfinishedTrackedProgressesModalBottomSheet(
+      trackedProgresses = trackedProgresses,
+      show = showTrackedProgressSheet,
+      onDismissRequest = { showTrackedProgressSheet = false },
+      onTrackedProgressSelected = { onTrackedProgressSelected(it) },
+    )
+  }
+}
+
+@Composable
+fun UnfinishedTrackedProgressesModalBottomSheet(
+  trackedProgresses: List<TrackedProgress>,
+  show: Boolean,
+  onDismissRequest: () -> Unit,
+  onTrackedProgressSelected: (id: Long) -> Unit,
+) {
+  CustomModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
+    Text(
+      text = stringResource(R.string.title_scheduled_trackers),
+      textAlign = TextAlign.Center,
+      style = MaterialTheme.typography.headlineSmall,
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 8.dp, vertical = 16.dp)
+    )
+    LazyColumn(
+      modifier = Modifier
+        .padding(horizontal = 16.dp)
+        .padding(bottom = 8.dp)
+    ) {
+      items(items = trackedProgresses, key = { it.id }) { progress ->
+        Button(
+          onClick = { onTrackedProgressSelected(progress.id) },
+          shape = RoundedCornerShape(8.dp),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary,
+          ),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Text(text = progress.name, fontWeight = FontWeight.Bold)
         }
       }
     }
