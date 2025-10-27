@@ -316,12 +316,12 @@ class RoutineDaoTests {
       dao.upsert(progress).let { progress.copy(id = it) }
     }
 
-    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
 
     checkNotNull(result)
     assertEquals(routine, result.key.routine)
     assertEquals(schedule, result.key.schedule)
-    assertEquals(progress.finishedDate, result.value.first())
+    assertEquals(progress.finishedDate, result.value.first().progress?.finishedDate)
   }
 
   @Test
@@ -329,19 +329,26 @@ class RoutineDaoTests {
     val routine = Routine(name = "Name").let { routine ->
       dao.upsert(routine).let { routine.copy(id = it) }
     }
-    Exercise(routineId = routine.id).let { exercise ->
-      dao.upsert(exercise).let { exercise.copy(id = it) }
+    val exercises = listOf(
+      Exercise(routineId = routine.id), Exercise(routineId = routine.id)
+    ).also { exercises ->
+      exercises.forEach { dao.upsert(it) }
     }
+
+    ExerciseProgress(exerciseId = 1L).let { progress ->
+      dao.upsert(progress).let { progress.copy(id = it) }
+    }
+
     val schedule = RoutineSchedule(routineId = routine.id).let { schedule ->
       dao.upsert(schedule).let { schedule.copy(id = it) }
     }
 
-    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
 
     checkNotNull(result)
     assertEquals(routine, result.key.routine)
     assertEquals(schedule, result.key.schedule)
-    assert(result.value.isEmpty())
+    assertEquals(exercises.size, result.value.size)
   }
 
   @Test
@@ -353,7 +360,7 @@ class RoutineDaoTests {
       dao.upsert(schedule).let { schedule.copy(id = it) }
     }
 
-    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
 
     assertEquals(null, result)
   }
@@ -367,7 +374,7 @@ class RoutineDaoTests {
       dao.upsert(exercise).let { exercise.copy(id = it) }
     }
 
-    val result = dao.getRoutineSchedulesWithProgressFlow().first().entries.firstOrNull()
+    val result = dao.getRoutineSchedulesWithProgressesFlow().first().entries.firstOrNull()
 
     assertEquals(null, result)
   }

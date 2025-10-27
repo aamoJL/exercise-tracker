@@ -4,14 +4,12 @@ package com.aamo.exercisetracker.database.entities
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import kotlinx.coroutines.flow.Flow
-import java.util.Date
 
 data class RoutineScheduleIds(val routineId: Long, val scheduleId: Long?)
 
@@ -52,16 +50,14 @@ interface RoutineDao {
   @Transaction
   @Query(
     """
-    SELECT routine.*, progress.finished_date
+    SELECT routine.*, exercise.*, progress.*
     FROM routine 
     JOIN routine_schedule AS schedule ON schedule.routine_id = routine.id 
     JOIN exercise ON exercise.routine_id = routine.id
     LEFT OUTER JOIN exercise_progress AS progress ON progress.exercise_id = exercise.id
   """
   )
-  fun getRoutineSchedulesWithProgressFlow(): Flow<Map<RoutineWithSchedule, List<@MapColumn(
-    columnName = "finished_date", tableName = "progress"
-  ) Date?>>>
+  fun getRoutineSchedulesWithProgressesFlow(): Flow<Map<RoutineWithSchedule, List<ExerciseWithProgress>>>
 
   @Transaction
   @Query("SELECT * FROM exercise WHERE id = :exerciseId")

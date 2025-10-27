@@ -132,7 +132,7 @@ fun NavGraphBuilder.dailiesScreen(
           fetchWeeklyRoutineScheduleFlow(
             weekDays = Calendar.getInstance().getLocalDayOrder(), currentDate = LocalDate.now()
           ) {
-            routineDao.getRoutineSchedulesWithProgressFlow()
+            routineDao.getRoutineSchedulesWithProgressesFlow()
           }
         }, fetchTrackedProgresses = {
           fetchUnfinishedTrackedProgressesFlow(currentTimeMillis = System.currentTimeMillis()) {

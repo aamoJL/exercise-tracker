@@ -46,6 +46,7 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
+import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
 import com.aamo.exercisetracker.features.routine.use_cases.fromDao
 import com.aamo.exercisetracker.features.routine.use_cases.saveRoutine
@@ -170,7 +171,8 @@ fun NavGraphBuilder.routineFormScreen(
         RoutineFormViewModel(
           fetchData = {
             RoutineFormViewModel.Model.fromDao {
-              dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
+              if (routineId == 0L) RoutineWithSchedule(routine = Routine(), schedule = null)
+              else dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
             }
           },
           saveData = { model ->

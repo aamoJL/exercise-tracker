@@ -10,12 +10,12 @@ fun fetchUnfinishedTrackedProgressesFlow(
   currentTimeMillis: Long, getDataFlow: () -> Flow<Map<TrackedProgress, List<TrackedProgressValue>>>
 ): Flow<List<TrackedProgress>> {
   return getDataFlow().map { map ->
-    map.filter { item ->
-      if (item.key.intervalWeeks == 0) false
+    map.filter { (progress, values) ->
+      if (progress.intervalWeeks == 0) false
       else {
-        item.value.maxByOrNull { value -> value.addedDate }?.addedDate?.time?.let { addedMillis -> currentTimeMillis - addedMillis >= item.key.intervalWeeks.weeks.inWholeMilliseconds }
+        values.maxByOrNull { value -> value.addedDate }?.addedDate?.time?.let { addedMillis -> currentTimeMillis - addedMillis >= progress.intervalWeeks.weeks.inWholeMilliseconds }
           ?: true
       }
-    }.map { it.key }
+    }.map { (progress, _) -> progress }.sortedBy { it.name }
   }
 }

@@ -1,5 +1,8 @@
 package com.aamo.exercisetracker.tests.features.dailies.use_cases
 
+import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseProgress
+import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
@@ -28,7 +31,13 @@ class FetchWeeklyRoutineSchedule {
       RoutineWithSchedule(
         routine = Routine(id = 0, name = "Routine"),
         schedule = RoutineSchedule(routineId = 0, tuesday = true, wednesday = true)
-      ) to listOf(currentTime)
+      ) to listOf(
+        ExerciseWithProgress(
+          exercise = Exercise(routineId = 0L), progress = ExerciseProgress(
+            exerciseId = 0L, finishedDate = currentTime
+          )
+        )
+      )
     )
 
     val result = runBlocking {
