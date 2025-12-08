@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components
+package com.aamo.exercisetracker.ui.components.inputs
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton

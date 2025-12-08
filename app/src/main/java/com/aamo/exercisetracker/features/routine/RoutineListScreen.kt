@@ -50,9 +50,9 @@ import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
 import com.aamo.exercisetracker.features.routine.use_cases.fromDao
-import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.SearchTextField
+import com.aamo.exercisetracker.ui.components.inputs.SearchTextField
+import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
@@ -264,8 +264,12 @@ private fun UnselectionTopBar(
   onFilterChanged: (String) -> Unit,
   onAdd: () -> Unit,
 ) {
-  TopAppBar(title = { null }, actions = {
-    SearchTextField(value = filterWord, onValueChange = onFilterChanged)
+  TopAppBar(title = { }, actions = {
+    SearchTextField(
+      value = filterWord,
+      placeholder = stringResource(R.string.ph_search),
+      onValueChange = onFilterChanged
+    )
     IconButton(onClick = onAdd) {
       Icon(
         painter = painterResource(R.drawable.rounded_add_24),

@@ -1,18 +1,29 @@
 @file:Suppress("HardCodedStringLiteral")
 
-package com.aamo.exercisetracker.database.entities
+package com.aamo.exercisetracker.database.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
+import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseProgress
+import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
+import com.aamo.exercisetracker.database.entities.ExerciseWithProgressAndSets
+import com.aamo.exercisetracker.database.entities.ExerciseWithSets
+import com.aamo.exercisetracker.database.entities.Routine
+import com.aamo.exercisetracker.database.entities.RoutineSchedule
+import com.aamo.exercisetracker.database.entities.RoutineWithExerciseProgresses
+import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.utility.extensions.general.letIf
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import kotlinx.coroutines.flow.Flow
 
 data class RoutineScheduleIds(val routineId: Long, val scheduleId: Long?)
 
+// TODO: remove unused
 @Dao
 interface RoutineDao {
   // region GET

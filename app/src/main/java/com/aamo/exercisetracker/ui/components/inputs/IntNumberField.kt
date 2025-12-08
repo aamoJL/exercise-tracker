@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components
+package com.aamo.exercisetracker.ui.components.inputs
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardActions

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components
+package com.aamo.exercisetracker.ui.components.modals
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope

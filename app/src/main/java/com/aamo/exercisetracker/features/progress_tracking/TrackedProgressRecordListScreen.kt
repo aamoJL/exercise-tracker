@@ -39,9 +39,9 @@ import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrack
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
-import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
+import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import kotlinx.coroutines.ExperimentalCoroutinesApi

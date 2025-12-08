@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components
+package com.aamo.exercisetracker.ui.components.inputs
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -13,12 +13,15 @@ import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 
 @Composable
 fun SearchTextField(
-  value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier
+  value: String,
+  placeholder: String,
+  onValueChange: (String) -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   OutlinedTextField(
     value = value,
     onValueChange = onValueChange,
-    placeholder = { Text(stringResource(R.string.ph_search)) },
+    placeholder = { Text(placeholder) },
     leadingIcon = {
       Icon(
         painter = painterResource(R.drawable.rounded_search_24), contentDescription = null

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components
+package com.aamo.exercisetracker.ui.components.modals
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults

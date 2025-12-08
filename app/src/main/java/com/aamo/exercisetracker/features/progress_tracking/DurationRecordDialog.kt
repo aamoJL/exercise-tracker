@@ -28,7 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
-import com.aamo.exercisetracker.ui.components.DurationNumberField
+import com.aamo.exercisetracker.ui.components.inputs.DurationNumberField
 import java.text.SimpleDateFormat
 import java.util.Date
 import kotlin.time.Duration

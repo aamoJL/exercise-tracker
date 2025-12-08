@@ -1,13 +1,17 @@
 @file:Suppress("HardCodedStringLiteral")
 
-package com.aamo.exercisetracker.database.entities
+package com.aamo.exercisetracker.database.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
+import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.database.entities.TrackedProgressValue
+import com.aamo.exercisetracker.database.entities.TrackedProgressWithValues
 import kotlinx.coroutines.flow.Flow
 
+// TODO: remove unused
 @Dao
 interface TrackedProgressDao {
   @Query("SELECT * FROM tracked_progress WHERE id = :id")

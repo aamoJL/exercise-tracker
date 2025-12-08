@@ -51,12 +51,12 @@ import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
 import com.aamo.exercisetracker.features.routine.use_cases.fromDao
 import com.aamo.exercisetracker.features.routine.use_cases.saveRoutine
 import com.aamo.exercisetracker.features.routine.use_cases.toDao
-import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.DeleteDialog
-import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.UnsavedDialog
-import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
+import com.aamo.exercisetracker.ui.components.inputs.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
+import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
@@ -90,9 +90,9 @@ class RoutineFormViewModel(
     val routineName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
     val selectedDays = ViewModelStateList<Day>().unique().onChange { onUnsavedChanges() }
     var isNew by mutableStateOf(true)
-    var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
+    var savingState by mutableStateOf(SavingState())
 
-    private fun canSave(): Boolean {
+    fun canSave(): Boolean {
       return when {
         savingState.state == SavingState.State.SAVING -> false
         routineName.value.isEmpty() -> false
@@ -128,7 +128,7 @@ class RoutineFormViewModel(
    * Saves the routine to the database
    */
   fun save() {
-    if (!uiState.savingState.canSave()) return
+    if (!uiState.canSave()) return
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
@@ -263,7 +263,7 @@ fun RoutineFormScreen(
       LoadingIconButton(
         onClick = onSave,
         isLoading = uiState.savingState.state == SavingState.State.SAVING,
-        enabled = uiState.savingState.canSave()
+        enabled = uiState.canSave()
       ) {
         Icon(
           painter = painterResource(R.drawable.round_done_24),

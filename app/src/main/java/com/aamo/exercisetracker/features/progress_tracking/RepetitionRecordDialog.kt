@@ -29,7 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
-import com.aamo.exercisetracker.ui.components.IntNumberField
+import com.aamo.exercisetracker.ui.components.inputs.IntNumberField
 import java.text.SimpleDateFormat
 import java.util.Date
 

@@ -12,7 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
-import com.aamo.exercisetracker.utility.tags.ERROR_TAG
+import com.aamo.exercisetracker.utility.tags.DebugTag
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -30,7 +30,7 @@ class StopwatchTimerService() : Service() {
   private val binder = BinderHelper()
   private var state: TimerState? = null
 
-  override fun onBind(p0: Intent?): IBinder? {
+  override fun onBind(p0: Intent?): IBinder {
     return binder
   }
 
@@ -104,7 +104,7 @@ class StopwatchTimerService() : Service() {
     return (ActivityCompat.checkSelfPermission(
       this, Manifest.permission.POST_NOTIFICATIONS
     ) != PackageManager.PERMISSION_DENIED).onFalse {
-      Log.e(ERROR_TAG, "Permission denied")
+      Log.e(DebugTag.ERROR.name, "Permission denied")
     }
   }
 

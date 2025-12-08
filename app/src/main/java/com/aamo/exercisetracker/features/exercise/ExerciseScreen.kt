@@ -74,10 +74,10 @@ import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExerciseProgress
 import com.aamo.exercisetracker.services.CountDownTimerService
-import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.GesturelessModalBottomSheet
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
+import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.modals.GesturelessModalBottomSheet
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
@@ -85,7 +85,7 @@ import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.tags.ERROR_TAG
+import com.aamo.exercisetracker.utility.tags.DebugTag
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -119,7 +119,7 @@ class ExerciseScreenViewModel(
   }
 
   class TimerState(val duration: Duration) {
-    val isActive = ViewModelState(false).validation { value -> value && duration > 0.seconds }
+    val isActive = ViewModelState(false).transformation { value -> value && duration > 0.seconds }
   }
 
   class UiState {
@@ -170,7 +170,7 @@ class ExerciseScreenViewModel(
   fun finishExercise() {
     viewModelScope.launch {
       runCatching { saveProgress() }.onFailure { error ->
-        Log.e(ERROR_TAG, error.message.toString())
+        Log.e(DebugTag.ERROR.name, error.message.toString())
       }
     }
   }
@@ -189,7 +189,7 @@ class ExerciseScreenViewModel(
         nextSetState.set.onNull {
           // Was final set, no resting
           setState.update(nextSetState)
-        }.onNotNull { set ->
+        }.onNotNull { _ ->
           setState.value.restTimer.onNotNull { restTimer ->
             startTimer(
               countDownTimerService = countDownTimerService,

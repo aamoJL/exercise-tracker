@@ -52,15 +52,15 @@ import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrack
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
-import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.DeleteDialog
-import com.aamo.exercisetracker.ui.components.DurationNumberField
-import com.aamo.exercisetracker.ui.components.DurationNumberFieldFields
-import com.aamo.exercisetracker.ui.components.IntNumberField
-import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.UnsavedDialog
-import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.inputs.DurationNumberField
+import com.aamo.exercisetracker.ui.components.inputs.DurationNumberFieldFields
+import com.aamo.exercisetracker.ui.components.inputs.IntNumberField
+import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
+import com.aamo.exercisetracker.ui.components.inputs.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
+import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.equalsAny
@@ -107,7 +107,7 @@ class TrackedProgressFormScreenViewModel(
       if (it != ProgressType.TIMER) timerDuration.update(0.seconds)
     }
     val timerDuration = ViewModelState(0.seconds).onChange { onUnsavedChanges() }
-    var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
+    var savingState by mutableStateOf(SavingState())
     var isNew by mutableStateOf(false)
 
     private fun onUnsavedChanges() {
@@ -116,7 +116,7 @@ class TrackedProgressFormScreenViewModel(
       }
     }
 
-    private fun canSave(): Boolean {
+    fun canSave(): Boolean {
       if (progressType.value == ProgressType.TIMER && timerDuration.value < 1.seconds) return false
       if (savingState.state == SavingState.State.SAVING) return false
       if (progressName.value.isEmpty()) return false
@@ -150,7 +150,7 @@ class TrackedProgressFormScreenViewModel(
   }
 
   fun save() {
-    if (!uiState.savingState.canSave()) return
+    if (!uiState.canSave()) return
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
@@ -335,7 +335,7 @@ fun TrackedProgressFormScreen(
       LoadingIconButton(
         onClick = onSave,
         isLoading = uiState.savingState.state == SavingState.State.SAVING,
-        enabled = uiState.savingState.canSave()
+        enabled = uiState.canSave()
       ) {
         Icon(
           painter = painterResource(R.drawable.round_done_24),

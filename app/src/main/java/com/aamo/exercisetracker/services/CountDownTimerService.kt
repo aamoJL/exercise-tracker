@@ -16,7 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
-import com.aamo.exercisetracker.utility.tags.ERROR_TAG
+import com.aamo.exercisetracker.utility.tags.DebugTag
 import java.util.Timer
 import kotlin.concurrent.timerTask
 
@@ -36,7 +36,7 @@ class CountDownTimerService() : Service() {
   private val binder = BinderHelper()
   private var state: TimerState? = null
 
-  override fun onBind(p0: Intent?): IBinder? {
+  override fun onBind(p0: Intent?): IBinder {
     return binder
   }
 
@@ -131,7 +131,7 @@ class CountDownTimerService() : Service() {
         // Vibration without attributes does not work, if the app is on the background
         vibrate(vibration, attributes)
       }.onFalse {
-        Log.e(ERROR_TAG, "Device does not have a vibrator")
+        Log.e(DebugTag.ERROR.name, "Device does not have a vibrator")
       }
     }
   }
@@ -141,7 +141,7 @@ class CountDownTimerService() : Service() {
     return (ActivityCompat.checkSelfPermission(
       this, Manifest.permission.POST_NOTIFICATIONS
     ) != PackageManager.PERMISSION_DENIED).onFalse {
-      Log.e(ERROR_TAG, "Permission denied")
+      Log.e(DebugTag.ERROR.name, "Permission denied")
     }
   }
 

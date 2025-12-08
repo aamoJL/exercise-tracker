@@ -1,21 +1,19 @@
 @file:Suppress("HardCodedStringLiteral")
 
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
-  kotlin("plugin.serialization") version "2.0.21"
   alias(libs.plugins.room)
   alias(libs.plugins.google.devtools.ksp)
+  alias(libs.plugins.serialization)
 }
 
 android {
   namespace = "com.aamo.exercisetracker"
   compileSdk = 36
-
-  @Suppress("UnstableApiUsage") androidResources {
-    generateLocaleConfig = true
-  }
 
   defaultConfig {
     applicationId = "com.aamo.exercisetracker"
@@ -45,14 +43,26 @@ android {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
-  kotlinOptions {
-    jvmTarget = "11"
+  kotlin {
+    compilerOptions {
+      jvmTarget = JvmTarget.JVM_11
+    }
   }
   buildFeatures {
     compose = true
+    buildConfig = true
+  }
+  @Suppress("UnstableApiUsage") androidResources {
+    generateLocaleConfig = true
   }
   room {
     schemaDirectory("$projectDir/schemas")
+  }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      animationsDisabled = true
+    }
   }
 }
 
@@ -66,18 +76,24 @@ dependencies {
   implementation(libs.androidx.ui.tooling.preview)
   implementation(libs.androidx.material3)
   implementation(libs.androidx.navigation.compose.android)
-  // JSON serialization library, works with the Kotlin serialization plugin
-  implementation(libs.kotlinx.serialization.json)
   implementation(libs.androidx.room.runtime)
-  implementation(libs.androidx.room.testing.android)
+  implementation(libs.kotlinx.serialization.json)
   implementation(libs.compose.charts)
   ksp(libs.androidx.room.compiler)
+
   testImplementation(libs.junit)
+  testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.ui.test.junit4)
   testImplementation(libs.androidx.room.testing)
+  testImplementation(libs.androidx.core.testing)
+
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(platform(libs.androidx.compose.bom))
   androidTestImplementation(libs.androidx.ui.test.junit4)
+  androidTestImplementation(libs.androidx.room.testing)
+
   debugImplementation(libs.androidx.ui.tooling)
   debugImplementation(libs.androidx.ui.test.manifest)
 }

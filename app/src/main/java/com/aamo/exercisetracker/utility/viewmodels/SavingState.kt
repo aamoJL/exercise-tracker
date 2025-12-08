@@ -1,10 +1,7 @@
 package com.aamo.exercisetracker.utility.viewmodels
 
 data class SavingState(
-  val state: State = State.NONE,
-  val canSave: () -> Boolean = { true },
-  val unsavedChanges: Boolean = false,
-  val error: Error? = null
+  val state: State = State.NONE, val unsavedChanges: Boolean = false, val error: Error? = null
 ) {
   enum class State {
     NONE,

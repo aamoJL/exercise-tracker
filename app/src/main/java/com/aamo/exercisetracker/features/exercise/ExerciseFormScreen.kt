@@ -64,14 +64,14 @@ import com.aamo.exercisetracker.features.exercise.use_cases.deleteExercise
 import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExercise
 import com.aamo.exercisetracker.features.exercise.use_cases.toDao
-import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.DeleteDialog
 import com.aamo.exercisetracker.ui.components.FormList
-import com.aamo.exercisetracker.ui.components.IntNumberField
-import com.aamo.exercisetracker.ui.components.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.UnsavedDialog
-import com.aamo.exercisetracker.ui.components.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.inputs.IntNumberField
+import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
+import com.aamo.exercisetracker.ui.components.inputs.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
+import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
@@ -107,7 +107,7 @@ class ExerciseFormViewModel(
 
   class UiState {
     inner class SetAmount(value: Int = 0) {
-      val amount = ViewModelState(value).validation { validation(it) }
+      val amount = ViewModelState(value).transformation { validation(it) }
       val listKey: Int = nextSetKey++
 
       private fun validation(value: Int): Int {
@@ -127,7 +127,7 @@ class ExerciseFormViewModel(
       onUnsavedChanges()
     }
     var isNew by mutableStateOf(false)
-    var savingState by mutableStateOf(SavingState(canSave = { canSave() }))
+    var savingState by mutableStateOf(SavingState())
 
     private var nextSetKey = 0 // Used for set amount list
 
@@ -141,7 +141,7 @@ class ExerciseFormViewModel(
       }
     }
 
-    private fun canSave(): Boolean {
+    fun canSave(): Boolean {
       return when {
         savingState.state == SavingState.State.SAVING -> false
         sets.values.isEmpty() -> false
@@ -172,7 +172,7 @@ class ExerciseFormViewModel(
   }
 
   fun save() {
-    if (!uiState.savingState.canSave()) return
+    if (!uiState.canSave()) return
 
     uiState.apply { savingState = savingState.getAsSaving() }
 
@@ -320,7 +320,7 @@ fun ExerciseFormScreen(
       LoadingIconButton(
         onClick = onSave,
         isLoading = uiState.savingState.state == SavingState.State.SAVING,
-        enabled = uiState.savingState.canSave()
+        enabled = uiState.canSave()
       ) {
         Icon(
           painter = painterResource(R.drawable.round_done_24),

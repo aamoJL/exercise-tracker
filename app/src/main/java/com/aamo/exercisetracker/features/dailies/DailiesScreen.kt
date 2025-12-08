@@ -65,8 +65,8 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel.RoutineModel
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
-import com.aamo.exercisetracker.ui.components.CustomModalBottomSheet
 import com.aamo.exercisetracker.ui.components.LoadingScreen
+import com.aamo.exercisetracker.ui.components.modals.CustomModalBottomSheet
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder

@@ -51,8 +51,8 @@ fun Calendar.getLocalDayOrder(): List<Day> {
     return listOfDays
   }
 
-  val afterLocalFirstDay = listOfDays.slice(0..firstDayOfWeekIndex - 1)
-  val beforeLocalFistDay = listOfDays.slice(firstDayOfWeekIndex..listOfDays.count() - 1)
+  val afterLocalFirstDay = listOfDays.slice(0..<firstDayOfWeekIndex)
+  val beforeLocalFistDay = listOfDays.slice(firstDayOfWeekIndex..<listOfDays.count())
 
   return beforeLocalFistDay.plus(afterLocalFirstDay)
 }

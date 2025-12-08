@@ -74,9 +74,9 @@ import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
 import com.aamo.exercisetracker.services.CountDownTimerService
 import com.aamo.exercisetracker.services.StopwatchTimerService
-import com.aamo.exercisetracker.ui.components.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.GesturelessModalBottomSheet
 import com.aamo.exercisetracker.ui.components.LoadingScreen
+import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.modals.GesturelessModalBottomSheet
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
@@ -131,7 +131,7 @@ class ProgressTrackingScreenViewModel(
 
   class CountDownTimerState(val duration: Duration) {
     val isActive =
-      ViewModelState(false).validation { value -> value && duration > 0.seconds }.onChange {
+      ViewModelState(false).transformation { value -> value && duration > 0.seconds }.onChange {
         if (it) isFinished = false
       }
     var isFinished by mutableStateOf(false)
@@ -538,7 +538,7 @@ fun ProgressTrackingScreen(
         })
       }
 
-      else -> null
+      else -> {}
     }
   }
 }
