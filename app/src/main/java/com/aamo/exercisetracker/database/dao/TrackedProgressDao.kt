@@ -14,11 +14,9 @@ import kotlinx.coroutines.flow.Flow
 // TODO: remove unused
 @Dao
 interface TrackedProgressDao {
+  // region GET
   @Query("SELECT * FROM tracked_progress WHERE id = :id")
   suspend fun getTrackedProgress(id: Long): TrackedProgress?
-
-  @Query("SELECT * FROM tracked_progress WHERE id = :progressId")
-  fun getProgressWithValues(progressId: Long): TrackedProgressWithValues?
 
   @Query("SELECT * FROM tracked_progress WHERE id = :progressId")
   fun getProgressWithValuesFlow(progressId: Long): Flow<TrackedProgressWithValues?>
@@ -34,16 +32,21 @@ interface TrackedProgressDao {
 
   @Query("SELECT * FROM tracked_progress LEFT JOIN tracked_progress_value ON tracked_progress_id = tracked_progress.id")
   fun getProgressesWithValuesFlow(): Flow<Map<TrackedProgress, List<TrackedProgressValue>>>
+  // endregion
 
+  // region UPSERT
   @Upsert
   suspend fun upsert(trackedProgress: TrackedProgress): Long
 
   @Upsert
   suspend fun upsert(trackedProgressValue: TrackedProgressValue): Long
+  // endregion
 
+  // region DELETE
   @Delete
   suspend fun delete(vararg trackedProgress: TrackedProgress): Int
 
   @Delete
   suspend fun delete(vararg trackedProgressValue: TrackedProgressValue): Int
+  // endregion
 }
