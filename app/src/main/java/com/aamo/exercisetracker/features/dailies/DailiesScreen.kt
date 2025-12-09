@@ -230,7 +230,7 @@ fun DailiesScreen(
                 .fillMaxWidth()
                 .padding(vertical = 28.dp)
             )
-            LoadingScreen(enabled = isLoading, modifier = Modifier.padding(bottom = 56.dp)) {
+            LoadingScreen(loading = isLoading, modifier = Modifier.padding(bottom = 56.dp)) {
               LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)
               ) {

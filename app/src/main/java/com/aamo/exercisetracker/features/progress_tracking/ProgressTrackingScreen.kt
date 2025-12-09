@@ -369,7 +369,7 @@ fun ProgressTrackingScreen(
     }
   }
 
-  LoadingScreen(enabled = uiState.isLoading) {
+  LoadingScreen(loading = uiState.isLoading) {
     Scaffold(topBar = {
       TopAppBar(title = { Text(uiState.progressName) }, actions = {
         IconButton(onClick = onEdit) {

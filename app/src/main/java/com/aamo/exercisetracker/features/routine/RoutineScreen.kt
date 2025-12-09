@@ -106,7 +106,7 @@ fun NavGraphBuilder.routineScreen(
     val routine = viewmodel.routine
     val exercises by viewmodel.exercises.collectAsStateWithLifecycle()
 
-    LoadingScreen(enabled = viewmodel.isLoading) {
+    LoadingScreen(loading = viewmodel.isLoading) {
       if (routine != null) {
         RoutineScreen(
           routine = routine,

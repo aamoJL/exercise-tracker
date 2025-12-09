@@ -8,6 +8,8 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import com.aamo.exercisetracker.utility.tags.UITag
 
 @Composable
 fun LoadingIconButton(
@@ -17,15 +19,14 @@ fun LoadingIconButton(
   enabled: Boolean = true,
   content: @Composable (() -> Unit),
 ) {
-  Box(
-    contentAlignment = Alignment.Center, modifier = modifier.minimumInteractiveComponentSize()
-  ) {
+  Box(contentAlignment = Alignment.Center, modifier = modifier.minimumInteractiveComponentSize()) {
     if (isLoading) {
       CircularProgressIndicator(
         color = MaterialTheme.colorScheme.secondary,
         trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.testTag(UITag.PROGRESS_INDICATOR.name)
       )
     }
-    IconButton(onClick = onClick, enabled = enabled, content = content)
+    IconButton(onClick = onClick, enabled = (enabled && !isLoading), content = content)
   }
 }

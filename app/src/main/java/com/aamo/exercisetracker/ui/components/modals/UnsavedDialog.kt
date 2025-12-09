@@ -9,10 +9,9 @@ import androidx.compose.ui.res.stringResource
 import com.aamo.exercisetracker.R
 
 @Composable
-fun UnsavedDialog(
-  onDismiss: () -> Unit,
-  onConfirm: () -> Unit,
-) {
+fun UnsavedDialog(open: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+  if (!open) return
+
   AlertDialog(
     title = { Text(text = stringResource(R.string.dialog_title_unsaved_changes)) },
     text = { Text(text = stringResource(R.string.dialog_text_unsaved_changes)) },

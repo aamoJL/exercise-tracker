@@ -54,11 +54,12 @@ import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTracked
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.inputs.DurationNumberField
-import com.aamo.exercisetracker.ui.components.inputs.DurationNumberFieldFields
-import com.aamo.exercisetracker.ui.components.inputs.IntNumberField
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
-import com.aamo.exercisetracker.ui.components.inputs.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.inputs.number_field.DurationNumberField
+import com.aamo.exercisetracker.ui.components.inputs.number_field.DurationNumberFieldFields
+import com.aamo.exercisetracker.ui.components.inputs.number_field.IntFieldValidator
+import com.aamo.exercisetracker.ui.components.inputs.number_field.NumberField
+import com.aamo.exercisetracker.ui.components.inputs.text_field.borderlessTextFieldColors
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
@@ -215,7 +216,7 @@ fun NavGraphBuilder.trackedProgressFormScreen(
     })
     val uiState = viewmodel.uiState
 
-    LoadingScreen(enabled = viewmodel.isLoading) {
+    LoadingScreen(loading = viewmodel.isLoading) {
       TrackedProgressFormScreen(
         uiState = uiState,
         onBack = onBack,
@@ -288,24 +289,22 @@ fun TrackedProgressFormScreen(
       ifFalse = { uiState.timerDuration.update(0.seconds) })
   }
 
-  if (openUnsavedDialog) {
-    UnsavedDialog(
-      onDismiss = { openUnsavedDialog = false },
-      onConfirm = {
-        openUnsavedDialog = false
-        onBack()
-      },
-    )
-  }
-  if (openDeleteDialog) {
-    DeleteDialog(
-      title = stringResource(R.string.dialog_title_delete_tracked_progress),
-      onDismiss = { openDeleteDialog = false },
-      onConfirm = {
-        openDeleteDialog = false
-        onDelete()
-      })
-  }
+  UnsavedDialog(
+    open = openUnsavedDialog,
+    onDismiss = { openUnsavedDialog = false },
+    onConfirm = {
+      openUnsavedDialog = false
+      onBack()
+    },
+  )
+  DeleteDialog(
+    open = openDeleteDialog,
+    title = stringResource(R.string.dialog_title_delete_tracked_progress),
+    onDismiss = { openDeleteDialog = false },
+    onConfirm = {
+      openDeleteDialog = false
+      onDelete()
+    })
 
   BackHandler(enabled = uiState.savingState.unsavedChanges) {
     openUnsavedDialog = true
@@ -361,12 +360,13 @@ fun TrackedProgressFormScreen(
         ),
         modifier = Modifier.fillMaxWidth()
       )
-      IntNumberField(
+      NumberField(
         value = uiState.weeklyInterval.value,
+        onValueChange = { uiState.weeklyInterval.update(it) },
+        validator = IntFieldValidator,
         label = { Text(stringResource(R.string.label_weekly_interval_optional)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { uiState.weeklyInterval.update(it) },
         suffix = { Text(stringResource(R.string.suffix_weeks)) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         visualTransformation = VisualTransformation.HideZero,

@@ -169,17 +169,17 @@ fun TrackedProgressRecordListScreen(
   var showDeleteDialog by remember { mutableStateOf(false) }
   var showEditRecordDialog by remember { mutableStateOf(false) }
 
-  if (showDeleteDialog) {
-    DeleteDialog(title = stringResource(R.string.dialog_title_delete_record), onDismiss = {
-      showDeleteDialog = false
-    }, onConfirm = {
+  DeleteDialog(
+    open = showDeleteDialog,
+    title = stringResource(R.string.dialog_title_delete_record),
+    onDismiss = { showDeleteDialog = false },
+    onConfirm = {
       selectedRecordKey?.let { uiState.values.firstOrNull { it.key == selectedRecordKey } }
         ?.also { record ->
           onDeleteRecord(record)
         }
       showDeleteDialog = false
     })
-  }
 
   if (showEditRecordDialog) {
     selectedRecordKey?.let { uiState.values.firstOrNull { it.key == selectedRecordKey } }
@@ -208,7 +208,7 @@ fun TrackedProgressRecordListScreen(
       }
   }
 
-  LoadingScreen(enabled = uiState.isLoading) {
+  LoadingScreen(loading = uiState.isLoading) {
     Scaffold(topBar = {
       TopAppBar(title = {
         Text(stringResource(R.string.title_tracked_progress_records, uiState.progressName))

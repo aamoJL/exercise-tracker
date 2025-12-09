@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components.inputs
+package com.aamo.exercisetracker.ui.components.inputs.text_field
 
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable

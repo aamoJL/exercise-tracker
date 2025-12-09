@@ -49,7 +49,7 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.inputs.SearchTextField
+import com.aamo.exercisetracker.ui.components.inputs.text_field.SearchTextField
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import kotlinx.coroutines.flow.Flow
@@ -175,15 +175,14 @@ fun TrackedProgressListScreen(
   val itemsSelected by remember(progresses) { mutableStateOf(progresses.any { it.isSelected }) }
   var openDeleteDialog by remember { mutableStateOf(false) }
 
-  if (openDeleteDialog) {
-    DeleteDialog(
-      title = stringResource(R.string.dialog_title_delete_tracked_progresses),
-      onDismiss = { openDeleteDialog = false },
-      onConfirm = {
-        openDeleteDialog = false
-        onDeleteProgresses(progresses.filter { it.isSelected }.map { it.progress })
-      })
-  }
+  DeleteDialog(
+    open = openDeleteDialog,
+    title = stringResource(R.string.dialog_title_delete_tracked_progresses),
+    onDismiss = { openDeleteDialog = false },
+    onConfirm = {
+      openDeleteDialog = false
+      onDeleteProgresses(progresses.filter { it.isSelected }.map { it.progress })
+    })
 
   BackHandler(enabled = itemsSelected) {
     onSwitchSelection(progresses, false)
@@ -201,7 +200,7 @@ fun TrackedProgressListScreen(
       else UnselectionTopBar(
         filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
       )
-      LoadingScreen(enabled = isLoading) {
+      LoadingScreen(loading = isLoading) {
         LazyColumn(
           userScrollEnabled = true,
           verticalArrangement = Arrangement.spacedBy(4.dp),

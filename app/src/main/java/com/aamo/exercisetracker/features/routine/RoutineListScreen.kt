@@ -51,7 +51,7 @@ import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
 import com.aamo.exercisetracker.features.routine.use_cases.fromDao
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.inputs.SearchTextField
+import com.aamo.exercisetracker.ui.components.inputs.text_field.SearchTextField
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
@@ -185,15 +185,14 @@ fun RoutineListScreen(
   val itemsSelected by remember(routines) { mutableStateOf(routines.any { it.isSelected }) }
   var openDeleteDialog by remember { mutableStateOf(false) }
 
-  if (openDeleteDialog) {
-    DeleteDialog(
-      title = stringResource(R.string.dialog_title_delete_routines),
-      onDismiss = { openDeleteDialog = false },
-      onConfirm = {
-        openDeleteDialog = false
-        onDeleteRoutines(routines.filter { it.isSelected }.map { it.routine })
-      })
-  }
+  DeleteDialog(
+    open = openDeleteDialog,
+    title = stringResource(R.string.dialog_title_delete_routines),
+    onDismiss = { openDeleteDialog = false },
+    onConfirm = {
+      openDeleteDialog = false
+      onDeleteRoutines(routines.filter { it.isSelected }.map { it.routine })
+    })
 
   BackHandler(enabled = itemsSelected) {
     onSwitchSelection(routines, false)
@@ -211,7 +210,7 @@ fun RoutineListScreen(
       else UnselectionTopBar(
         filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
       )
-      LoadingScreen(enabled = isLoading) {
+      LoadingScreen(loading = isLoading) {
         LazyColumn(
           userScrollEnabled = true,
           verticalArrangement = Arrangement.spacedBy(4.dp),

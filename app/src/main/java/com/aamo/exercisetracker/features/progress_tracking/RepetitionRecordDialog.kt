@@ -29,7 +29,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
-import com.aamo.exercisetracker.ui.components.inputs.IntNumberField
+import com.aamo.exercisetracker.ui.components.inputs.number_field.IntFieldValidator
+import com.aamo.exercisetracker.ui.components.inputs.number_field.NumberField
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -54,9 +55,10 @@ fun RepetitionRecordDialog(
 
   AlertDialog(title = { Text(text = label) }, text = {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      IntNumberField(
+      NumberField(
         value = fieldValue,
         onValueChange = { fieldValue = it },
+        validator = IntFieldValidator,
         suffix = { Text(text = valueUnit) },
         modifier = Modifier.focusRequester(focusRequester)
       )

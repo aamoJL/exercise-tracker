@@ -67,9 +67,10 @@ import com.aamo.exercisetracker.features.exercise.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.FormList
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.inputs.IntNumberField
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
-import com.aamo.exercisetracker.ui.components.inputs.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.inputs.number_field.IntFieldValidator
+import com.aamo.exercisetracker.ui.components.inputs.number_field.NumberField
+import com.aamo.exercisetracker.ui.components.inputs.text_field.borderlessTextFieldColors
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
@@ -243,7 +244,7 @@ fun NavGraphBuilder.exerciseFormScreen(
     })
     val uiState = viewmodel.uiState
 
-    LoadingScreen(enabled = viewmodel.isLoading) {
+    LoadingScreen(loading = viewmodel.isLoading) {
       ExerciseFormScreen(
         uiState = uiState,
         onBack = onBack,
@@ -273,24 +274,21 @@ fun ExerciseFormScreen(
     }
   }
 
-  if (openUnsavedDialog) {
-    UnsavedDialog(
-      onDismiss = { openUnsavedDialog = false },
-      onConfirm = {
-        openUnsavedDialog = false
-        onBack()
-      },
-    )
-  }
-  if (openDeleteDialog) {
-    DeleteDialog(
-      title = stringResource(R.string.dialog_title_delete_exercise),
-      onDismiss = { openDeleteDialog = false },
-      onConfirm = {
-        openDeleteDialog = false
-        onDelete()
-      })
-  }
+  UnsavedDialog(
+    open = openUnsavedDialog, onDismiss = { openUnsavedDialog = false },
+    onConfirm = {
+      openUnsavedDialog = false
+      onBack()
+    },
+  )
+  DeleteDialog(
+    open = openDeleteDialog,
+    title = stringResource(R.string.dialog_title_delete_exercise),
+    onDismiss = { openDeleteDialog = false },
+    onConfirm = {
+      openDeleteDialog = false
+      onDelete()
+    })
 
   BackHandler(enabled = uiState.savingState.unsavedChanges) {
     openUnsavedDialog = true
@@ -346,12 +344,13 @@ fun ExerciseFormScreen(
         ),
         modifier = Modifier.fillMaxWidth()
       )
-      IntNumberField(
+      NumberField(
         value = uiState.restDuration.value.inWholeMinutes.toInt(),
+        onValueChange = { uiState.restDuration.update(it.minutes) },
+        validator = IntFieldValidator,
         label = { Text(stringResource(R.string.label_rest_duration_optional)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { uiState.restDuration.update(it.minutes) },
         suffix = { Text(stringResource(R.string.suffix_minutes)) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         visualTransformation = VisualTransformation.HideZero,
@@ -406,8 +405,10 @@ fun ExerciseFormScreen(
               },
               modifier = Modifier.animateItem()
             ) {
-              IntNumberField(
+              NumberField(
                 value = set.amount.value,
+                onValueChange = { set.amount.update(it) },
+                validator = IntFieldValidator,
                 shape = RectangleShape,
                 colors = TextFieldDefaults.colors(
                   unfocusedIndicatorColor = Color.Transparent,
@@ -416,7 +417,6 @@ fun ExerciseFormScreen(
                   focusedPlaceholderColor = MaterialTheme.colorScheme.outline
                 ),
                 placeholder = { Text(stringResource(R.string.ph_amount)) },
-                onValueChange = { set.amount.update(it) },
                 suffix = { Text(uiState.setUnit.value) },
                 keyboardOptions = KeyboardOptions(
                   imeAction = ifElse(

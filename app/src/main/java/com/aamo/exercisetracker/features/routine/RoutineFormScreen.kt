@@ -54,7 +54,7 @@ import com.aamo.exercisetracker.features.routine.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
-import com.aamo.exercisetracker.ui.components.inputs.borderlessTextFieldColors
+import com.aamo.exercisetracker.ui.components.inputs.text_field.borderlessTextFieldColors
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.date.Day
@@ -191,7 +191,7 @@ fun NavGraphBuilder.routineFormScreen(
       }
     })
 
-    LoadingScreen(enabled = viewmodel.isLoading) {
+    LoadingScreen(loading = viewmodel.isLoading) {
       RoutineFormScreen(
         uiState = viewmodel.uiState,
         onBack = onBack,
@@ -216,24 +216,22 @@ fun RoutineFormScreen(
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
 
-  if (openUnsavedDialog) {
-    UnsavedDialog(
-      onDismiss = { openUnsavedDialog = false },
-      onConfirm = {
-        openUnsavedDialog = false
-        onBack()
-      },
-    )
-  }
-  if (openDeleteDialog) {
-    DeleteDialog(
-      title = stringResource(R.string.dialog_title_delete_routine),
-      onDismiss = { openDeleteDialog = false },
-      onConfirm = {
-        openDeleteDialog = false
-        onDelete()
-      })
-  }
+  UnsavedDialog(
+    open = openUnsavedDialog,
+    onDismiss = { openUnsavedDialog = false },
+    onConfirm = {
+      openUnsavedDialog = false
+      onBack()
+    },
+  )
+  DeleteDialog(
+    open = openDeleteDialog,
+    title = stringResource(R.string.dialog_title_delete_routine),
+    onDismiss = { openDeleteDialog = false },
+    onConfirm = {
+      openDeleteDialog = false
+      onDelete()
+    })
 
   BackHandler(enabled = unsavedChanges) {
     openUnsavedDialog = true

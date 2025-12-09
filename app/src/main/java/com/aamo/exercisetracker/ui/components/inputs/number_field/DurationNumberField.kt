@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui.components.inputs
+package com.aamo.exercisetracker.ui.components.inputs.number_field
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -102,7 +102,7 @@ fun DurationNumberField(
     verticalAlignment = Alignment.CenterVertically, modifier = modifier
   ) {
     if (hours.enabled) {
-      IntNumberField(
+      NumberField(
         enabled = enabled,
         value = segments.hours,
         onValueChange = {
@@ -110,6 +110,7 @@ fun DurationNumberField(
             onValueChange(segments.copy(hours = it).toDuration())
           }
         },
+        validator = IntFieldValidator,
         shape = shape,
         label = {
           Text(
@@ -128,7 +129,7 @@ fun DurationNumberField(
       }
     }
     if (minutes.enabled) {
-      IntNumberField(
+      NumberField(
         enabled = enabled,
         value = segments.minutes,
         onValueChange = {
@@ -136,6 +137,7 @@ fun DurationNumberField(
             onValueChange(segments.copy(minutes = it).toDuration())
           }
         },
+        validator = IntFieldValidator,
         shape = shape,
         label = {
           Text(
@@ -154,7 +156,7 @@ fun DurationNumberField(
       }
     }
     if (seconds.enabled) {
-      IntNumberField(
+      NumberField(
         enabled = enabled,
         value = segments.seconds,
         onValueChange = {
@@ -162,6 +164,7 @@ fun DurationNumberField(
             onValueChange(segments.copy(seconds = it).toDuration())
           }
         },
+        validator = IntFieldValidator,
         shape = shape,
         label = {
           Text(

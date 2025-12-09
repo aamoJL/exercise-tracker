@@ -10,9 +10,9 @@ import androidx.compose.ui.res.stringResource
 import com.aamo.exercisetracker.R
 
 @Composable
-fun DeleteDialog(
-  title: String, onDismiss: () -> Unit, onConfirm: () -> Unit
-) {
+fun DeleteDialog(open: Boolean, title: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+  if (!open) return
+
   AlertDialog(
     title = { Text(text = title) },
     onDismissRequest = onDismiss,

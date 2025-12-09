@@ -318,7 +318,7 @@ fun NavGraphBuilder.exerciseScreen(
       }
     }
 
-    LoadingScreen(enabled = uiState.isLoading) {
+    LoadingScreen(loading = uiState.isLoading) {
       ExerciseScreen(
         uiState = uiState,
         onBack = {
