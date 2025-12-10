@@ -28,9 +28,9 @@ import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressFormSc
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressListScreen
 import com.aamo.exercisetracker.features.progress_tracking.trackedProgressListScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
-import com.aamo.exercisetracker.features.routine.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
-import com.aamo.exercisetracker.features.routine.routineListScreen
+import com.aamo.exercisetracker.features.routine.list.RoutineListScreen
+import com.aamo.exercisetracker.features.routine.list.routineListScreen
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.navigation.destinationEquals
@@ -41,13 +41,13 @@ object HomeScreen
 
 fun NavGraphBuilder.homeScreen(navController: NavController) {
   composable<HomeScreen> {
-    HomeScreen(mainNavController = navController)
+    HomeScreenContent(mainNavController = navController)
   }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun HomeScreen(mainNavController: NavController) {
+fun HomeScreenContent(mainNavController: NavController) {
   val homeNavController = rememberNavController()
   val navStackEntry = homeNavController.currentBackStackEntryAsState().value
 
@@ -67,13 +67,9 @@ fun HomeScreen(mainNavController: NavController) {
         }
       })
       routineListScreen(onSelectRoutine = { id ->
-        mainNavController.navigate(RoutinePage(id = id)) {
-          launchSingleTop = true
-        }
+        mainNavController.navigate(RoutinePage(id = id)) { launchSingleTop = true }
       }, onAddRoutine = {
-        mainNavController.navigate(RoutineFormScreen(id = 0L)) {
-          launchSingleTop = true
-        }
+        mainNavController.navigate(RoutineFormScreen(id = 0L)) { launchSingleTop = true }
       })
       trackedProgressListScreen(onSelectProgress = { id ->
         mainNavController.navigate(ProgressTrackingScreen(progressId = id)) {

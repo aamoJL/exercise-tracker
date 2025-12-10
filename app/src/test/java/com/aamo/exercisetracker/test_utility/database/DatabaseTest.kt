@@ -4,20 +4,23 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.dao.RoutineDao
+import com.aamo.exercisetracker.database.dao.TrackedProgressDao
 import org.junit.After
 import org.junit.Before
 import java.io.IOException
 
-abstract class RoutineDatabaseTest {
+abstract class DatabaseTest {
   protected lateinit var database: RoutineDatabase
-  protected lateinit var dao: RoutineDao
+  protected lateinit var routineDao: RoutineDao
+  protected lateinit var trackedProgressDao: TrackedProgressDao
 
   @Before
   open fun setup() {
     database = Room.inMemoryDatabaseBuilder(
       context = ApplicationProvider.getApplicationContext(), klass = RoutineDatabase::class.java
     ).build()
-    dao = database.routineDao()
+    routineDao = database.routineDao()
+    trackedProgressDao = database.trackedProgressDao()
   }
 
   @After

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.routine
+package com.aamo.exercisetracker.features.routine.list
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -48,8 +48,9 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
-import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
-import com.aamo.exercisetracker.features.routine.use_cases.fromDao
+import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.features.routine.list.use_cases.deleteRoutines
+import com.aamo.exercisetracker.features.routine.list.use_cases.fetchRoutinesFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.text_field.SearchTextField
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
@@ -73,52 +74,36 @@ import java.util.Calendar
 object RoutineListScreen
 
 class RoutineListScreenViewModel(
-  private val fetchData: () -> Flow<List<RoutineModel>>,
+  fetchData: () -> Flow<List<RoutineWithSchedule>>,
   private val deleteData: suspend (List<Routine>) -> Boolean
 ) : ViewModel() {
   data class RoutineModel(
     val routine: Routine, val schedule: RoutineSchedule?, val isSelected: Boolean = false
-  ) {
-    companion object
-  }
+  )
 
-  init {
-    viewModelScope.launch {
-      runCatching {
-        fetchData().collect { list ->
-          _routines.update { list.sortedBy { it.routine.name } }
-          isLoading = false
-        }
-      }
-    }
-  }
-
-  var isLoading by mutableStateOf(true)
-    private set
-
-  private var _routines = MutableStateFlow<List<RoutineModel>>(emptyList())
+  private var _selections = MutableStateFlow<List<Routine>>(emptyList())
 
   private var _filterWord = MutableStateFlow(String.EMPTY)
   val filterWord = _filterWord.asStateFlow()
 
-  val filteredRoutines = combine(_routines, filterWord) { routine, word ->
-    routine.filter { it.routine.name.contains(word, ignoreCase = true) }
-  }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = emptyList())
+  val filteredRoutines =
+    combine(fetchData(), _selections, filterWord) { routine, selections, word ->
+      routine.filter { it.routine.name.contains(word, ignoreCase = true) }.map {
+        RoutineModel(
+          routine = it.routine, schedule = it.schedule, isSelected = selections.contains(it.routine)
+        )
+      }
+    }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null)
 
   fun setFilterWord(word: String) {
     _filterWord.update { word }
   }
 
-  fun switchRoutineSelection(models: List<RoutineModel>, state: Boolean) {
-    _routines.update { list ->
+  fun switchRoutineSelection(models: List<Routine>, state: Boolean) {
+    _selections.update { list ->
       list.toMutableList().apply {
-        models.forEach { model ->
-          this.indexOf(model).also { index ->
-            if (index != -1) {
-              this[index] = this[index].copy(isSelected = state)
-            }
-          }
-        }
+        if (state) this.addAll(models.filter { !this.contains(it) })
+        else this.removeAll(models)
       }
     }
   }
@@ -140,16 +125,8 @@ fun NavGraphBuilder.routineListScreen(
     val viewmodel: RoutineListScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
         RoutineListScreenViewModel(
-          fetchData = {
-            RoutineListScreenViewModel.RoutineModel.fromDao {
-              dao.getRoutinesWithScheduleFlow()
-            }
-          },
-          deleteData = { routines ->
-            deleteRoutine(*routines.toTypedArray()) {
-              dao.delete(*it.toTypedArray()) > 0
-            }
-          },
+          fetchData = { fetchRoutinesFlow(dao = dao) },
+          deleteData = { routines -> deleteRoutines(dao = dao, *routines.toTypedArray()) },
         )
       }
     })
@@ -157,9 +134,9 @@ fun NavGraphBuilder.routineListScreen(
     val filterWord by viewmodel.filterWord.collectAsStateWithLifecycle()
 
     RoutineListScreen(
-      routines = routines,
+      routines = routines ?: emptyList(),
       filterWord = filterWord,
-      isLoading = viewmodel.isLoading,
+      isLoading = routines == null,
       onSelectRoutine = onSelectRoutine,
       onFilterChanged = { viewmodel.setFilterWord(it) },
       onAdd = onAddRoutine,
@@ -180,7 +157,7 @@ fun RoutineListScreen(
   onSelectRoutine: (id: Long) -> Unit,
   onAdd: () -> Unit,
   onDeleteRoutines: (List<Routine>) -> Unit,
-  onSwitchSelection: (List<RoutineListScreenViewModel.RoutineModel>, Boolean) -> Unit
+  onSwitchSelection: (List<Routine>, Boolean) -> Unit
 ) {
   val itemsSelected by remember(routines) { mutableStateOf(routines.any { it.isSelected }) }
   var openDeleteDialog by remember { mutableStateOf(false) }
@@ -195,7 +172,7 @@ fun RoutineListScreen(
     })
 
   BackHandler(enabled = itemsSelected) {
-    onSwitchSelection(routines, false)
+    onSwitchSelection(routines.map { it.routine }, false)
   }
 
   Surface {
@@ -225,8 +202,10 @@ fun RoutineListScreen(
                 .background(color = MaterialTheme.colorScheme.surfaceVariant)
                 .combinedClickable(onClick = {
                   if (!itemsSelected) onSelectRoutine(model.routine.id)
-                  else onSwitchSelection(listOf(model), !model.isSelected)
-                }, onLongClick = { if (!itemsSelected) onSwitchSelection(listOf(model), true) })
+                  else onSwitchSelection(listOf(model.routine), !model.isSelected)
+                }, onLongClick = {
+                  if (!itemsSelected) onSwitchSelection(listOf(model.routine), true)
+                })
             ) {
               Row(
                 verticalAlignment = Alignment.CenterVertically,

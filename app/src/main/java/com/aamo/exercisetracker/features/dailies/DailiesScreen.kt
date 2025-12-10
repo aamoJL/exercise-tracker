@@ -1,5 +1,6 @@
 package com.aamo.exercisetracker.features.dailies
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +34,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,7 +62,7 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.TrackedProgress
-import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel.RoutineModel
+import com.aamo.exercisetracker.features.dailies.models.DailiesRoutineModel
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
@@ -73,15 +73,14 @@ import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.applyIf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.util.Calendar
 import kotlin.math.absoluteValue
 
-typealias WeeklySchedule = List<List<RoutineModel>>
+typealias WeeklySchedule = List<List<DailiesRoutineModel>>
 
 @Serializable
 data class DailiesScreen(val initialDay: Day)
@@ -90,37 +89,14 @@ class DailiesScreenViewModel(
   fetchWeeklySchedule: () -> Flow<WeeklySchedule>,
   fetchTrackedProgresses: () -> Flow<List<TrackedProgress>>
 ) : ViewModel() {
-  data class RoutineModel(
-    val routine: Routine, val progress: Progress
-  ) {
-    data class Progress(val finishedCount: Int, val totalCount: Int)
-  }
 
-  private val _weeklySchedule = MutableStateFlow<WeeklySchedule>(emptyList())
-  val weeklySchedule = _weeklySchedule.asStateFlow()
+  val weeklySchedule = fetchWeeklySchedule().stateIn(
+    scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null
+  )
 
-  private val _trackedProgresses = MutableStateFlow<List<TrackedProgress>>(emptyList())
-  val trackedProgresses = _trackedProgresses.asStateFlow()
-
-  private var weeklyScheduleLoading by mutableStateOf(true)
-  private var progressesLoading by mutableStateOf(true)
-
-  val isLoading by derivedStateOf { weeklyScheduleLoading || progressesLoading }
-
-  init {
-    viewModelScope.launch {
-      fetchWeeklySchedule().collect {
-        _weeklySchedule.value = it
-        weeklyScheduleLoading = false
-      }
-    }
-    viewModelScope.launch {
-      fetchTrackedProgresses().collect {
-        _trackedProgresses.value = it
-        progressesLoading = false
-      }
-    }
-  }
+  val trackedProgresses = fetchTrackedProgresses().stateIn(
+    scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null
+  )
 }
 
 fun NavGraphBuilder.dailiesScreen(
@@ -137,14 +113,14 @@ fun NavGraphBuilder.dailiesScreen(
       initializer {
         DailiesScreenViewModel(fetchWeeklySchedule = {
           fetchWeeklyRoutineScheduleFlow(
-            weekDays = Calendar.getInstance().getLocalDayOrder(), currentDate = LocalDate.now()
-          ) {
-            routineDao.getRoutineSchedulesWithProgressesFlow()
-          }
+            dao = routineDao,
+            weekDays = Calendar.getInstance().getLocalDayOrder(),
+            currentDate = LocalDate.now()
+          )
         }, fetchTrackedProgresses = {
-          fetchUnfinishedTrackedProgressesFlow(currentTimeMillis = System.currentTimeMillis()) {
-            trackedProgressDao.getProgressesWithValuesFlow()
-          }
+          fetchUnfinishedTrackedProgressesFlow(
+            dao = trackedProgressDao, currentTimeMillis = System.currentTimeMillis()
+          )
         })
       }
     })
@@ -152,9 +128,9 @@ fun NavGraphBuilder.dailiesScreen(
     val progresses by viewmodel.trackedProgresses.collectAsStateWithLifecycle()
 
     DailiesScreen(
-      weeklySchedule = weeklySchedule,
-      trackedProgresses = progresses,
-      isLoading = viewmodel.isLoading,
+      weeklySchedule = weeklySchedule ?: emptyList(),
+      trackedProgresses = progresses ?: emptyList(),
+      isLoading = weeklySchedule == null || progresses == null,
       initialDay = initialDay,
       onRoutineSelected = onSelectRoutine,
       onTrackedProgressSelected = onTrackedProgressSelected,
@@ -208,7 +184,7 @@ fun DailiesScreen(
           )
         } ?: emptyList()
 
-        val pageOffset =
+        @SuppressLint("FrequentlyChangingValue") val pageOffset =
           ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
 
         Surface(
@@ -363,8 +339,9 @@ private fun Preview() {
         initialDay = Day.MONDAY,
         weeklySchedule = listOf(
           listOf(
-            RoutineModel(
-              routine = Routine(id = 0, name = "Routine 1"), progress = RoutineModel.Progress(
+            DailiesRoutineModel(
+              routine = Routine(id = 0, name = "Routine 1"),
+              progress = DailiesRoutineModel.Progress(
                 finishedCount = 2, totalCount = 2
               )
             )

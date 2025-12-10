@@ -5,7 +5,7 @@ import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
-import com.aamo.exercisetracker.test_utility.database.RoutineDatabaseTest
+import com.aamo.exercisetracker.test_utility.database.DatabaseTest
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -13,15 +13,15 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class Upsert : RoutineDatabaseTest() {
+class Upsert : DatabaseTest() {
   @Test
   fun `upsert exercise with sets`() = runTest {
-    dao.upsert(Routine()).also { routineId ->
+    routineDao.upsert(Routine()).also { routineId ->
       val exercise = Exercise(routineId = routineId)
       val set = ExerciseSet(exerciseId = 0L)
 
-      dao.upsert(exercise = exercise, sets = listOf(set)).also { exerciseId ->
-        dao.getExerciseWithSets(exerciseId = exerciseId).also { result ->
+      routineDao.upsert(exercise = exercise, sets = listOf(set)).also { exerciseId ->
+        routineDao.getExerciseWithSets(exerciseId = exerciseId).also { result ->
           checkNotNull(result)
           assertEquals(exercise.copy(id = exerciseId), result.exercise)
           assertEquals(1, result.sets.size)
@@ -36,9 +36,9 @@ class Upsert : RoutineDatabaseTest() {
     val routine = Routine()
     val schedule = RoutineSchedule(routineId = 0L)
 
-    dao.upsert(routine = routine, schedule = schedule).also { (routineId, scheduleId) ->
+    routineDao.upsert(routine = routine, schedule = schedule).also { (routineId, scheduleId) ->
       checkNotNull(scheduleId)
-      dao.getRoutineWithSchedule(routineId = routineId).also { result ->
+      routineDao.getRoutineWithSchedule(routineId = routineId).also { result ->
         checkNotNull(result)
         assertEquals(
           RoutineWithSchedule(

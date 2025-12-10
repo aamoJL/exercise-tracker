@@ -23,9 +23,7 @@ fun HomePage() {
         navController = navController,
         onBack = { navController.navigateUp() },
         onSelectExercise = { id ->
-          navController.navigate(ExerciseScreen(id = id)) {
-            launchSingleTop = true
-          }
+          navController.navigate(ExerciseScreen(id = id)) { launchSingleTop = true }
         })
       exercisePage(navController = navController)
       progressTrackingPage(navController = navController)

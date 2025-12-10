@@ -1,9 +1,8 @@
 package com.aamo.exercisetracker.features.dailies.use_cases
 
-import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
-import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
-import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel.RoutineModel
+import com.aamo.exercisetracker.database.dao.RoutineDao
 import com.aamo.exercisetracker.features.dailies.WeeklySchedule
+import com.aamo.exercisetracker.features.dailies.models.DailiesRoutineModel
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.toDay
 import kotlinx.coroutines.flow.Flow
@@ -12,21 +11,21 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 fun fetchWeeklyRoutineScheduleFlow(
+  dao: RoutineDao,
   currentDate: LocalDate,
   weekDays: List<Day>,
-  getDataFlow: () -> Flow<Map<RoutineWithSchedule, List<ExerciseWithProgress>>>,
 ): Flow<WeeklySchedule> {
   val todayIndex = weekDays.indexOf(currentDate.dayOfWeek.toDay())
 
-  return getDataFlow().map { map ->
+  return dao.getRoutineSchedulesWithProgressesFlow().map { map ->
     weekDays.mapIndexed { i, day ->
       val dayMillis = currentDate.atStartOfDay().plusDays((i - todayIndex).toLong())
         .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
       map.filter { (rws, _) -> rws.schedule?.isDaySelected(day.getDayNumber()) == true }
         .map { (rws, progresses) ->
-          RoutineModel(
-            routine = rws.routine, progress = RoutineModel.Progress(
+          DailiesRoutineModel(
+            routine = rws.routine, progress = DailiesRoutineModel.Progress(
               finishedCount = progresses.count { (_, progress) ->
                 progress?.finishedDate?.time?.compareTo(dayMillis)?.let { it > 0 } == true
               }, totalCount = progresses.size
