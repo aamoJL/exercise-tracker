@@ -75,18 +75,18 @@ class Navigation : PageTest() {
 
     // this is like this because I could not find a way to change Robolectric date
     if (initDayIndex == 0) {
-      rule.onNodeWithText(getString(days[0].nameResourceKey))
+      rule.onNodeWithText(getString(days[0].nameResourceKey)).assertExists()
       rule.onRoot().performTouchInput { swipeLeft() }
-      rule.onNodeWithText(getString(days[1].nameResourceKey))
+      rule.onNodeWithText(getString(days[1].nameResourceKey)).assertExists()
       rule.onRoot().performTouchInput { swipeRight() }
-      rule.onNodeWithText(getString(days[0].nameResourceKey))
+      rule.onNodeWithText(getString(days[0].nameResourceKey)).assertExists()
     }
     else {
-      rule.onNodeWithText(getString(days[initDayIndex].nameResourceKey))
+      rule.onNodeWithText(getString(days[initDayIndex].nameResourceKey)).assertExists()
       rule.onRoot().performTouchInput { swipeRight() }
-      rule.onNodeWithText(getString(days[initDayIndex + 1].nameResourceKey))
+      rule.onNodeWithText(getString(days[initDayIndex - 1].nameResourceKey)).assertExists()
       rule.onRoot().performTouchInput { swipeLeft() }
-      rule.onNodeWithText(getString(days[initDayIndex].nameResourceKey))
+      rule.onNodeWithText(getString(days[initDayIndex].nameResourceKey)).assertExists()
     }
   }
 }

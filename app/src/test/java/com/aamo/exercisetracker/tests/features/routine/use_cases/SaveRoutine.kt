@@ -11,6 +11,7 @@ import junit.framework.TestCase
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
+// TODO: remove
 @Suppress("HardCodedStringLiteral")
 class SaveRoutine() {
   @Test
@@ -36,12 +37,8 @@ class SaveRoutine() {
     )
 
     val expected = RoutineWithSchedule(
-      routine = Routine(id = routineId, name = model.routineName),
-      schedule = RoutineSchedule(
-        routineId = routineId,
-        monday = true,
-        wednesday = true,
-        saturday = true
+      routine = Routine(id = routineId, name = model.routineName), schedule = RoutineSchedule(
+        routineId = routineId, monday = true, wednesday = true, saturday = true
       )
     )
 

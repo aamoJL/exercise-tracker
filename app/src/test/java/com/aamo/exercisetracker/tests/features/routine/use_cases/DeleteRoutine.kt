@@ -6,6 +6,7 @@ import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
+// TODO: remove
 class DeleteRoutine {
   @Test
   fun `returns correct model when deleting`() {

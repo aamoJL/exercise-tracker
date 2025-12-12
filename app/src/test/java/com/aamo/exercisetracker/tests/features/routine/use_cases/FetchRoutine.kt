@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
+// TODO: remove
 class FetchRoutine {
   @Test
   fun `returns correct model from dao when new`() {

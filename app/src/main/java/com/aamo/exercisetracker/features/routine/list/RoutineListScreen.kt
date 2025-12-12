@@ -75,25 +75,17 @@ object RoutineListScreen
 
 class RoutineListScreenViewModel(
   fetchData: () -> Flow<List<RoutineWithSchedule>>,
-  private val deleteData: suspend (List<Routine>) -> Boolean
+  private val deleteData: suspend (List<Routine>) -> Unit
 ) : ViewModel() {
-  data class RoutineModel(
-    val routine: Routine, val schedule: RoutineSchedule?, val isSelected: Boolean = false
-  )
-
   private var _selections = MutableStateFlow<List<Routine>>(emptyList())
+  val selections = _selections.asStateFlow()
 
   private var _filterWord = MutableStateFlow(String.EMPTY)
   val filterWord = _filterWord.asStateFlow()
 
-  val filteredRoutines =
-    combine(fetchData(), _selections, filterWord) { routine, selections, word ->
-      routine.filter { it.routine.name.contains(word, ignoreCase = true) }.map {
-        RoutineModel(
-          routine = it.routine, schedule = it.schedule, isSelected = selections.contains(it.routine)
-        )
-      }
-    }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null)
+  val filteredRoutines = combine(fetchData(), filterWord) { routine, word ->
+    routine.filter { it.routine.name.contains(word, ignoreCase = true) }
+  }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null)
 
   fun setFilterWord(word: String) {
     _filterWord.update { word }
@@ -132,10 +124,12 @@ fun NavGraphBuilder.routineListScreen(
     })
     val routines by viewmodel.filteredRoutines.collectAsStateWithLifecycle()
     val filterWord by viewmodel.filterWord.collectAsStateWithLifecycle()
+    val selections by viewmodel.selections.collectAsStateWithLifecycle()
 
     RoutineListScreen(
       routines = routines ?: emptyList(),
       filterWord = filterWord,
+      selections = selections,
       isLoading = routines == null,
       onSelectRoutine = onSelectRoutine,
       onFilterChanged = { viewmodel.setFilterWord(it) },
@@ -150,8 +144,9 @@ fun NavGraphBuilder.routineListScreen(
 
 @Composable
 fun RoutineListScreen(
-  routines: List<RoutineListScreenViewModel.RoutineModel>,
+  routines: List<RoutineWithSchedule>,
   filterWord: String,
+  selections: List<Routine>,
   isLoading: Boolean,
   onFilterChanged: (String) -> Unit,
   onSelectRoutine: (id: Long) -> Unit,
@@ -159,7 +154,6 @@ fun RoutineListScreen(
   onDeleteRoutines: (List<Routine>) -> Unit,
   onSwitchSelection: (List<Routine>, Boolean) -> Unit
 ) {
-  val itemsSelected by remember(routines) { mutableStateOf(routines.any { it.isSelected }) }
   var openDeleteDialog by remember { mutableStateOf(false) }
 
   DeleteDialog(
@@ -168,10 +162,10 @@ fun RoutineListScreen(
     onDismiss = { openDeleteDialog = false },
     onConfirm = {
       openDeleteDialog = false
-      onDeleteRoutines(routines.filter { it.isSelected }.map { it.routine })
+      onDeleteRoutines(selections)
     })
 
-  BackHandler(enabled = itemsSelected) {
+  BackHandler(enabled = selections.isNotEmpty()) {
     onSwitchSelection(routines.map { it.routine }, false)
   }
 
@@ -181,9 +175,8 @@ fun RoutineListScreen(
         .fillMaxSize()
         .imePadding()
     ) {
-      if (itemsSelected) SelectionTopBar(
-        selectionCount = routines.count { it.isSelected },
-        onDeleteSelected = { openDeleteDialog = true })
+      if (selections.isNotEmpty()) SelectionTopBar(
+        selectionCount = selections.size, onDeleteSelected = { openDeleteDialog = true })
       else UnselectionTopBar(
         filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
       )
@@ -196,15 +189,17 @@ fun RoutineListScreen(
             .clip(RoundedCornerShape(8.dp))
         ) {
           items(routines) { model ->
+            val selected = selections.contains(model.routine)
+
             Box(
               modifier = Modifier
                 .fillMaxWidth()
                 .background(color = MaterialTheme.colorScheme.surfaceVariant)
                 .combinedClickable(onClick = {
-                  if (!itemsSelected) onSelectRoutine(model.routine.id)
-                  else onSwitchSelection(listOf(model.routine), !model.isSelected)
+                  if (selections.isEmpty()) onSelectRoutine(model.routine.id)
+                  else onSwitchSelection(listOf(model.routine), !selected)
                 }, onLongClick = {
-                  if (!itemsSelected) onSwitchSelection(listOf(model.routine), true)
+                  if (selections.isEmpty()) onSwitchSelection(listOf(model.routine), true)
                 })
             ) {
               Row(
@@ -212,8 +207,8 @@ fun RoutineListScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
               ) {
-                if (itemsSelected) {
-                  Checkbox(checked = model.isSelected, onCheckedChange = null)
+                if (selections.isNotEmpty()) {
+                  Checkbox(checked = selected, onCheckedChange = null)
                 }
                 Text(text = model.routine.name, fontWeight = FontWeight.Bold)
               }
@@ -325,17 +320,16 @@ private fun Preview() {
   ExerciseTrackerTheme(darkTheme = true) {
     RoutineListScreen(
       routines = listOf(
-      RoutineListScreenViewModel.RoutineModel(
-        routine = Routine(id = 0, name = "Routine 1"),
-        schedule = RoutineSchedule(id = 0, routineId = 0, monday = true),
-        isSelected = true
-      ), RoutineListScreenViewModel.RoutineModel(
-        routine = Routine(id = 1, name = "Routine 2"),
-        schedule = RoutineSchedule(id = 1, routineId = 0, monday = true),
-        isSelected = false
-      )
-    ),
+        RoutineWithSchedule(
+          routine = Routine(id = 0, name = "Routine 1"),
+          schedule = RoutineSchedule(id = 0, routineId = 0, monday = true)
+        ), RoutineWithSchedule(
+          routine = Routine(id = 1, name = "Routine 2"),
+          schedule = RoutineSchedule(id = 1, routineId = 0, monday = true),
+        )
+      ),
       filterWord = String.EMPTY,
+      selections = listOf(Routine(id = 1, name = "Routine 2")),
       isLoading = false,
       onFilterChanged = {},
       onSelectRoutine = {},
