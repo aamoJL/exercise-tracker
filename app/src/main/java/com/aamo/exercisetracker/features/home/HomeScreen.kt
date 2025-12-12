@@ -25,8 +25,8 @@ import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.dailies.dailiesScreen
 import com.aamo.exercisetracker.features.progress_tracking.ProgressTrackingScreen
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressFormScreen
-import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressListScreen
-import com.aamo.exercisetracker.features.progress_tracking.trackedProgressListScreen
+import com.aamo.exercisetracker.features.progress_tracking.list.TrackedProgressListScreen
+import com.aamo.exercisetracker.features.progress_tracking.list.trackedProgressListScreen
 import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
 import com.aamo.exercisetracker.features.routine.list.RoutineListScreen

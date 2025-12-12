@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progress_tracking
+package com.aamo.exercisetracker.features.progress_tracking.list
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,11 +47,12 @@ import androidx.navigation.compose.composable
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
+import com.aamo.exercisetracker.features.progress_tracking.list.use_cases.deleteTrackedProgresses
+import com.aamo.exercisetracker.features.progress_tracking.list.use_cases.fetchTrackedProgressesFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.text_field.SearchTextField
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,52 +68,28 @@ import kotlinx.serialization.Serializable
 object TrackedProgressListScreen
 
 class TrackedProgressListScreenViewModel(
-  private val fetchData: () -> Flow<List<ProgressModel>>,
-  private val deleteData: suspend (List<TrackedProgress>) -> Boolean,
+  fetchData: () -> Flow<List<TrackedProgress>>,
+  private val deleteData: suspend (List<TrackedProgress>) -> Unit,
 ) : ViewModel() {
-  data class ProgressModel(
-    val progress: TrackedProgress, val isSelected: Boolean
-  ) {
-    companion object
-  }
-
-  init {
-    viewModelScope.launch {
-      runCatching {
-        fetchData().collect { list ->
-          _progresses.update { list.sortedBy { it.progress.name } }
-          isLoading = false
-        }
-      }
-    }
-  }
-
-  var isLoading by mutableStateOf(true)
-    private set
-
-  private val _progresses = MutableStateFlow<List<ProgressModel>>(emptyList())
+  private var _selections = MutableStateFlow<List<TrackedProgress>>(emptyList())
+  val selections = _selections.asStateFlow()
 
   private var _filterWord = MutableStateFlow(String.EMPTY)
   val filterWord = _filterWord.asStateFlow()
 
-  val filteredProgresses = combine(_progresses, filterWord) { progress, word ->
-    progress.filter { it.progress.name.contains(word, ignoreCase = true) }
-  }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = emptyList())
+  val filteredProgresses = combine(fetchData(), filterWord) { progress, word ->
+    progress.filter { it.name.contains(word, ignoreCase = true) }
+  }.stateIn(scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null)
 
   fun setFilterWord(word: String) {
     _filterWord.update { word }
   }
 
-  fun switchProgressSelection(models: List<ProgressModel>, state: Boolean) {
-    _progresses.update { list ->
+  fun switchProgressSelection(models: List<TrackedProgress>, state: Boolean) {
+    _selections.update { list ->
       list.toMutableList().apply {
-        models.forEach { model ->
-          this.indexOf(model).also { index ->
-            if (index != -1) {
-              this[index] = this[index].copy(isSelected = state)
-            }
-          }
-        }
+        if (state) this.addAll(models.filter { !this.contains(it) })
+        else this.removeAll(models)
       }
     }
   }
@@ -133,24 +111,20 @@ fun NavGraphBuilder.trackedProgressListScreen(
       RoutineDatabase.getDatabase(LocalContext.current.applicationContext).trackedProgressDao()
     val viewmodel: TrackedProgressListScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        TrackedProgressListScreenViewModel(fetchData = {
-          TrackedProgressListScreenViewModel.ProgressModel.fromDao {
-            dao.getProgressesFlow()
-          }
-        }, deleteData = { progresses ->
-          deleteTrackedProgress(*progresses.toTypedArray()) {
-            dao.delete(*progresses.toTypedArray()) > 0
-          }
-        })
+        TrackedProgressListScreenViewModel(
+          fetchData = { fetchTrackedProgressesFlow(dao = dao) },
+          deleteData = { models -> deleteTrackedProgresses(dao = dao, *models.toTypedArray()) })
       }
     })
     val progresses by viewmodel.filteredProgresses.collectAsStateWithLifecycle()
     val filterWord by viewmodel.filterWord.collectAsStateWithLifecycle()
+    val selections by viewmodel.selections.collectAsStateWithLifecycle()
 
-    TrackedProgressListScreen(
-      progresses = progresses,
+    TrackedProgressListScreenContent(
+      progresses = progresses ?: emptyList(),
       filterWord = filterWord,
-      isLoading = viewmodel.isLoading,
+      selections = selections,
+      isLoading = progresses == null,
       onFilterChanged = { viewmodel.setFilterWord(it) },
       onSelectProgress = onSelectProgress,
       onAdd = onAddProgress,
@@ -162,17 +136,17 @@ fun NavGraphBuilder.trackedProgressListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrackedProgressListScreen(
-  progresses: List<TrackedProgressListScreenViewModel.ProgressModel>,
+private fun TrackedProgressListScreenContent(
+  progresses: List<TrackedProgress>,
   filterWord: String,
+  selections: List<TrackedProgress>,
   isLoading: Boolean,
   onFilterChanged: (String) -> Unit,
   onSelectProgress: (id: Long) -> Unit,
   onAdd: () -> Unit,
   onDeleteProgresses: (List<TrackedProgress>) -> Unit,
-  onSwitchSelection: (List<TrackedProgressListScreenViewModel.ProgressModel>, Boolean) -> Unit
+  onSwitchSelection: (List<TrackedProgress>, Boolean) -> Unit
 ) {
-  val itemsSelected by remember(progresses) { mutableStateOf(progresses.any { it.isSelected }) }
   var openDeleteDialog by remember { mutableStateOf(false) }
 
   DeleteDialog(
@@ -181,10 +155,10 @@ fun TrackedProgressListScreen(
     onDismiss = { openDeleteDialog = false },
     onConfirm = {
       openDeleteDialog = false
-      onDeleteProgresses(progresses.filter { it.isSelected }.map { it.progress })
+      onDeleteProgresses(selections)
     })
 
-  BackHandler(enabled = itemsSelected) {
+  BackHandler(enabled = selections.isNotEmpty()) {
     onSwitchSelection(progresses, false)
   }
 
@@ -194,9 +168,8 @@ fun TrackedProgressListScreen(
         .fillMaxSize()
         .imePadding()
     ) {
-      if (itemsSelected) SelectionTopBar(
-        selectionCount = progresses.count { it.isSelected },
-        onDeleteSelected = { openDeleteDialog = true })
+      if (selections.isNotEmpty()) SelectionTopBar(
+        selectionCount = selections.size, onDeleteSelected = { openDeleteDialog = true })
       else UnselectionTopBar(
         filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
       )
@@ -209,24 +182,28 @@ fun TrackedProgressListScreen(
             .clip(RoundedCornerShape(8.dp))
         ) {
           items(progresses) { model ->
+            val selected = selections.contains(model)
+
             Box(
               modifier = Modifier
                 .fillMaxWidth()
                 .background(color = MaterialTheme.colorScheme.surfaceVariant)
                 .combinedClickable(onClick = {
-                  if (!itemsSelected) onSelectProgress(model.progress.id)
-                  else onSwitchSelection(listOf(model), !model.isSelected)
-                }, onLongClick = { if (!itemsSelected) onSwitchSelection(listOf(model), true) })
+                  if (selections.isEmpty()) onSelectProgress(model.id)
+                  else onSwitchSelection(listOf(model), !selected)
+                }, onLongClick = {
+                  if (selections.isEmpty()) onSwitchSelection(listOf(model), true)
+                })
             ) {
               Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
               ) {
-                if (itemsSelected) {
-                  Checkbox(checked = model.isSelected, onCheckedChange = null)
+                if (selections.isNotEmpty()) {
+                  Checkbox(checked = selected, onCheckedChange = null)
                 }
-                Text(text = model.progress.name, fontWeight = FontWeight.Bold)
+                Text(text = model.name, fontWeight = FontWeight.Bold)
               }
               Box(
                 contentAlignment = Alignment.TopEnd,
@@ -234,7 +211,7 @@ fun TrackedProgressListScreen(
                   .fillMaxSize()
                   .padding(horizontal = 12.dp, vertical = 8.dp)
               ) {
-                IntervalTrailing(intervalWeeks = model.progress.intervalWeeks)
+                IntervalTrailing(intervalWeeks = model.intervalWeeks)
               }
             }
           }
@@ -294,4 +271,28 @@ private fun IntervalTrailing(intervalWeeks: Int) {
   }
 
   Text(text = text, color = color, style = MaterialTheme.typography.labelSmall)
+}
+
+@Suppress("HardCodedStringLiteral")
+@Preview
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme(darkTheme = true) {
+    TrackedProgressListScreenContent(
+      progresses = listOf(
+      TrackedProgress(id = 1, name = "Progress 1"),
+      TrackedProgress(id = 2, name = "Progress 2"),
+      TrackedProgress(id = 3, name = "Progress 3"),
+    ),
+      filterWord = String.EMPTY,
+      selections = listOf(
+        TrackedProgress(id = 1, name = "Progress 1"),
+      ),
+      isLoading = false,
+      onFilterChanged = {},
+      onSelectProgress = {},
+      onAdd = {},
+      onDeleteProgresses = {},
+      onSwitchSelection = { _, _ -> })
+  }
 }

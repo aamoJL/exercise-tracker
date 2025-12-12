@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.features.progress_tracking.use_cases
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressRecordListScreenViewModel
 
+// TODO: remove
 suspend fun deleteTrackedProgressValue(
   vararg values: TrackedProgressValue, deleteData: suspend (List<TrackedProgressValue>) -> Boolean
 ) {

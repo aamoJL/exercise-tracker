@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.util.Date
 
+// TODO: remove
 class DeleteTrackedProgressValue {
   @Test
   fun `returns correct model on delete`() {

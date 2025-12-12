@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.time.Duration.Companion.milliseconds
 
+// TODO: remove
 fun ProgressTrackingScreenViewModel.Model.Companion.fromDao(
   fetchData: () -> Flow<TrackedProgressWithValues>
 ): Flow<ProgressTrackingScreenViewModel.Model> {

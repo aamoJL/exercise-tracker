@@ -126,7 +126,7 @@ fun NavGraphBuilder.routineListScreen(
     val filterWord by viewmodel.filterWord.collectAsStateWithLifecycle()
     val selections by viewmodel.selections.collectAsStateWithLifecycle()
 
-    RoutineListScreen(
+    RoutineListScreenContent(
       routines = routines ?: emptyList(),
       filterWord = filterWord,
       selections = selections,
@@ -143,7 +143,7 @@ fun NavGraphBuilder.routineListScreen(
 }
 
 @Composable
-fun RoutineListScreen(
+private fun RoutineListScreenContent(
   routines: List<RoutineWithSchedule>,
   filterWord: String,
   selections: List<Routine>,
@@ -318,7 +318,7 @@ private fun ScheduleTrailing(schedule: RoutineSchedule) {
 @Composable
 private fun Preview() {
   ExerciseTrackerTheme(darkTheme = true) {
-    RoutineListScreen(
+    RoutineListScreenContent(
       routines = listOf(
         RoutineWithSchedule(
           routine = Routine(id = 0, name = "Routine 1"),

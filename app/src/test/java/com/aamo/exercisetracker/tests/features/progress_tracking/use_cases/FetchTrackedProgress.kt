@@ -16,6 +16,7 @@ import java.util.Date
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
+// TODO: remove
 @Suppress("HardCodedStringLiteral")
 class ProgressTrackingScreenViewModelTests {
   @Test

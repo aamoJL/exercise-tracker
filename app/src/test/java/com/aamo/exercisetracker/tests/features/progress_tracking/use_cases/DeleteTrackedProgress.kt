@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
+// TODO: remove
 class DeleteTrackedProgress {
   @Test
   fun `returns true when deleted`() = runBlocking {

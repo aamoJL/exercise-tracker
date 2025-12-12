@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import kotlin.time.Duration.Companion.minutes
 
+// TODO: remove
 @Suppress("HardCodedStringLiteral")
 class SaveTrackedProgress {
   @Test

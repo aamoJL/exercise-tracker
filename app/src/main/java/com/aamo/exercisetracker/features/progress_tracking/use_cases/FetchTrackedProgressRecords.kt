@@ -5,6 +5,7 @@ import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressRecord
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+// TODO: remove
 suspend fun TrackedProgressRecordListScreenViewModel.Model.Companion.fromDao(
   fetchData: suspend () -> Flow<TrackedProgressWithValues>
 ): Flow<TrackedProgressRecordListScreenViewModel.Model> {

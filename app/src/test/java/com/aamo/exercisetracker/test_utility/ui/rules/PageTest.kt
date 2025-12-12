@@ -12,6 +12,7 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.dao.RoutineDao
 import com.aamo.exercisetracker.database.dao.TrackedProgressDao
 import com.aamo.exercisetracker.database.entities.Routine
+import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.test_utility.ui.extensions.waitForDisplayed
 import com.aamo.exercisetracker.utility.tags.UITag
 import kotlinx.coroutines.yield
@@ -55,6 +56,16 @@ open class PageTest {
     waitForLoading()
 
     val insert = routineDao.upsert(routine).let { routine.copy(id = it) }
+
+    rule.onNodeWithText(insert.name).waitForDisplayed()
+    return insert
+  }
+
+  suspend fun toTrackedProgressListScreen(progress: TrackedProgress): TrackedProgress {
+    rule.onNodeWithText(getString(R.string.label_progress)).performClick()
+    waitForLoading()
+
+    val insert = trackedProgressDao.upsert(progress).let { progress.copy(id = it) }
 
     rule.onNodeWithText(insert.name).waitForDisplayed()
     return insert
