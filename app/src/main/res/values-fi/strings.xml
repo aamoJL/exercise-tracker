@@ -44,7 +44,7 @@
     <string name="cd_routines_tab">Ohjelmat välilehti</string>
     <string name="label_routines">Ohjelmat</string>
     <string name="title_new_routine">Uusi ohjelma</string>
-    <string name="title_edit_routine">Muokkaa ohjelmaa</string>
+    <string name="title_existing_routine">Muokkaa ohjelmaa</string>
     <string name="cd_delete_routine">Poista ohjelma</string>
     <string name="cd_save_routine">Tallenna ohjelma</string>
     <string name="label_schedule">Aikataulu</string>

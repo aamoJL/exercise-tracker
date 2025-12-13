@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.routine
+package com.aamo.exercisetracker.features.routine.form
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -46,11 +47,12 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
+import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
-import com.aamo.exercisetracker.features.routine.use_cases.deleteRoutine
-import com.aamo.exercisetracker.features.routine.use_cases.fromDao
-import com.aamo.exercisetracker.features.routine.use_cases.saveRoutine
-import com.aamo.exercisetracker.features.routine.use_cases.toDao
+import com.aamo.exercisetracker.features.routine.form.models.RoutineFormFields
+import com.aamo.exercisetracker.features.routine.form.use_cases.deleteRoutine
+import com.aamo.exercisetracker.features.routine.form.use_cases.fetchRoutineWithSchedule
+import com.aamo.exercisetracker.features.routine.form.use_cases.saveRoutine
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
@@ -59,13 +61,17 @@ import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
-import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Calendar
@@ -74,22 +80,14 @@ import java.util.Calendar
 data class RoutineFormScreen(val id: Long)
 
 class RoutineFormViewModel(
-  private val fetchData: suspend () -> Model,
-  private val saveData: suspend (Model) -> Boolean,
-  private val deleteData: suspend () -> Boolean
+  private val fetchData: suspend () -> RoutineWithSchedule?,
+  private val saveData: suspend (RoutineWithSchedule) -> Unit,
+  private val deleteData: suspend (Routine) -> Unit
 ) : ViewModel() {
-  data class Model(
-    val routineName: String,
-    val selectedDays: List<Day>,
-    val isNew: Boolean,
-  ) {
-    companion object
-  }
-
-  class UiState {
-    val routineName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
-    val selectedDays = ViewModelStateList<Day>().unique().onChange { onUnsavedChanges() }
-    var isNew by mutableStateOf(true)
+  class FormState(fields: RoutineFormFields) {
+    val routineName = ViewModelState(fields.name).onChange { onUnsavedChanges() }
+    val selectedDays = ViewModelStateList(fields.days).unique().onChange { onUnsavedChanges() }
+    var isNew by mutableStateOf(fields.name.isEmpty())
     var savingState by mutableStateOf(SavingState())
 
     fun canSave(): Boolean {
@@ -107,42 +105,55 @@ class RoutineFormViewModel(
     }
   }
 
-  var isLoading by mutableStateOf(true)
-  val uiState = UiState()
+  private var model: RoutineWithSchedule? = null
 
-  init {
-    viewModelScope.launch {
-      fetchData().also { result ->
-        uiState.apply {
-          routineName.update(result.routineName)
-          selectedDays.add(*result.selectedDays.toTypedArray())
-          isNew = result.isNew
-          savingState = savingState.copy(unsavedChanges = false)
-        }
-      }
-      isLoading = false
-    }
-  }
+  private val _formState = MutableSharedFlow<FormState?>().onStart {
+    val data = fetchData() ?: throw Exception("Failed to fetch data")
+    model = data
+
+    emit(
+      FormState(
+        fields = RoutineFormFields(
+          name = data.routine.name, days = data.schedule?.asListOfDays() ?: emptyList()
+        )
+      )
+    )
+  }.catch { }
+  val formState = _formState.stateIn(
+    scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null
+  )
 
   /**
    * Saves the routine to the database
    */
   fun save() {
-    if (!uiState.canSave()) return
+    val formState = formState.value ?: return
+    if (!formState.canSave()) return
 
-    uiState.apply { savingState = savingState.getAsSaving() }
+    formState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
       runCatching {
-        check(saveData(uiState.let { s ->
-          Model(
-            routineName = s.routineName.value, selectedDays = s.selectedDays.values, isNew = s.isNew
-          )
-        }))
+        saveData(formState.let { s ->
+          checkNotNull(model).let { model ->
+            model.copy(
+              routine = model.routine.copy(name = s.routineName.value),
+              schedule = (model.schedule ?: RoutineSchedule(routineId = model.routine.id)).copy(
+                sunday = s.selectedDays.values.contains(Day.SUNDAY),
+                monday = s.selectedDays.values.contains(Day.MONDAY),
+                tuesday = s.selectedDays.values.contains(Day.TUESDAY),
+                wednesday = s.selectedDays.values.contains(Day.WEDNESDAY),
+                thursday = s.selectedDays.values.contains(Day.THURSDAY),
+                friday = s.selectedDays.values.contains(Day.FRIDAY),
+                saturday = s.selectedDays.values.contains(Day.SATURDAY),
+              )
+            )
+          }
+        })
       }.onSuccess { _ ->
-        uiState.apply { savingState = savingState.getAsSaved() }
+        formState.apply { savingState = savingState.getAsSaved() }
       }.onFailure { error ->
-        uiState.apply { savingState = savingState.getAsError(error = Error(error)) }
+        formState.apply { savingState = savingState.getAsError(error = Error(error)) }
       }
     }
   }
@@ -151,10 +162,11 @@ class RoutineFormViewModel(
    * Deletes the routine from the database
    */
   fun delete() {
-    if (uiState.isNew) return
+    val state = formState.value ?: return
+    if (state.isNew) return
 
     viewModelScope.launch {
-      runCatching { deleteData() }
+      runCatching { deleteData(checkNotNull(model?.routine)) }
     }
   }
 }
@@ -169,31 +181,25 @@ fun NavGraphBuilder.routineFormScreen(
     val viewmodel: RoutineFormViewModel = viewModel(factory = viewModelFactory {
       initializer {
         RoutineFormViewModel(
-          fetchData = {
-            RoutineFormViewModel.Model.fromDao {
-              if (routineId == 0L) RoutineWithSchedule(routine = Routine(), schedule = null)
-              else dao.getRoutineWithSchedule(routineId) ?: throw Exception("Failed to fetch data")
+          fetchData = { fetchRoutineWithSchedule(dao = dao, routineId = routineId) },
+          saveData = { (routine, schedule) ->
+            saveRoutine(dao = dao, routine = routine, schedule = schedule).also { id ->
+              onSaved(id)
             }
           },
-          saveData = { model ->
-            saveRoutine(model = model.toDao(routineId)) { (routine, schedule) ->
-              dao.upsert(routine, schedule).also {
-                onSaved(it.routineId)
-              }.let { true }
+          deleteData = { routine ->
+            deleteRoutine(dao = dao, routine).also {
+              onDeleted()
             }
-          },
-          deleteData = {
-            deleteRoutine(Routine(id = routineId)) {
-              dao.delete(*it.toTypedArray()) > 0
-            }.onTrue { onDeleted() }
           },
         )
       }
     })
+    val uiState by viewmodel.formState.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = viewmodel.isLoading) {
+    LoadingScreen(loading = uiState == null) {
       RoutineFormScreen(
-        uiState = viewmodel.uiState,
+        formState = checkNotNull(uiState),
         onBack = onBack,
         onSave = { viewmodel.save() },
         onDelete = { viewmodel.delete() })
@@ -204,14 +210,14 @@ fun NavGraphBuilder.routineFormScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutineFormScreen(
-  uiState: RoutineFormViewModel.UiState,
+  formState: RoutineFormViewModel.FormState,
   onBack: () -> Unit,
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
   val days = remember { Calendar.getInstance().getLocalDayOrder() }
   val unsavedChanges =
-    remember(uiState.savingState.unsavedChanges) { uiState.savingState.unsavedChanges }
+    remember(formState.savingState.unsavedChanges) { formState.savingState.unsavedChanges }
 
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
@@ -241,16 +247,16 @@ fun RoutineFormScreen(
     TopAppBar(title = {
       Text(
         text = ifElse(
-          condition = uiState.isNew,
+          condition = formState.isNew,
           ifTrue = { stringResource(R.string.title_new_routine) },
-          ifFalse = { stringResource(R.string.title_edit_routine) })
+          ifFalse = { stringResource(R.string.title_existing_routine) })
       )
     }, navigationIcon = {
       BackNavigationIconButton(onBack = {
         if (unsavedChanges) openUnsavedDialog = true else onBack()
       })
     }, actions = {
-      if (!uiState.isNew) {
+      if (!formState.isNew) {
         IconButton(onClick = { openDeleteDialog = true }) {
           Icon(
             painter = painterResource(R.drawable.rounded_delete_24),
@@ -260,8 +266,8 @@ fun RoutineFormScreen(
       }
       LoadingIconButton(
         onClick = onSave,
-        isLoading = uiState.savingState.state == SavingState.State.SAVING,
-        enabled = uiState.canSave()
+        isLoading = formState.savingState.state == SavingState.State.SAVING,
+        enabled = formState.canSave()
       ) {
         Icon(
           painter = painterResource(R.drawable.round_done_24),
@@ -277,11 +283,11 @@ fun RoutineFormScreen(
         .padding(8.dp)
     ) {
       TextField(
-        value = uiState.routineName.value,
+        value = formState.routineName.value,
         label = { Text(stringResource(R.string.label_name)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { uiState.routineName.update(it) },
+        onValueChange = { formState.routineName.update(it) },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
         ),
@@ -302,7 +308,7 @@ fun RoutineFormScreen(
               .padding(vertical = 8.dp)
           ) {
             items(days) { day ->
-              val isSelected = uiState.selectedDays.values.contains(day)
+              val isSelected = formState.selectedDays.values.contains(day)
 
               IconToggleButton(
                 colors = IconButtonDefaults.outlinedIconToggleButtonColors(
@@ -311,12 +317,11 @@ fun RoutineFormScreen(
                   contentColor = MaterialTheme.colorScheme.outline,
                 ), checked = isSelected, onCheckedChange = { selection ->
                   selection.onTrue {
-                    uiState.selectedDays.add(day)
+                    formState.selectedDays.add(day)
                   }.onFalse {
-                    uiState.selectedDays.remove(day)
+                    formState.selectedDays.remove(day)
                   }
-                }, modifier = Modifier
-              ) {
+                }) {
                 Text(stringResource(day.nameResourceKey).take(2))
               }
             }

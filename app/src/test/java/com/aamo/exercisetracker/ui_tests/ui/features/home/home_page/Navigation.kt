@@ -28,6 +28,19 @@ class Navigation : PageTest() {
   }
 
   @Test
+  fun `back always returns to dailiesScreen`() = runTest {
+    rule.onNodeWithText(getString(R.string.label_routines)).performClick()
+    waitForLoading()
+    rule.onNodeWithText(getString(R.string.label_progress)).performClick()
+    waitForLoading()
+
+    rule.activity.onBackPressedDispatcher.onBackPressed()
+    waitForLoading()
+
+    rule.onNodeWithText(getString(Day.today().nameResourceKey)).assertExists()
+  }
+
+  @Test
   fun `to routineListScreen`() = runTest {
     rule.onNodeWithText(getString(R.string.label_routines)).performClick()
     waitForLoading()

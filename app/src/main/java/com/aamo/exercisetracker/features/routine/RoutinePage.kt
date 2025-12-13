@@ -5,6 +5,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.navigation
 import com.aamo.exercisetracker.features.exercise.ExerciseFormScreen
+import com.aamo.exercisetracker.features.routine.form.RoutineFormScreen
+import com.aamo.exercisetracker.features.routine.form.routineFormScreen
 import kotlinx.serialization.Serializable
 
 @Serializable

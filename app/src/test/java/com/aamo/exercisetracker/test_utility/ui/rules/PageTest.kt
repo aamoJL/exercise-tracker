@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.test_utility.ui.rules
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,6 +13,7 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.dao.RoutineDao
 import com.aamo.exercisetracker.database.dao.TrackedProgressDao
 import com.aamo.exercisetracker.database.entities.Routine
+import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.test_utility.ui.extensions.waitForDisplayed
 import com.aamo.exercisetracker.utility.tags.UITag
@@ -59,6 +61,29 @@ open class PageTest {
 
     rule.onNodeWithText(insert.name).waitForDisplayed()
     return insert
+  }
+
+  suspend fun toRoutineFormScreen(model: RoutineWithSchedule? = null): RoutineWithSchedule? {
+    rule.onNodeWithText(getString(R.string.label_routines)).performClick()
+    waitForLoading()
+
+    if (model != null) {
+      val insert = routineDao.upsert(model.routine, model.schedule).let { (routineId, scheduleId) ->
+        model.copy(
+          routine = model.routine.copy(id = routineId),
+          schedule = model.schedule?.copy(id = scheduleId ?: 0L, routineId = routineId)
+        )
+      }
+
+      rule.onNodeWithText(insert.routine.name).waitForDisplayed().performClick()
+      waitForLoading()
+      rule.onNodeWithContentDescription(getString(R.string.cd_edit_routine)).performClick()
+      return insert
+    }
+    else {
+      rule.onNodeWithContentDescription(getString(R.string.cd_add_routine)).performClick()
+      return null
+    }
   }
 
   suspend fun toTrackedProgressListScreen(progress: TrackedProgress): TrackedProgress {

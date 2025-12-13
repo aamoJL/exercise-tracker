@@ -44,7 +44,7 @@
     <string name="cd_routines_tab">Routines tab</string>
     <string name="label_routines">Routines</string>
     <string name="title_new_routine">New Routine</string>
-    <string name="title_edit_routine">Edit Routine</string>
+    <string name="title_existing_routine">Edit Routine</string>
     <string name="cd_delete_routine">Delete routine</string>
     <string name="cd_save_routine">Save routine</string>
     <string name="label_schedule">Schedule</string>

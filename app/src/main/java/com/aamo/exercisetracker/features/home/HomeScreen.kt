@@ -27,8 +27,8 @@ import com.aamo.exercisetracker.features.progress_tracking.ProgressTrackingScree
 import com.aamo.exercisetracker.features.progress_tracking.TrackedProgressFormScreen
 import com.aamo.exercisetracker.features.progress_tracking.list.TrackedProgressListScreen
 import com.aamo.exercisetracker.features.progress_tracking.list.trackedProgressListScreen
-import com.aamo.exercisetracker.features.routine.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
+import com.aamo.exercisetracker.features.routine.form.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.list.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.list.routineListScreen
 import com.aamo.exercisetracker.utility.extensions.date.Day
