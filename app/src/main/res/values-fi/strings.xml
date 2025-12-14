@@ -24,7 +24,7 @@
     <string name="dialog_title_delete_exercise">Poista treeni?</string>
     <string name="btn_delete">Poista</string>
     <string name="btn_cancel">Peruuta</string>
-    <string name="ph_reps">toistoa</string>
+    <string name="default_text_reps">toistoa</string>
     <string name="ph_minutes">minuuttia</string>
     <string name="cd_edit_exercise">Muokkaa treeniä</string>
     <string name="title_rest">Tauko</string>
@@ -68,7 +68,7 @@
     <string name="dialog_title_delete_tracked_progress">Poista kehityksen seuranta?</string>
     <string name="dialog_title_delete_tracked_progresses">Poista kehityksen seurannat?</string>
     <string name="title_new_tracked_progress">Uusi kehityksen seuranta</string>
-    <string name="title_edit_tracked_progress">Muokkaa kehityksen seurantaa</string>
+    <string name="title_existing_tracked_progress">Muokkaa kehityksen seurantaa</string>
     <string name="cd_delete_tracked_progress">Poista kehityksen seuranta</string>
     <string name="cd_save_tracked_progress">Tallenna kehityksen seuranta</string>
     <string name="suffix_weeks">viikkoa</string>
@@ -91,7 +91,7 @@
     <string name="label_seconds">Sekuntia</string>
     <string name="label_stopwatch">Sekuntikello</string>
     <string name="label_time">Aika</string>
-    <string name="title_repetitions">Toistoja</string>
+    <string name="label_repetitions">Toistoja</string>
     <string name="cd_timer">Ajastin</string>
     <string name="title_timer">Ajastin</string>
     <string name="title_stopwatch">Sekuntikello</string>

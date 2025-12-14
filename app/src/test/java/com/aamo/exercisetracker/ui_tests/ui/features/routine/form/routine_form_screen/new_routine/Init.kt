@@ -1,14 +1,13 @@
 package com.aamo.exercisetracker.ui_tests.ui.features.routine.form.routine_form_screen.new_routine
 
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import com.aamo.exercisetracker.R
+import com.aamo.exercisetracker.test_utility.ui.extensions.assertEditableText
 import com.aamo.exercisetracker.test_utility.ui.rules.PageTest
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
-import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -34,11 +33,7 @@ class Init : PageTest() {
 
   @Test
   fun `form fields`() {
-    assertEquals(
-      String.EMPTY,
-      rule.onNodeWithText(getString(R.string.label_name))
-        .fetchSemanticsNode().config[SemanticsProperties.EditableText].text
-    )
+    rule.onNodeWithText(getString(R.string.label_name)).assertEditableText(String.EMPTY)
 
     Day.entries.forEach { day ->
       rule.onNodeWithText(getString(day.nameResourceKey).take(2)).assertIsOff()

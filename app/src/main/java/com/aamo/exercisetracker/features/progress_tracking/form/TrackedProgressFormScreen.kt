@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progress_tracking
+package com.aamo.exercisetracker.features.progress_tracking.form
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -48,10 +49,10 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgress
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
+import com.aamo.exercisetracker.features.progress_tracking.form.models.TrackedProgressFormFields
+import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.deleteTrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.fetchTrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.saveTrackedProgress
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
@@ -67,49 +68,37 @@ import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.equalsAny
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.letIf
-import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Serializable
 data class TrackedProgressFormScreen(val progressId: Long)
 
-class TrackedProgressFormScreenViewModel(
-  private val fetchData: suspend () -> Model,
-  private val saveData: suspend (Model) -> Boolean,
-  private val deleteData: suspend () -> Boolean,
+class TrackedProgressFormViewModel(
+  private val fetchData: suspend () -> TrackedProgress?,
+  private val saveData: suspend (TrackedProgress) -> Unit,
+  private val deleteData: suspend (TrackedProgress) -> Unit,
 ) : ViewModel() {
-  data class Model(
-    val trackedProgressName: String,
-    val weeklyInterval: Int,
-    val progressValueUnit: String,
-    val hasStopWatch: Boolean,
-    val timerDuration: Duration?,
-    val isNew: Boolean,
-  ) {
-    companion object
-  }
-
-  class UiState {
-    enum class ProgressType {
-      REPETITION,
-      TIMER,
-      STOPWATCH
+  class FormState(fields: TrackedProgressFormFields) {
+    val progressName = ViewModelState(fields.name).onChange { onUnsavedChanges() }
+    val weeklyInterval = ViewModelState(fields.weeklyInterval).onChange { onUnsavedChanges() }
+    val progressValueUnit = ViewModelState(fields.progressValueUnit).onChange { onUnsavedChanges() }
+    val progressType = ViewModelState(fields.type).onChange {
+      if (it != TrackedProgressFormFields.ProgressType.TIMER) timerDuration.update(0.seconds)
     }
-
-    val progressName = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
-    val weeklyInterval = ViewModelState(0).onChange { onUnsavedChanges() }
-    val progressValueUnit = ViewModelState(String.EMPTY).onChange { onUnsavedChanges() }
-    val progressType = ViewModelState(ProgressType.REPETITION).onChange {
-      if (it != ProgressType.TIMER) timerDuration.update(0.seconds)
-    }
-    val timerDuration = ViewModelState(0.seconds).onChange { onUnsavedChanges() }
+    val timerDuration =
+      ViewModelState(fields.timerDuration ?: 0.seconds).onChange { onUnsavedChanges() }
     var savingState by mutableStateOf(SavingState())
-    var isNew by mutableStateOf(false)
+    var isNew by mutableStateOf(fields.name.isEmpty())
 
     private fun onUnsavedChanges() {
       if (!savingState.unsavedChanges) {
@@ -118,68 +107,74 @@ class TrackedProgressFormScreenViewModel(
     }
 
     fun canSave(): Boolean {
-      if (progressType.value == ProgressType.TIMER && timerDuration.value < 1.seconds) return false
-      if (savingState.state == SavingState.State.SAVING) return false
       if (progressName.value.isEmpty()) return false
+      if (progressType.value == TrackedProgressFormFields.ProgressType.TIMER) {
+        if (timerDuration.value < 1.seconds) return false
+      }
+      if (savingState.state == SavingState.State.SAVING) return false
       return true
     }
   }
 
-  var isLoading by mutableStateOf(true)
-  val uiState = UiState()
+  private var model: TrackedProgress? = null
 
-  init {
-    viewModelScope.launch {
-      fetchData().also { result ->
-        uiState.apply {
-          progressName.update(result.trackedProgressName)
-          weeklyInterval.update(result.weeklyInterval)
-          progressValueUnit.update(result.progressValueUnit)
-          result.hasStopWatch.onTrue {
-            progressType.update(UiState.ProgressType.STOPWATCH)
-          }
-          result.timerDuration?.also {
-            progressType.update(UiState.ProgressType.TIMER)
-            timerDuration.update(result.timerDuration)
-          }
-          isNew = result.isNew
-          savingState = savingState.copy(unsavedChanges = false)
-        }
-        isLoading = false
-      }
-    }
-  }
+  private val _formState = MutableSharedFlow<FormState?>().onStart {
+    val data = fetchData() ?: throw Exception("Failed to fetch data")
+    model = data
+
+    emit(
+      FormState(
+        fields = TrackedProgressFormFields(
+          name = data.name,
+          weeklyInterval = data.intervalWeeks,
+          type = if (data.hasStopWatch) TrackedProgressFormFields.ProgressType.STOPWATCH
+          else if (data.timerTime != null) TrackedProgressFormFields.ProgressType.TIMER
+          else TrackedProgressFormFields.ProgressType.REPETITION,
+          progressValueUnit = data.unit,
+          timerDuration = data.timerTime?.milliseconds
+        )
+      )
+    )
+  }.catch { }
+  val formState = _formState.stateIn(
+    scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null
+  )
 
   fun save() {
-    if (!uiState.canSave()) return
+    val formState = formState.value ?: return
+    if (!formState.canSave()) return
 
-    uiState.apply { savingState = savingState.getAsSaving() }
+    formState.apply { savingState = savingState.getAsSaving() }
 
     viewModelScope.launch {
       runCatching {
-        check(saveData(uiState.let { s ->
-          Model(
-            trackedProgressName = s.progressName.value,
-            weeklyInterval = s.weeklyInterval.value,
-            progressValueUnit = s.progressValueUnit.value,
-            hasStopWatch = s.progressType.value == UiState.ProgressType.STOPWATCH,
-            timerDuration = s.timerDuration.value.let { if (it.inWholeSeconds == 0L) null else it },
-            isNew = s.isNew
-          )
-        }))
+        saveData(formState.let { s ->
+          checkNotNull(model).let { model ->
+            model.copy(
+              name = s.progressName.value,
+              intervalWeeks = s.weeklyInterval.value,
+              unit = s.progressValueUnit.value,
+              hasStopWatch = s.progressType.value == TrackedProgressFormFields.ProgressType.STOPWATCH,
+              timerTime = s.timerDuration.value.inWholeMilliseconds.let {
+                if (it == 0L) null else it
+              },
+            )
+          }
+        })
       }.onSuccess { _ ->
-        uiState.apply { savingState = savingState.getAsSaved() }
+        formState.apply { savingState = savingState.getAsSaved() }
       }.onFailure { error ->
-        uiState.apply { savingState = savingState.getAsError(error = Error(error)) }
+        formState.apply { savingState = savingState.getAsError(error = Error(error)) }
       }
     }
   }
 
   fun delete() {
-    if (uiState.isNew) return
+    val formState = formState.value ?: return
+    if (formState.isNew) return
 
     viewModelScope.launch {
-      runCatching { deleteData() }
+      runCatching { deleteData(checkNotNull(model)) }
     }
   }
 }
@@ -189,36 +184,29 @@ fun NavGraphBuilder.trackedProgressFormScreen(
 ) {
   composable<TrackedProgressFormScreen> { navStack ->
     val progressId = navStack.toRoute<TrackedProgressFormScreen>().progressId
-    val progressUnitDefault = stringResource(R.string.ph_reps)
+    val defaultUnit = stringResource(R.string.default_text_reps)
     val dao =
       RoutineDatabase.getDatabase(LocalContext.current.applicationContext).trackedProgressDao()
-    val viewmodel: TrackedProgressFormScreenViewModel = viewModel(factory = viewModelFactory {
+    val viewmodel: TrackedProgressFormViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        TrackedProgressFormScreenViewModel(fetchData = {
-          TrackedProgressFormScreenViewModel.Model.fromDao(defaultUnit = progressUnitDefault) {
-            dao.getTrackedProgress(progressId) ?: TrackedProgress()
-          }
+        TrackedProgressFormViewModel(fetchData = {
+          fetchTrackedProgress(dao = dao, progressId = progressId, defaultUnit = defaultUnit)
         }, saveData = { model ->
-          saveTrackedProgress(data = model.toDao(progressId)) {
-            dao.upsert(it).let { result ->
-              ifElse(
-                condition = result != -1L,
-                ifTrue = { onSaved(result) },
-                ifFalse = { onSaved(it.id) })
-            }.let { true }
+          saveTrackedProgress(dao = dao, model = model).also {
+            onSaved(it)
           }
-        }, deleteData = {
-          dao.getTrackedProgress(progressId)?.let { progress ->
-            deleteTrackedProgress(progress) { dao.delete(*it.toTypedArray()) > 0 }.onTrue { onDeleted() }
-          } ?: throw Exception("Failed to fetch data")
+        }, deleteData = { model ->
+          deleteTrackedProgress(dao = dao, model = model).also {
+            onDeleted()
+          }
         })
       }
     })
-    val uiState = viewmodel.uiState
+    val formState by viewmodel.formState.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = viewmodel.isLoading) {
+    LoadingScreen(loading = formState == null) {
       TrackedProgressFormScreen(
-        uiState = uiState,
+        uiState = checkNotNull(formState),
         onBack = onBack,
         onSave = { viewmodel.save() },
         onDelete = { viewmodel.delete() })
@@ -229,34 +217,30 @@ fun NavGraphBuilder.trackedProgressFormScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackedProgressFormScreen(
-  uiState: TrackedProgressFormScreenViewModel.UiState,
+  uiState: TrackedProgressFormViewModel.FormState,
   onBack: () -> Unit,
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  val progressUnitDefault = stringResource(R.string.ph_reps)
+  val progressUnitDefault = stringResource(R.string.default_text_reps)
 
   val unitFieldEnabled by remember(uiState.progressType.value) {
     mutableStateOf(
       uiState.progressType.value.equalsAny(
-        TrackedProgressFormScreenViewModel.UiState.ProgressType.REPETITION,
-        TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER
+        TrackedProgressFormFields.ProgressType.REPETITION,
+        TrackedProgressFormFields.ProgressType.TIMER
       )
     )
   }
   val durationFieldEnabled by remember(uiState.progressType.value) {
     mutableStateOf(
       uiState.progressType.value.equalsAny(
-        TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER,
+        TrackedProgressFormFields.ProgressType.TIMER,
       )
     )
   }
   var unitFieldPreviousValue by remember {
-    mutableStateOf(
-      uiState.progressValueUnit.value.letIf(
-        condition = { it.isEmpty() },
-        block = { progressUnitDefault })
-    )
+    mutableStateOf(uiState.progressValueUnit.value.letIf(condition = { it.isEmpty() }) { progressUnitDefault })
   }
   var durationFieldPreviousValue by remember { mutableStateOf(uiState.timerDuration.value) }
 
@@ -316,7 +300,7 @@ fun TrackedProgressFormScreen(
         text = ifElse(
           condition = uiState.isNew,
           ifTrue = { stringResource(R.string.title_new_tracked_progress) },
-          ifFalse = { stringResource(R.string.title_edit_tracked_progress) })
+          ifFalse = { stringResource(R.string.title_existing_tracked_progress) })
       )
     }, navigationIcon = {
       BackNavigationIconButton(onBack = {
@@ -385,19 +369,19 @@ fun TrackedProgressFormScreen(
             .fillMaxHeight()
         ) {
           HorizontalRadioButton(
-            title = stringResource(R.string.title_repetitions),
-            selected = uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.REPETITION,
-            onSelect = { uiState.progressType.update(TrackedProgressFormScreenViewModel.UiState.ProgressType.REPETITION) },
+            title = stringResource(R.string.label_repetitions),
+            selected = uiState.progressType.value == TrackedProgressFormFields.ProgressType.REPETITION,
+            onSelect = { uiState.progressType.update(TrackedProgressFormFields.ProgressType.REPETITION) },
           )
           HorizontalRadioButton(
             title = stringResource(R.string.label_timer),
-            selected = uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER,
-            onSelect = { uiState.progressType.update(TrackedProgressFormScreenViewModel.UiState.ProgressType.TIMER) },
+            selected = uiState.progressType.value == TrackedProgressFormFields.ProgressType.TIMER,
+            onSelect = { uiState.progressType.update(TrackedProgressFormFields.ProgressType.TIMER) },
           )
           HorizontalRadioButton(
             title = stringResource(R.string.label_stopwatch),
-            selected = uiState.progressType.value == TrackedProgressFormScreenViewModel.UiState.ProgressType.STOPWATCH,
-            onSelect = { uiState.progressType.update(TrackedProgressFormScreenViewModel.UiState.ProgressType.STOPWATCH) },
+            selected = uiState.progressType.value == TrackedProgressFormFields.ProgressType.STOPWATCH,
+            onSelect = { uiState.progressType.update(TrackedProgressFormFields.ProgressType.STOPWATCH) },
           )
         }
         Column(

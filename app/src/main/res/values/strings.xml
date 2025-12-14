@@ -24,7 +24,7 @@
     <string name="dialog_title_delete_exercise">Delete exercise?</string>
     <string name="btn_delete">Delete</string>
     <string name="btn_cancel">Cancel</string>
-    <string name="ph_reps">reps</string>
+    <string name="default_text_reps">reps</string>
     <string name="ph_minutes">minutes</string>
     <string name="cd_edit_exercise">Edit exercise</string>
     <string name="title_rest">Rest</string>
@@ -68,7 +68,7 @@
     <string name="dialog_title_delete_tracked_progress">Delete tracked progress?</string>
     <string name="dialog_title_delete_tracked_progresses">Delete tracked progresses?</string>
     <string name="title_new_tracked_progress">New Tracked Progress</string>
-    <string name="title_edit_tracked_progress">Edit Tracked Progress</string>
+    <string name="title_existing_tracked_progress">Edit Tracked Progress</string>
     <string name="cd_delete_tracked_progress">Delete tracked progress</string>
     <string name="cd_save_tracked_progress">Save tracked progress</string>
     <string name="label_weekly_interval_optional">Weekly interval (optional)</string>
@@ -91,7 +91,7 @@
     <string name="label_seconds">Seconds</string>
     <string name="label_stopwatch">Stopwatch</string>
     <string name="label_time">Time</string>
-    <string name="title_repetitions">Repetitions</string>
+    <string name="label_repetitions">Repetitions</string>
     <string name="cd_timer">Timer</string>
     <string name="title_timer">Timer</string>
     <string name="title_stopwatch">Stopwatch</string>

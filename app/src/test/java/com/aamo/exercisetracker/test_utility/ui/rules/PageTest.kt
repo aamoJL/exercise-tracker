@@ -13,6 +13,7 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.dao.RoutineDao
 import com.aamo.exercisetracker.database.dao.TrackedProgressDao
 import com.aamo.exercisetracker.database.entities.Routine
+import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.test_utility.ui.extensions.waitForDisplayed
@@ -63,7 +64,7 @@ open class PageTest {
     return insert
   }
 
-  suspend fun toRoutineFormScreen(model: RoutineWithSchedule? = null): RoutineWithSchedule? {
+  suspend fun toRoutineFormScreen(model: RoutineWithSchedule? = null): RoutineWithSchedule {
     rule.onNodeWithText(getString(R.string.label_routines)).performClick()
     waitForLoading()
 
@@ -82,7 +83,7 @@ open class PageTest {
     }
     else {
       rule.onNodeWithContentDescription(getString(R.string.cd_add_routine)).performClick()
-      return null
+      return RoutineWithSchedule(routine = Routine(), schedule = RoutineSchedule(routineId = 0L))
     }
   }
 
@@ -94,5 +95,23 @@ open class PageTest {
 
     rule.onNodeWithText(insert.name).waitForDisplayed()
     return insert
+  }
+
+  suspend fun toTrackedProgressFormScreen(model: TrackedProgress? = null): TrackedProgress {
+    rule.onNodeWithText(getString(R.string.label_progress)).performClick()
+    waitForLoading()
+
+    if (model != null) {
+      val insert = trackedProgressDao.upsert(model).let { id -> model.copy(id = id) }
+
+      rule.onNodeWithText(insert.name).waitForDisplayed().performClick()
+      waitForLoading()
+      rule.onNodeWithContentDescription(getString(R.string.cd_edit_tracked_progress)).performClick()
+      return insert
+    }
+    else {
+      rule.onNodeWithContentDescription(getString(R.string.cd_add_tracked_progress)).performClick()
+      return TrackedProgress()
+    }
   }
 }

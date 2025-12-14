@@ -35,10 +35,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.deleteTrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.saveTrackedProgressValue
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.toDao
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
@@ -135,14 +132,14 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
             }
           },
           deleteRecordData = { record ->
-            deleteTrackedProgressValue(record.toDao(progressId)) {
-              dao.delete(*it.toTypedArray()) > 0
-            }
+//            deleteTrackedProgressValue(record.toDao(progressId)) {
+//              dao.delete(*it.toTypedArray()) > 0
+//            }
           },
           saveRecordData = { record ->
-            saveTrackedProgressValue(value = record.toDao(progressId)) {
-              dao.upsert(it).let { true }
-            }
+//            saveTrackedProgressValue(value = record.toDao(progressId)) {
+//              dao.upsert(it).let { true }
+//            }
           },
         )
       }

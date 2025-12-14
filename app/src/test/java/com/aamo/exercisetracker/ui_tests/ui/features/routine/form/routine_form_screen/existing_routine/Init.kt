@@ -1,6 +1,5 @@
 package com.aamo.exercisetracker.ui_tests.ui.features.routine.form.routine_form_screen.existing_routine
 
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -10,9 +9,9 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.test_utility.ui.extensions.assertEditableText
 import com.aamo.exercisetracker.test_utility.ui.rules.PageTest
 import com.aamo.exercisetracker.utility.extensions.date.Day
-import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -34,7 +33,7 @@ class Init : PageTest() {
         routine = Routine(name = "Routine 1"),
         schedule = RoutineSchedule(routineId = 0L, sunday = true)
       )
-    ) ?: throw Error()
+    )
     waitForLoading()
   }
 
@@ -46,11 +45,7 @@ class Init : PageTest() {
 
   @Test
   fun `form fields`() {
-    assertEquals(
-      model.routine.name,
-      rule.onNodeWithText(getString(R.string.label_name))
-        .fetchSemanticsNode().config[SemanticsProperties.EditableText].text
-    )
+    rule.onNodeWithText(getString(R.string.label_name)).assertEditableText(model.routine.name)
 
     val selectedDays = model.schedule!!.asListOfDays()
 

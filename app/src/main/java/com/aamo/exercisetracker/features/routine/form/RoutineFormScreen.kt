@@ -195,11 +195,11 @@ fun NavGraphBuilder.routineFormScreen(
         )
       }
     })
-    val uiState by viewmodel.formState.collectAsStateWithLifecycle()
+    val formState by viewmodel.formState.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = uiState == null) {
+    LoadingScreen(loading = formState == null) {
       RoutineFormScreen(
-        formState = checkNotNull(uiState),
+        formState = checkNotNull(formState),
         onBack = onBack,
         onSave = { viewmodel.save() },
         onDelete = { viewmodel.delete() })

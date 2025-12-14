@@ -20,8 +20,9 @@ class FormState {
 
     assertFalse(RoutineFormViewModel.FormState(fields = fields.copy(name = String.EMPTY)).canSave())
     assertFalse(
-      RoutineFormViewModel.FormState(fields = fields)
-        .apply { savingState = savingState.getAsSaving() }.canSave()
+      RoutineFormViewModel.FormState(fields = fields).apply {
+        savingState = savingState.getAsSaving()
+      }.canSave()
     )
   }
 
@@ -32,12 +33,14 @@ class FormState {
     assertFalse(RoutineFormViewModel.FormState(fields = fields).savingState.unsavedChanges)
 
     assertTrue(
-      RoutineFormViewModel.FormState(fields = fields)
-        .apply { routineName.update("New name") }.savingState.unsavedChanges
+      RoutineFormViewModel.FormState(fields = fields).apply {
+        routineName.update("New name")
+      }.savingState.unsavedChanges
     )
     assertTrue(
-      RoutineFormViewModel.FormState(fields = fields)
-        .apply { selectedDays.add(Day.MONDAY) }.savingState.unsavedChanges
+      RoutineFormViewModel.FormState(fields = fields).apply {
+        selectedDays.add(Day.MONDAY)
+      }.savingState.unsavedChanges
     )
   }
 

@@ -3,6 +3,8 @@ package com.aamo.exercisetracker.features.progress_tracking
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.navigation
+import com.aamo.exercisetracker.features.progress_tracking.form.TrackedProgressFormScreen
+import com.aamo.exercisetracker.features.progress_tracking.form.trackedProgressFormScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
