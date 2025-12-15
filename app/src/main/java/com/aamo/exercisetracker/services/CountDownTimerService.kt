@@ -20,7 +20,17 @@ import com.aamo.exercisetracker.utility.tags.DebugTag
 import java.util.Timer
 import kotlin.concurrent.timerTask
 
-class CountDownTimerService() : Service() {
+interface ICountDownTimerService {
+  fun start(
+    durationMillis: Long, onFinished: () -> Unit, onStart: (() -> Unit)?, onCleanUp: (() -> Unit)?
+  ) {
+  }
+
+  fun stop() {}
+  fun cancel() {}
+}
+
+class CountDownTimerService() : Service(), ICountDownTimerService {
   /**
    * @param onFinished Will be called when the timer has been stopped
    * @param onCleanUp Will be called when the timer has been stopped or cancelled
@@ -48,11 +58,8 @@ class CountDownTimerService() : Service() {
     stopSelf()
   }
 
-  fun start(
-    durationMillis: Long,
-    onFinished: () -> Unit,
-    onStart: (() -> Unit)? = null,
-    onCleanUp: (() -> Unit)? = null
+  override fun start(
+    durationMillis: Long, onFinished: () -> Unit, onStart: (() -> Unit)?, onCleanUp: (() -> Unit)?
   ) {
     cancel()
     state = TimerState(
@@ -71,7 +78,7 @@ class CountDownTimerService() : Service() {
     onStart?.invoke()
   }
 
-  fun stop() {
+  override fun stop() {
     state?.onFinished.let {
       // Cancel before invoking so the onFinished can start a new timer
       cancel()
@@ -79,7 +86,7 @@ class CountDownTimerService() : Service() {
     }
   }
 
-  fun cancel() {
+  override fun cancel() {
     state?.apply {
       timer.cancel()
       timer.purge()

@@ -35,7 +35,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
-import com.aamo.exercisetracker.features.progress_tracking.use_cases.fromDao
+import com.aamo.exercisetracker.features.progress_tracking.view.components.DurationRecordDialog
+import com.aamo.exercisetracker.features.progress_tracking.view.components.RepetitionRecordDialog
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
@@ -43,7 +44,7 @@ import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
@@ -126,10 +127,11 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
       initializer {
         TrackedProgressRecordListScreenViewModel(
           fetchData = {
-            TrackedProgressRecordListScreenViewModel.Model.fromDao {
-              dao.getProgressWithValuesFlow(progressId)
-                .map { it ?: throw Exception("Failed to fetch data") }
-            }
+            flow { }
+//            TrackedProgressRecordListScreenViewModel.Model.fromDao {
+//              dao.getProgressWithValuesFlow(progressId)
+//                .map { it ?: throw Exception("Failed to fetch data") }
+//            }
           },
           deleteRecordData = { record ->
 //            deleteTrackedProgressValue(record.toDao(progressId)) {

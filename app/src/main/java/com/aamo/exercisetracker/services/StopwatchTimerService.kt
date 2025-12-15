@@ -16,7 +16,13 @@ import com.aamo.exercisetracker.utility.tags.DebugTag
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-class StopwatchTimerService() : Service() {
+interface IStopwatchTimerService {
+  fun start(onStart: (() -> Unit)?, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)?) {}
+  fun cancel() {}
+  fun stop() {}
+}
+
+class StopwatchTimerService() : Service(), IStopwatchTimerService {
   /**
    * @param onFinished Will be called when the timer has been stopped
    * @param onCleanUp Will be called when the timer has been stopped or cancelled
@@ -42,8 +48,8 @@ class StopwatchTimerService() : Service() {
     stopSelf()
   }
 
-  fun start(
-    onStart: (() -> Unit)? = null, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)? = null
+  override fun start(
+    onStart: (() -> Unit)?, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)?
   ) {
     cancel()
     state = TimerState(
@@ -54,7 +60,7 @@ class StopwatchTimerService() : Service() {
     onStart?.invoke()
   }
 
-  fun stop() {
+  override fun stop() {
     state?.also {
       // Cancel before invoking so the onFinished can start a new timer
       cancel()
@@ -62,7 +68,7 @@ class StopwatchTimerService() : Service() {
     }
   }
 
-  fun cancel() {
+  override fun cancel() {
     state?.apply {
       onCleanUp?.invoke()
     }

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.progress_tracking
+package com.aamo.exercisetracker.features.progress_tracking.view.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

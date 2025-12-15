@@ -44,6 +44,10 @@ open class PageTest {
     return rule.activity.getString(id)
   }
 
+  fun getString(@StringRes id: Int, param: String): String {
+    return rule.activity.getString(id, param)
+  }
+
   fun getString(@StringRes id: Int, param: Int): String {
     return rule.activity.getString(id, param)
   }
@@ -113,5 +117,15 @@ open class PageTest {
       rule.onNodeWithContentDescription(getString(R.string.cd_add_tracked_progress)).performClick()
       return TrackedProgress()
     }
+  }
+
+  suspend fun toProgressTrackingScreen(progress: TrackedProgress): TrackedProgress {
+    rule.onNodeWithText(getString(R.string.label_progress)).performClick()
+    waitForLoading()
+
+    val insert = trackedProgressDao.upsert(progress).let { progress.copy(id = it) }
+
+    rule.onNodeWithText(insert.name).waitForDisplayed().performClick()
+    return insert
   }
 }

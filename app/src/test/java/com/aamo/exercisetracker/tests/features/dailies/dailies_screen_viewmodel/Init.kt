@@ -18,9 +18,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class Init {
-  @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `weekly schedule set`() = runTest(UnconfinedTestDispatcher()) {
     val dataFlow = MutableSharedFlow<WeeklySchedule>()
@@ -48,7 +48,6 @@ class Init {
     assertEquals(schedule, viewmodel.weeklySchedule.value)
   }
 
-  @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `tracked progresses set`() = runTest(UnconfinedTestDispatcher()) {
     val dataFlow = MutableSharedFlow<List<TrackedProgress>>()

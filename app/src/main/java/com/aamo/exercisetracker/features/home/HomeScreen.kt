@@ -23,10 +23,10 @@ import androidx.navigation.compose.rememberNavController
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.features.dailies.DailiesScreen
 import com.aamo.exercisetracker.features.dailies.dailiesScreen
-import com.aamo.exercisetracker.features.progress_tracking.ProgressTrackingScreen
 import com.aamo.exercisetracker.features.progress_tracking.form.TrackedProgressFormScreen
 import com.aamo.exercisetracker.features.progress_tracking.list.TrackedProgressListScreen
 import com.aamo.exercisetracker.features.progress_tracking.list.trackedProgressListScreen
+import com.aamo.exercisetracker.features.progress_tracking.view.ProgressTrackingScreen
 import com.aamo.exercisetracker.features.routine.RoutinePage
 import com.aamo.exercisetracker.features.routine.form.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.list.RoutineListScreen
