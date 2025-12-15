@@ -25,7 +25,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".services.CountDownTimerService" />
+        <service android:name=".services.CountdownTimerService" />
         <service android:name=".services.StopwatchTimerService" />
     </application>
 </manifest>

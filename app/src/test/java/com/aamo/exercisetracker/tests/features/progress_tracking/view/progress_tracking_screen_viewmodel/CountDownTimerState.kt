@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.seconds
 class CountDownTimerState {
   @Test
   fun `isActive transformation`() {
-    val state = ProgressTrackingScreenViewModel.CountDownTimerState()
+    val state = ProgressTrackingScreenViewModel.CountdownTimerState()
 
     assertEquals(0.seconds, state.duration)
     assertFalse(state.isActive.value)

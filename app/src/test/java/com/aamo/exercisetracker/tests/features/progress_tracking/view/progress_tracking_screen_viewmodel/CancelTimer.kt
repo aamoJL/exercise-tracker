@@ -2,7 +2,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.view.progress_
 
 import com.aamo.exercisetracker.features.progress_tracking.view.ProgressTrackingScreenViewModel
 import com.aamo.exercisetracker.features.progress_tracking.view.models.ProgressTrackingTrackedProgressModel
-import com.aamo.exercisetracker.services.ICountDownTimerService
+import com.aamo.exercisetracker.services.ICountdownTimerService
 import com.aamo.exercisetracker.services.IStopwatchTimerService
 import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase.assertTrue
@@ -26,9 +26,9 @@ class CancelTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = 4.minutes
+      countdownTime = 4.minutes
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -37,7 +37,7 @@ class CancelTimer : UnconfinedTest() {
       viewmodel.model.collect()
     }
 
-    viewmodel.cancelTimer(countDownTimerService = object : ICountDownTimerService {
+    viewmodel.cancelCountdown(countdownTimerService = object : ICountdownTimerService {
       override fun cancel() {
         cancelled = true
       }
@@ -52,9 +52,9 @@ class CancelTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = null
+      countdownTime = null
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -63,7 +63,7 @@ class CancelTimer : UnconfinedTest() {
       viewmodel.model.collect()
     }
 
-    viewmodel.cancelTimer(stopwatchTimerService = object : IStopwatchTimerService {
+    viewmodel.cancelStopwatch(stopwatchTimerService = object : IStopwatchTimerService {
       override fun cancel() {
         cancelled = true
       }

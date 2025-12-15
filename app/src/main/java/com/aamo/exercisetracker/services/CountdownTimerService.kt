@@ -20,7 +20,7 @@ import com.aamo.exercisetracker.utility.tags.DebugTag
 import java.util.Timer
 import kotlin.concurrent.timerTask
 
-interface ICountDownTimerService {
+interface ICountdownTimerService {
   fun start(
     durationMillis: Long, onFinished: () -> Unit, onStart: (() -> Unit)?, onCleanUp: (() -> Unit)?
   ) {
@@ -30,7 +30,7 @@ interface ICountDownTimerService {
   fun cancel() {}
 }
 
-class CountDownTimerService() : Service(), ICountDownTimerService {
+class CountdownTimerService() : Service(), ICountdownTimerService {
   /**
    * @param onFinished Will be called when the timer has been stopped
    * @param onCleanUp Will be called when the timer has been stopped or cancelled
@@ -153,6 +153,6 @@ class CountDownTimerService() : Service(), ICountDownTimerService {
   }
 
   inner class BinderHelper : Binder() {
-    fun getService(): CountDownTimerService = this@CountDownTimerService
+    fun getService(): CountdownTimerService = this@CountdownTimerService
   }
 }

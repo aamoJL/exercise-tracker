@@ -16,12 +16,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,10 +43,11 @@ import androidx.navigation.compose.composable
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.features.progress_tracking.list.components.IntervalTrailing
+import com.aamo.exercisetracker.features.progress_tracking.list.components.TrackedProgressListScreenTopBar
 import com.aamo.exercisetracker.features.progress_tracking.list.use_cases.deleteTrackedProgresses
 import com.aamo.exercisetracker.features.progress_tracking.list.use_cases.fetchTrackedProgressesFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.inputs.text_field.SearchTextField
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
@@ -168,10 +165,12 @@ private fun TrackedProgressListScreenContent(
         .fillMaxSize()
         .imePadding()
     ) {
-      if (selections.isNotEmpty()) SelectionTopBar(
-        selectionCount = selections.size, onDeleteSelected = { openDeleteDialog = true })
-      else UnselectionTopBar(
-        filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
+      TrackedProgressListScreenTopBar(
+        selectionCount = selections.size,
+        filterWord = filterWord,
+        onDeleteSelected = { openDeleteDialog = true },
+        onFilterChanged = onFilterChanged,
+        onAdd = onAdd
       )
       LoadingScreen(loading = isLoading) {
         LazyColumn(
@@ -221,58 +220,6 @@ private fun TrackedProgressListScreenContent(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun UnselectionTopBar(
-  filterWord: String,
-  onFilterChanged: (String) -> Unit,
-  onAdd: () -> Unit,
-) {
-  TopAppBar(title = { }, actions = {
-    SearchTextField(
-      value = filterWord,
-      placeholder = stringResource(R.string.ph_search),
-      onValueChange = onFilterChanged
-    )
-    IconButton(onClick = onAdd) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_add_24),
-        contentDescription = stringResource(R.string.cd_add_tracked_progress)
-      )
-    }
-  })
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SelectionTopBar(selectionCount: Int, onDeleteSelected: () -> Unit) {
-  TopAppBar(title = {
-    Text(text = stringResource(R.string.x_count_selected, selectionCount))
-  }, actions = {
-    IconButton(onClick = onDeleteSelected) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_delete_24),
-        contentDescription = stringResource(R.string.cd_delete_tracked_progress)
-      )
-    }
-  })
-}
-
-@Composable
-private fun IntervalTrailing(intervalWeeks: Int) {
-  val color = when (intervalWeeks) {
-    0 -> MaterialTheme.colorScheme.outline
-    else -> MaterialTheme.colorScheme.secondary
-  }
-  val text = when (intervalWeeks) {
-    0 -> stringResource(R.string.label_untimed)
-    1 -> stringResource(R.string.label_weekly)
-    else -> stringResource(R.string.label_every_x_weeks, intervalWeeks)
-  }
-
-  Text(text = text, color = color, style = MaterialTheme.typography.labelSmall)
-}
-
 @Suppress("HardCodedStringLiteral")
 @Preview
 @Composable
@@ -281,8 +228,8 @@ private fun Preview() {
     TrackedProgressListScreenContent(
       progresses = listOf(
       TrackedProgress(id = 1, name = "Progress 1"),
-      TrackedProgress(id = 2, name = "Progress 2"),
-      TrackedProgress(id = 3, name = "Progress 3"),
+      TrackedProgress(id = 2, name = "Progress 2", intervalWeeks = 1),
+      TrackedProgress(id = 3, name = "Progress 3", intervalWeeks = 2),
     ),
       filterWord = String.EMPTY,
       selections = listOf(

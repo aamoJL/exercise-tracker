@@ -6,9 +6,9 @@ data class ProgressTrackingTrackedProgressModel(
   val id: Long,
   val name: String,
   val progressType: ProgressType,
-  val records: List<Int>,
+  val values: List<Int>,
   val recordUnit: String,
-  val countDownTime: Duration?
+  val countdownTime: Duration?
 ) {
   enum class ProgressType {
     REPETITION,

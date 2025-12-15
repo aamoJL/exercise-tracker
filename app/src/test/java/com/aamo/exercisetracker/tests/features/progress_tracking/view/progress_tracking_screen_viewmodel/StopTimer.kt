@@ -24,9 +24,9 @@ class StopTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = null
+      countdownTime = null
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -35,7 +35,7 @@ class StopTimer : UnconfinedTest() {
       viewmodel.model.collect()
     }
 
-    viewmodel.stopTimer(stopwatchTimerService = object : IStopwatchTimerService {
+    viewmodel.stopStopwatch(stopwatchTimerService = object : IStopwatchTimerService {
       override fun stop() {
         stopped = true
       }

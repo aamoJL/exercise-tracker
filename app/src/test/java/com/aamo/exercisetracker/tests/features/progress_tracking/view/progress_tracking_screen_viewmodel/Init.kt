@@ -35,9 +35,9 @@ class Init {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.REPETITION,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = null
+      countdownTime = null
     )
 
     dataFlow.emit(model)
@@ -53,23 +53,23 @@ class Init {
       viewmodel.model.collect()
     }
 
-    assertEquals(0.seconds, viewmodel.countDownTimerState.duration)
-    assertFalse(viewmodel.countDownTimerState.isActive.value)
+    assertEquals(0.seconds, viewmodel.countdownTimerState.duration)
+    assertFalse(viewmodel.countdownTimerState.isActive.value)
 
     val model = ProgressTrackingTrackedProgressModel(
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = 4.seconds
+      countdownTime = 4.seconds
     )
 
     dataFlow.emit(model)
 
     checkNotNull(viewmodel.model.value)
-    assertEquals(model.countDownTime!!, viewmodel.countDownTimerState.duration)
-    assertFalse(viewmodel.countDownTimerState.isActive.value)
+    assertEquals(model.countdownTime!!, viewmodel.countdownTimerState.duration)
+    assertFalse(viewmodel.countdownTimerState.isActive.value)
   }
 
   @Test
@@ -88,9 +88,9 @@ class Init {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = 4.seconds
+      countdownTime = 4.seconds
     )
 
     dataFlow.emit(model)

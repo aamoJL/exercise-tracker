@@ -73,7 +73,7 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.features.exercise.use_cases.fromDao
 import com.aamo.exercisetracker.features.exercise.use_cases.saveExerciseProgress
-import com.aamo.exercisetracker.services.CountDownTimerService
+import com.aamo.exercisetracker.services.CountdownTimerService
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
@@ -154,7 +154,7 @@ class ExerciseScreenViewModel(
     }
   }
 
-  fun startSet(countDownTimerService: CountDownTimerService) {
+  fun startSet(countDownTimerService: CountdownTimerService) {
     uiState.setState.value.setTimer.onNotNull { setTimer ->
       startTimer(
         countDownTimerService = countDownTimerService,
@@ -175,15 +175,15 @@ class ExerciseScreenViewModel(
     }
   }
 
-  fun stopTimer(countDownTimerService: CountDownTimerService) {
+  fun stopTimer(countDownTimerService: CountdownTimerService) {
     countDownTimerService.stop()
   }
 
-  fun cancelTimer(countDownTimerService: CountDownTimerService) {
+  fun cancelTimer(countDownTimerService: CountdownTimerService) {
     countDownTimerService.cancel()
   }
 
-  private fun finishSet(countDownTimerService: CountDownTimerService) {
+  private fun finishSet(countDownTimerService: CountdownTimerService) {
     uiState.apply {
       SetState(index = setState.value.index + 1).let { nextSetState ->
         nextSetState.set.onNull {
@@ -204,7 +204,7 @@ class ExerciseScreenViewModel(
   }
 
   private fun startTimer(
-    countDownTimerService: CountDownTimerService,
+    countDownTimerService: CountdownTimerService,
     duration: Duration,
     onFinished: () -> Unit,
     onStart: (() -> Unit)? = null,
@@ -255,11 +255,11 @@ fun NavGraphBuilder.exerciseScreen(
       }
     })
     val uiState = viewmodel.uiState
-    var timerService: CountDownTimerService? by remember { mutableStateOf(null) }
+    var timerService: CountdownTimerService? by remember { mutableStateOf(null) }
     val connection = remember {
       object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-          timerService = (binder as? CountDownTimerService.BinderHelper)?.getService()?.apply {
+          timerService = (binder as? CountdownTimerService.BinderHelper)?.getService()?.apply {
             // Notifications needs to be hidden also here, because the service will be null in
             //  LifecycleEventEffect ON_RESUME when the configuration changes
             hideNotification()
@@ -309,7 +309,7 @@ fun NavGraphBuilder.exerciseScreen(
     DisposableEffect(Unit) {
       context.apply {
         bindService(
-          Intent(this, CountDownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
+          Intent(this, CountdownTimerService::class.java), connection, Context.BIND_AUTO_CREATE
         )
       }
 

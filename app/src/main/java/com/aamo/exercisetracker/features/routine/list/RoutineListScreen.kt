@@ -15,13 +15,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,16 +44,14 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.features.progress_tracking.list.components.RoutineListScreenTopBar
+import com.aamo.exercisetracker.features.routine.list.components.ScheduleTrailing
 import com.aamo.exercisetracker.features.routine.list.use_cases.deleteRoutines
 import com.aamo.exercisetracker.features.routine.list.use_cases.fetchRoutinesFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.inputs.text_field.SearchTextField
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
-import com.aamo.exercisetracker.utility.extensions.date.Day
-import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
-import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -68,7 +61,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import java.util.Calendar
 
 @Serializable
 object RoutineListScreen
@@ -175,11 +167,12 @@ private fun RoutineListScreenContent(
         .fillMaxSize()
         .imePadding()
     ) {
-      if (selections.isNotEmpty()) SelectionTopBar(
-        selectionCount = selections.size, onDeleteSelected = { openDeleteDialog = true })
-      else UnselectionTopBar(
-        filterWord = filterWord, onFilterChanged = onFilterChanged, onAdd = onAdd
-      )
+      RoutineListScreenTopBar(
+        selectionCount = selections.size,
+        filterWord = filterWord,
+        onFilterChanged = onFilterChanged,
+        onAdd = onAdd,
+        onDeleteSelected = { openDeleteDialog = true })
       LoadingScreen(loading = isLoading) {
         LazyColumn(
           userScrollEnabled = true,
@@ -230,89 +223,6 @@ private fun RoutineListScreenContent(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun UnselectionTopBar(
-  filterWord: String,
-  onFilterChanged: (String) -> Unit,
-  onAdd: () -> Unit,
-) {
-  TopAppBar(title = { }, actions = {
-    SearchTextField(
-      value = filterWord,
-      placeholder = stringResource(R.string.ph_search),
-      onValueChange = onFilterChanged
-    )
-    IconButton(onClick = onAdd) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_add_24),
-        contentDescription = stringResource(R.string.cd_add_routine)
-      )
-    }
-  })
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SelectionTopBar(selectionCount: Int, onDeleteSelected: () -> Unit) {
-  TopAppBar(title = {
-    Text(text = stringResource(R.string.x_count_selected, selectionCount))
-  }, actions = {
-    IconButton(onClick = onDeleteSelected) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_delete_24),
-        contentDescription = stringResource(R.string.cd_delete_routine)
-      )
-    }
-  })
-}
-
-@Composable
-private fun ScheduleTrailing(schedule: RoutineSchedule) {
-  fun dayIsSelected(day: Day, schedule: RoutineSchedule): Boolean {
-    return when (day) {
-      Day.SUNDAY -> schedule.sunday
-      Day.MONDAY -> schedule.monday
-      Day.TUESDAY -> schedule.tuesday
-      Day.WEDNESDAY -> schedule.wednesday
-      Day.THURSDAY -> schedule.thursday
-      Day.FRIDAY -> schedule.friday
-      Day.SATURDAY -> schedule.saturday
-    }
-  }
-
-  val dayOrder = Calendar.getInstance().getLocalDayOrder()
-
-  if (Day.entries.none { dayIsSelected(it, schedule) }) {
-    Text(
-      text = stringResource(R.string.label_inactive),
-      color = MaterialTheme.colorScheme.outline,
-      style = MaterialTheme.typography.labelSmall
-    )
-  }
-  else if (Day.entries.all { dayIsSelected(it, schedule) }) {
-    Text(
-      text = stringResource(R.string.label_every_day),
-      color = MaterialTheme.colorScheme.secondary,
-      style = MaterialTheme.typography.labelSmall
-    )
-  }
-  else {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      repeat(7) { i ->
-        Text(
-          text = stringResource(dayOrder[i].nameResourceKey).take(2),
-          color = ifElse(
-            condition = dayIsSelected(day = dayOrder[i], schedule = schedule),
-            ifTrue = { MaterialTheme.colorScheme.secondary },
-            ifFalse = { MaterialTheme.colorScheme.outline }),
-          style = MaterialTheme.typography.labelSmall
-        )
-      }
-    }
-  }
-}
-
 @Suppress("HardCodedStringLiteral")
 @Preview
 @Composable
@@ -325,7 +235,7 @@ private fun Preview() {
           schedule = RoutineSchedule(id = 0, routineId = 0, monday = true)
         ), RoutineWithSchedule(
           routine = Routine(id = 1, name = "Routine 2"),
-          schedule = RoutineSchedule(id = 1, routineId = 0, monday = true),
+          schedule = RoutineSchedule(id = 1, routineId = 0, monday = true, saturday = true),
         )
       ),
       filterWord = String.EMPTY,

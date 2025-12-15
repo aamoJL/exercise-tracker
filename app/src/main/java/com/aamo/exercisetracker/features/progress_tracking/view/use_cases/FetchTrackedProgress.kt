@@ -15,11 +15,11 @@ fun fetchTrackedProgressFlow(
     ProgressTrackingTrackedProgressModel(
       id = progress.id,
       name = progress.name,
-      records = values.sortedBy { it.addedDate }.map { it.value },
+      values = values.sortedBy { it.addedDate }.map { it.value },
       recordUnit = progress.unit,
       progressType = if (progress.hasStopWatch) ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH
       else if (progress.timerTime?.let { it > 0 } == true) ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN
       else ProgressTrackingTrackedProgressModel.ProgressType.REPETITION,
-      countDownTime = progress.timerTime?.milliseconds)
+      countdownTime = progress.timerTime?.milliseconds)
   }
 }

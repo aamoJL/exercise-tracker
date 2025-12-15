@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,6 +47,7 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
+import com.aamo.exercisetracker.features.routine.form.components.ScheduleInput
 import com.aamo.exercisetracker.features.routine.form.models.RoutineFormFields
 import com.aamo.exercisetracker.features.routine.form.use_cases.deleteRoutine
 import com.aamo.exercisetracker.features.routine.form.use_cases.fetchRoutineWithSchedule
@@ -59,11 +58,9 @@ import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.inputs.text_field.borderlessTextFieldColors
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
-import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
-import com.aamo.exercisetracker.utility.extensions.general.onFalse
-import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
@@ -74,7 +71,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import java.util.Calendar
 
 @Serializable
 data class RoutineFormScreen(val id: Long)
@@ -198,7 +194,7 @@ fun NavGraphBuilder.routineFormScreen(
     val formState by viewmodel.formState.collectAsStateWithLifecycle()
 
     LoadingScreen(loading = formState == null) {
-      RoutineFormScreen(
+      RoutineFormScreenContent(
         formState = checkNotNull(formState),
         onBack = onBack,
         onSave = { viewmodel.save() },
@@ -209,13 +205,12 @@ fun NavGraphBuilder.routineFormScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RoutineFormScreen(
+private fun RoutineFormScreenContent(
   formState: RoutineFormViewModel.FormState,
   onBack: () -> Unit,
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  val days = remember { Calendar.getInstance().getLocalDayOrder() }
   val unsavedChanges =
     remember(formState.savingState.unsavedChanges) { formState.savingState.unsavedChanges }
 
@@ -294,40 +289,35 @@ fun RoutineFormScreen(
         modifier = Modifier.fillMaxWidth()
       )
       Spacer(modifier = Modifier.height(8.dp))
-      Card {
-        Column(modifier = Modifier.padding(8.dp)) {
-          Text(
-            text = stringResource(R.string.label_schedule),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(8.dp)
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+          text = stringResource(R.string.label_schedule),
+          style = MaterialTheme.typography.bodySmall,
+          modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Card(shape = RoundedCornerShape(50), modifier = Modifier.padding(horizontal = 4.dp)) {
+          ScheduleInput(
+            selections = formState.selectedDays.values,
+            onAdd = { formState.selectedDays.remove(it) },
+            onRemove = { formState.selectedDays.remove(it) },
+            modifier = Modifier.padding(4.dp)
           )
-          LazyRow(
-            horizontalArrangement = Arrangement.SpaceAround,
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(vertical = 8.dp)
-          ) {
-            items(days) { day ->
-              val isSelected = formState.selectedDays.values.contains(day)
-
-              IconToggleButton(
-                colors = IconButtonDefaults.outlinedIconToggleButtonColors(
-                  checkedContainerColor = MaterialTheme.colorScheme.inversePrimary,
-                  checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                  contentColor = MaterialTheme.colorScheme.outline,
-                ), checked = isSelected, onCheckedChange = { selection ->
-                  selection.onTrue {
-                    formState.selectedDays.add(day)
-                  }.onFalse {
-                    formState.selectedDays.remove(day)
-                  }
-                }) {
-                Text(stringResource(day.nameResourceKey).take(2))
-              }
-            }
-          }
         }
       }
     }
+  }
+}
+
+@Suppress("HardCodedStringLiteral")
+@Preview
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme {
+    RoutineFormScreenContent(
+      formState = RoutineFormViewModel.FormState(
+      fields = RoutineFormFields(
+        name = "Name", days = listOf(Day.MONDAY, Day.WEDNESDAY, Day.SATURDAY)
+      )
+    ), onBack = {}, onSave = {}, onDelete = {})
   }
 }

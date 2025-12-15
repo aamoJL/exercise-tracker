@@ -62,11 +62,11 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.TrackedProgress
+import com.aamo.exercisetracker.features.dailies.components.UnfinishedTrackedProgressesModalBottomSheet
 import com.aamo.exercisetracker.features.dailies.models.DailiesRoutineModel
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
-import com.aamo.exercisetracker.ui.components.modals.CustomModalBottomSheet
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
@@ -127,7 +127,7 @@ fun NavGraphBuilder.dailiesScreen(
     val weeklySchedule by viewmodel.weeklySchedule.collectAsStateWithLifecycle()
     val progresses by viewmodel.trackedProgresses.collectAsStateWithLifecycle()
 
-    DailiesScreen(
+    DailiesScreenContent(
       weeklySchedule = weeklySchedule ?: emptyList(),
       trackedProgresses = progresses ?: emptyList(),
       isLoading = weeklySchedule == null || progresses == null,
@@ -141,7 +141,7 @@ fun NavGraphBuilder.dailiesScreen(
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun DailiesScreen(
+private fun DailiesScreenContent(
   weeklySchedule: WeeklySchedule,
   trackedProgresses: List<TrackedProgress>,
   isLoading: Boolean,
@@ -291,51 +291,13 @@ fun DailiesScreen(
   }
 }
 
-@Composable
-fun UnfinishedTrackedProgressesModalBottomSheet(
-  trackedProgresses: List<TrackedProgress>,
-  show: Boolean,
-  onDismissRequest: () -> Unit,
-  onTrackedProgressSelected: (id: Long) -> Unit,
-) {
-  CustomModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
-    Text(
-      text = stringResource(R.string.title_scheduled_trackers),
-      textAlign = TextAlign.Center,
-      style = MaterialTheme.typography.headlineSmall,
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 8.dp, vertical = 16.dp)
-    )
-    LazyColumn(
-      modifier = Modifier
-        .padding(horizontal = 16.dp)
-        .padding(bottom = 8.dp)
-    ) {
-      items(items = trackedProgresses, key = { it.id }) { progress ->
-        Button(
-          onClick = { onTrackedProgressSelected(progress.id) },
-          shape = RoundedCornerShape(8.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onSecondary,
-          ),
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Text(text = progress.name, fontWeight = FontWeight.Bold)
-        }
-      }
-    }
-  }
-}
-
 @Suppress("HardCodedStringLiteral")
 @Preview(showSystemUi = true)
 @Composable
 private fun Preview() {
   ExerciseTrackerTheme(darkTheme = true) {
     Scaffold { paddingValues ->
-      DailiesScreen(
+      DailiesScreenContent(
         initialDay = Day.MONDAY,
         weeklySchedule = listOf(
           listOf(

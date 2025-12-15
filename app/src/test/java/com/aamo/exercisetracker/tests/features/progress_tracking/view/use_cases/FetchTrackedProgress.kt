@@ -32,10 +32,10 @@ class FetchTrackedProgress : DatabaseTest() {
     val expected = ProgressTrackingTrackedProgressModel(
       id = model.id,
       name = model.name,
-      records = records.sortedBy { it.addedDate }.map { it.value },
+      values = records.sortedBy { it.addedDate }.map { it.value },
       recordUnit = model.unit,
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.REPETITION,
-      countDownTime = null
+      countdownTime = null
     )
     val actual = fetchTrackedProgressFlow(dao = trackedProgressDao, progressId = model.id).first()
 

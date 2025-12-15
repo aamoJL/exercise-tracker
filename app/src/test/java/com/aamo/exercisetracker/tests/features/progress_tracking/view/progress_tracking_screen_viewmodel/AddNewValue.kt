@@ -24,9 +24,9 @@ class AddNewValue : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.REPETITION,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = null
+      countdownTime = null
     )
     val viewmodel = ProgressTrackingScreenViewModel(
       fetchData = { flow { emit(model) } },

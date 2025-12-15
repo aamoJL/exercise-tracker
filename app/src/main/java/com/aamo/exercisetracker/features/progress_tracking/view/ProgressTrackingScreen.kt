@@ -4,57 +4,34 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.icu.text.DecimalFormat
 import android.os.IBinder
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseInOutCubic
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
@@ -72,28 +49,20 @@ import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.features.progress_tracking.records.components.DurationRecordDialog
 import com.aamo.exercisetracker.features.progress_tracking.records.components.RepetitionRecordDialog
+import com.aamo.exercisetracker.features.progress_tracking.view.components.CountdownSheet
+import com.aamo.exercisetracker.features.progress_tracking.view.components.RecordChart
+import com.aamo.exercisetracker.features.progress_tracking.view.components.StopwatchSheet
 import com.aamo.exercisetracker.features.progress_tracking.view.models.ProgressTrackingTrackedProgressModel
 import com.aamo.exercisetracker.features.progress_tracking.view.use_cases.fetchTrackedProgressFlow
 import com.aamo.exercisetracker.features.progress_tracking.view.use_cases.saveTrackedProgressValue
-import com.aamo.exercisetracker.services.CountDownTimerService
-import com.aamo.exercisetracker.services.ICountDownTimerService
+import com.aamo.exercisetracker.services.CountdownTimerService
+import com.aamo.exercisetracker.services.ICountdownTimerService
 import com.aamo.exercisetracker.services.IStopwatchTimerService
 import com.aamo.exercisetracker.services.StopwatchTimerService
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
-import com.aamo.exercisetracker.ui.components.modals.GesturelessModalBottomSheet
-import com.aamo.exercisetracker.utility.extensions.date.toClockString
-import com.aamo.exercisetracker.utility.extensions.general.ifElse
-import com.aamo.exercisetracker.utility.extensions.general.trimFirst
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
-import ir.ehsannarmani.compose_charts.LineChart
-import ir.ehsannarmani.compose_charts.extensions.format
-import ir.ehsannarmani.compose_charts.models.DrawStyle
-import ir.ehsannarmani.compose_charts.models.GridProperties
-import ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties
-import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
-import ir.ehsannarmani.compose_charts.models.Line
-import ir.ehsannarmani.compose_charts.models.PopupProperties
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -103,14 +72,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Date
-import kotlin.concurrent.timer
-import kotlin.math.ceil
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 @Serializable
 data class ProgressTrackingScreen(val progressId: Long)
@@ -119,7 +82,7 @@ class ProgressTrackingScreenViewModel(
   fetchData: () -> Flow<ProgressTrackingTrackedProgressModel>,
   private val addValue: suspend (TrackedProgressValue) -> Unit,
 ) : ViewModel() {
-  class CountDownTimerState {
+  class CountdownTimerState {
     var duration by mutableStateOf(0.seconds)
     val isActive = ViewModelState(false).transformation { value -> value && duration > 0.seconds }
   }
@@ -130,12 +93,12 @@ class ProgressTrackingScreenViewModel(
   }
 
   val model = fetchData().catch { }.onEach {
-    it.countDownTime?.also { duration -> countDownTimerState.duration = duration }
+    it.countdownTime?.also { duration -> countdownTimerState.duration = duration }
   }.stateIn(
     scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null
   )
 
-  val countDownTimerState = CountDownTimerState()
+  val countdownTimerState = CountdownTimerState()
   val stopwatchTimerState = StopwatchTimerState()
 
   fun addNewValue(value: Int, date: Date) {
@@ -148,15 +111,15 @@ class ProgressTrackingScreenViewModel(
     }
   }
 
-  fun startTimer(countDownTimerService: ICountDownTimerService) {
-    countDownTimerService.cancel()
+  fun startCountdown(countdownTimerService: ICountdownTimerService) {
+    countdownTimerService.cancel()
 
-    countDownTimerState.also { timerState ->
+    countdownTimerState.also { timerState ->
       val duration = timerState.duration
 
       if (duration <= 0.seconds) return
 
-      countDownTimerService.start(
+      countdownTimerService.start(
         durationMillis = duration.inWholeMilliseconds,
         onStart = { timerState.isActive.update(true) },
         onFinished = { /* Nothing here */ },
@@ -164,7 +127,11 @@ class ProgressTrackingScreenViewModel(
     }
   }
 
-  fun startTimer(stopwatchTimerService: IStopwatchTimerService) {
+  fun cancelCountdown(countdownTimerService: ICountdownTimerService) {
+    countdownTimerService.cancel()
+  }
+
+  fun startStopwatch(stopwatchTimerService: IStopwatchTimerService) {
     stopwatchTimerService.cancel()
     stopwatchTimerService.start(
       onStart = { stopwatchTimerState.isActive.update(true) },
@@ -172,15 +139,11 @@ class ProgressTrackingScreenViewModel(
       onCleanUp = { stopwatchTimerState.isActive.update(false) })
   }
 
-  fun stopTimer(stopwatchTimerService: IStopwatchTimerService) {
+  fun stopStopwatch(stopwatchTimerService: IStopwatchTimerService) {
     stopwatchTimerService.stop()
   }
 
-  fun cancelTimer(countDownTimerService: ICountDownTimerService) {
-    countDownTimerService.cancel()
-  }
-
-  fun cancelTimer(stopwatchTimerService: IStopwatchTimerService) {
+  fun cancelStopwatch(stopwatchTimerService: IStopwatchTimerService) {
     stopwatchTimerService.cancel()
   }
 }
@@ -204,7 +167,7 @@ fun NavGraphBuilder.progressTrackingScreen(
     val timerTitle = stringResource(R.string.title_timer)
     val stopwatchTitle = stringResource(R.string.title_stopwatch)
 
-    var countDownService: CountDownTimerService? by remember { mutableStateOf(null) }
+    var countDownService: CountdownTimerService? by remember { mutableStateOf(null) }
     var stopwatchService: StopwatchTimerService? by remember { mutableStateOf(null) }
     val timerConnection = remember {
       object : ServiceConnection {
@@ -212,7 +175,7 @@ fun NavGraphBuilder.progressTrackingScreen(
           // Notifications needs to be hidden here, because the service will be null in
           //  LifecycleEventEffect ON_RESUME when the configuration changes
           when (binder) {
-            is CountDownTimerService.BinderHelper -> binder.getService().apply {
+            is CountdownTimerService.BinderHelper -> binder.getService().apply {
               countDownService = this
               hideNotification()
             }
@@ -239,7 +202,7 @@ fun NavGraphBuilder.progressTrackingScreen(
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
-      if (viewmodel.countDownTimerState.isActive.value) {
+      if (viewmodel.countdownTimerState.isActive.value) {
         countDownService?.showNotification(timerTitle)
       }
       if (viewmodel.stopwatchTimerState.isActive.value) {
@@ -250,7 +213,7 @@ fun NavGraphBuilder.progressTrackingScreen(
     DisposableEffect(model?.progressType) {
       context.apply {
         when (model?.progressType) {
-          ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN -> CountDownTimerService::class.java
+          ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN -> CountdownTimerService::class.java
           ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH -> StopwatchTimerService::class.java
           else -> null
         }?.also {
@@ -264,19 +227,19 @@ fun NavGraphBuilder.progressTrackingScreen(
     }
 
     LoadingScreen(loading = model == null) {
-      ProgressTrackingScreen(
+      ProgressTrackingScreenContent(
         model = checkNotNull(model),
         stopwatchTimerState = viewmodel.stopwatchTimerState,
-        countDownTimerState = viewmodel.countDownTimerState,
+        countdownTimerState = viewmodel.countdownTimerState,
         onEdit = { onEdit(progressId) },
         onBack = onBack,
         onShowRecords = { onShowRecords(progressId) },
         onAddValue = { value, date -> viewmodel.addNewValue(value, date) },
-        onStartTimer = { countDownService?.also { viewmodel.startTimer(it) } },
-        onCancelTimer = { countDownService?.also { viewmodel.cancelTimer(it) } },
-        onStartStopwatch = { stopwatchService?.also { viewmodel.startTimer(it) } },
-        onStopStopwatch = { stopwatchService?.also { viewmodel.stopTimer(it) } },
-        onCancelStopwatch = { stopwatchService?.also { viewmodel.cancelTimer(it) } },
+        onStartCountdown = { countDownService?.also { viewmodel.startCountdown(it) } },
+        onCancelCountdown = { countDownService?.also { viewmodel.cancelCountdown(it) } },
+        onStartStopwatch = { stopwatchService?.also { viewmodel.startStopwatch(it) } },
+        onStopStopwatch = { stopwatchService?.also { viewmodel.stopStopwatch(it) } },
+        onCancelStopwatch = { stopwatchService?.also { viewmodel.cancelStopwatch(it) } },
       )
     }
   }
@@ -284,16 +247,16 @@ fun NavGraphBuilder.progressTrackingScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProgressTrackingScreen(
+private fun ProgressTrackingScreenContent(
   model: ProgressTrackingTrackedProgressModel,
   stopwatchTimerState: ProgressTrackingScreenViewModel.StopwatchTimerState,
-  countDownTimerState: ProgressTrackingScreenViewModel.CountDownTimerState,
+  countdownTimerState: ProgressTrackingScreenViewModel.CountdownTimerState,
   onEdit: () -> Unit,
   onBack: () -> Unit,
   onShowRecords: () -> Unit,
   onAddValue: (value: Int, date: Date) -> Unit,
-  onStartTimer: () -> Unit,
-  onCancelTimer: () -> Unit,
+  onStartCountdown: () -> Unit,
+  onCancelCountdown: () -> Unit,
   onStartStopwatch: () -> Unit,
   onStopStopwatch: () -> Unit,
   onCancelStopwatch: () -> Unit,
@@ -339,7 +302,7 @@ private fun ProgressTrackingScreen(
           contentDescription = stringResource(R.string.cd_edit_tracked_progress)
         )
       }
-      IconButton(enabled = model.records.isNotEmpty(), onClick = onShowRecords) {
+      IconButton(enabled = model.values.isNotEmpty(), onClick = onShowRecords) {
         Icon(
           painter = painterResource(R.drawable.rounded_list_24),
           contentDescription = stringResource(R.string.cd_show_records)
@@ -391,354 +354,69 @@ private fun ProgressTrackingScreen(
     }
   }
   when (model.progressType) {
-    ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN -> TimerSheet(
+    ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN -> CountdownSheet(
       show = showTimerModal,
-      timerTitle = stringResource(R.string.title_timer),
-      timerState = countDownTimerState,
+      active = countdownTimerState.isActive.value,
+      duration = countdownTimerState.duration,
+      title = stringResource(R.string.title_timer),
       onDismissRequest = {
         showTimerModal = false
-        onCancelTimer()
+        onCancelCountdown()
       },
-    ) {
-      IconButton(
-        onClick = {
-          showTimerModal = false
-          onCancelTimer()
-        }, colors = IconButtonDefaults.iconButtonColors(
-          containerColor = MaterialTheme.colorScheme.error,
-          contentColor = MaterialTheme.colorScheme.onError,
-        ), modifier = Modifier.size(64.dp)
-      ) {
-        Icon(
-          painter = painterResource(R.drawable.rounded_cancel_24),
-          contentDescription = stringResource(R.string.btn_cancel),
-          modifier = Modifier.size(48.dp)
-        )
-      }
-      IconButton(
-        enabled = !countDownTimerState.isActive.value,
-        onClick = { onStartTimer() },
-        colors = IconButtonDefaults.iconButtonColors(
-          containerColor = MaterialTheme.colorScheme.primary,
-          contentColor = MaterialTheme.colorScheme.onPrimary,
-          disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = .38f),
-          disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = .38f),
-        ),
-        modifier = Modifier.size(64.dp)
-      ) {
-        Icon(
-          painter = painterResource(R.drawable.rounded_play_circle_24),
-          contentDescription = stringResource(R.string.btn_start),
-          modifier = Modifier.size(48.dp)
-        )
-      }
-    }
+      onStart = onStartCountdown,
+      onCancel = {
+        showTimerModal = false
+        onCancelCountdown()
+      })
 
     ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH -> StopwatchSheet(
       show = showTimerModal,
-      timerTitle = stringResource(R.string.title_stopwatch),
-      timerState = stopwatchTimerState,
+      active = stopwatchTimerState.isActive.value,
+      title = stringResource(R.string.title_stopwatch),
       onDismissRequest = {
         showTimerModal = false
         onCancelStopwatch()
       },
-    ) {
-      IconButton(
-        onClick = {
-          showTimerModal = false
-          onCancelStopwatch()
-        }, colors = IconButtonDefaults.iconButtonColors(
-          containerColor = MaterialTheme.colorScheme.error,
-          contentColor = MaterialTheme.colorScheme.onError,
-        ), modifier = Modifier.size(64.dp)
-      ) {
-        Icon(
-          painter = painterResource(R.drawable.rounded_cancel_24),
-          contentDescription = stringResource(R.string.btn_cancel),
-          modifier = Modifier.size(48.dp)
-        )
-      }
-      ifElse(condition = stopwatchTimerState.isActive.value, ifTrue = {
-        // Stop button
-        IconButton(
-          onClick = {
-            showTimerModal = false
-            onStopStopwatch()
-            showNewRecordDialog = true
-          }, colors = IconButtonDefaults.iconButtonColors(
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onSecondary,
-            disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = .38f),
-            disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = .38f),
-          ), modifier = Modifier.size(64.dp)
-        ) {
-          Icon(
-            painter = painterResource(R.drawable.rounded_stop_circle_24),
-            contentDescription = stringResource(R.string.btn_stop),
-            modifier = Modifier.size(48.dp)
-          )
-        }
-      }, ifFalse = {
-        // Start button
-        IconButton(
-          onClick = { onStartStopwatch() }, colors = IconButtonDefaults.iconButtonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = .38f),
-            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = .38f),
-          ), modifier = Modifier.size(64.dp)
-        ) {
-          Icon(
-            painter = painterResource(R.drawable.rounded_play_circle_24),
-            contentDescription = stringResource(R.string.btn_start),
-            modifier = Modifier.size(48.dp)
-          )
-        }
-      })
-    }
+      onStart = onStartStopwatch,
+      onStop = {
+        showTimerModal = false
+        onStopStopwatch()
+        showNewRecordDialog = true
+      },
+      onCancel = {
+        showTimerModal = false
+        onCancelStopwatch()
+      },
+    )
 
     else -> {}
   }
 }
 
+@Suppress("HardCodedStringLiteral")
+@Preview
 @Composable
-fun RecordChart(model: ProgressTrackingTrackedProgressModel, modifier: Modifier = Modifier) {
-  val values = model.records.map { it.toDouble() }
-  val gridProperties =
-    GridProperties(xAxisProperties = GridProperties.AxisProperties(lineCount = 5))
-  val maxValue = (values.maxOrNull())?.let { max ->
-    val segmentCount = gridProperties.yAxisProperties.lineCount - 1
-
-    if (model.progressType == ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH) {
-      val minutes = (segmentCount / 2).minutes.inWholeMilliseconds.toDouble()
-      val multiplier = ceil(max / minutes).toInt()
-
-      multiplier * minutes
-    }
-    else {
-      val segment = max / segmentCount.toDouble()
-      val delta = segment % 10 // Get delta to next round number
-
-      max + segmentCount * (10 - delta)
-    }
-  } ?: 0.toDouble()
-  val label = when (model.progressType) {
-    ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH -> stringResource(R.string.label_time)
-    else -> model.recordUnit.replaceFirstChar { char -> char.uppercase() }
-  }
-  val lineColor = MaterialTheme.colorScheme.primary
-  val lines = remember(values) {
-    listOf(
-      Line(
-        label = label,
-        values = ifElse(
-          condition = values.isNotEmpty(),
-          ifTrue = { values },
-          ifFalse = { listOf(0.toDouble()) }), // LineChart will crash if the values list is empty
-        color = SolidColor(lineColor),
-        firstGradientFillColor = lineColor.copy(alpha = .5f),
-        secondGradientFillColor = Color.Transparent,
-        strokeAnimationSpec = tween(1000, easing = EaseInOutCubic),
-        gradientAnimationDelay = 500,
-        drawStyle = DrawStyle.Stroke(width = 2.dp),
-        curvedEdges = true
-      )
-    )
-  }
-  val indicatorProperties = HorizontalIndicatorProperties(
-    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface), contentBuilder = { value ->
-      when (model.progressType) {
-        ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH -> value.toDuration(DurationUnit.MILLISECONDS)
-          .toClockString(hasHours = value >= 1.hours.inWholeMilliseconds).trimFirst('0')
-
-        else -> value.format(0)
-      }
-    })
-  val labelHelperProperties = LabelHelperProperties(
-    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface)
-  )
-  val popupProperties = PopupProperties(
-    mode = PopupProperties.Mode.PointMode(threshold = 30.dp),
-    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
-    contentBuilder = { popup ->
-      when (model.progressType) {
-        ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH -> popup.value.toDuration(
-          DurationUnit.MILLISECONDS
-        ).toClockString(hasHours = popup.value >= 1.hours.inWholeMilliseconds).trimFirst('0')
-
-        else -> DecimalFormat.getInstance().apply { maximumFractionDigits = 0 }.format(popup.value)
-      }
-    })
-
-  LineChart(
-    modifier = modifier,
-    data = lines,
-    indicatorProperties = indicatorProperties,
-    labelHelperProperties = labelHelperProperties,
-    popupProperties = popupProperties,
-    maxValue = maxValue,
-    gridProperties = gridProperties
-  )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TimerSheet(
-  show: Boolean,
-  timerTitle: String,
-  timerState: ProgressTrackingScreenViewModel.CountDownTimerState?,
-  onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
-  content: @Composable RowScope.() -> Unit,
-) {
-  val isActive = timerState?.isActive?.value == true
-  val duration = timerState?.duration ?: 0.seconds
-
-  val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
-  var clockText by rememberSaveable(duration) { mutableStateOf(duration.toClockString()) }
-  val progress = remember {
-    if (duration.inWholeMilliseconds <= 0) Animatable(1f)
-    else Animatable(initialValue = ((System.currentTimeMillis() - startTime).toFloat() / duration.inWholeMilliseconds.toFloat()))
-  }
-
-  LaunchedEffect(isActive) {
-    // Animate progress indicator
-    if (isActive) {
-      val remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
-
-      progress.animateTo(
-        targetValue = 1f, animationSpec = tween(
-          durationMillis = remainingMillis.toInt(), easing = LinearEasing
-        )
-      )
-    }
-  }
-
-  DisposableEffect(isActive) {
-    // Update clock text
-    val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
-      val remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
-
-      clockText = remainingMillis.milliseconds.toClockString()
-    }
-    else null
-
-    onDispose {
-      timer?.cancel()
-      timer?.purge()
-    }
-  }
-
-  GesturelessModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
-    Box(
-      contentAlignment = Alignment.BottomCenter, modifier = Modifier
-        .fillMaxWidth(.7f)
-        .weight(3f)
-    ) {
-      Box(
-        contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
-      ) {
-        CircularProgressIndicator(
-          progress = { progress.value },
-          strokeWidth = 20.dp,
-          gapSize = 0.dp,
-          strokeCap = StrokeCap.Butt,
-          modifier = Modifier.fillMaxSize()
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Text(timerTitle, style = MaterialTheme.typography.titleMedium)
-          Text(
-            text = clockText,
-            style = MaterialTheme.typography.displayLarge,
-            textAlign = TextAlign.Center
-          )
-          Spacer(Modifier.height(with(LocalDensity.current) {
-            // Centers the text inside the progress indicator
-            MaterialTheme.typography.titleMedium.lineHeight.toDp()
-          }))
-        }
-      }
-    }
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceEvenly,
-      modifier = Modifier
-        .fillMaxWidth()
-        .weight(2f)
-        .padding(horizontal = 16.dp)
-    ) {
-      content()
-    }
-  }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun StopwatchSheet(
-  show: Boolean,
-  timerTitle: String,
-  timerState: ProgressTrackingScreenViewModel.StopwatchTimerState?,
-  onDismissRequest: () -> Unit, // Needs to be here because back button will request dismiss
-  content: @Composable RowScope.() -> Unit,
-) {
-  val isActive = timerState?.isActive?.value == true
-
-  val startTime = rememberSaveable(isActive) { System.currentTimeMillis() }
-  var clockText by rememberSaveable(isActive) {
-    mutableStateOf((System.currentTimeMillis() - startTime).milliseconds.toClockString())
-  }
-
-  DisposableEffect(isActive) {
-    // Update clock text
-    val timer = if (isActive) timer(period = 1.seconds.inWholeMilliseconds) {
-      clockText = (System.currentTimeMillis() - startTime).milliseconds.toClockString()
-    }
-    else null
-
-    onDispose {
-      timer?.cancel()
-      timer?.purge()
-    }
-  }
-
-  GesturelessModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
-    Box(
-      contentAlignment = Alignment.BottomCenter, modifier = Modifier
-        .fillMaxWidth(.7f)
-        .weight(3f)
-    ) {
-      Box(
-        contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
-      ) {
-        CircularProgressIndicator(
-          progress = { if (isActive) 1f else 0f },
-          strokeWidth = 20.dp,
-          gapSize = 0.dp,
-          strokeCap = StrokeCap.Butt,
-          modifier = Modifier.fillMaxSize()
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Text(timerTitle, style = MaterialTheme.typography.titleMedium)
-          Text(
-            text = clockText,
-            style = MaterialTheme.typography.displayLarge,
-            textAlign = TextAlign.Center
-          )
-          Spacer(Modifier.height(with(LocalDensity.current) {
-            // Centers the text inside the progress indicator
-            MaterialTheme.typography.titleMedium.lineHeight.toDp()
-          }))
-        }
-      }
-    }
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceEvenly,
-      modifier = Modifier
-        .fillMaxWidth()
-        .weight(2f)
-        .padding(horizontal = 16.dp)
-    ) {
-      content()
-    }
+private fun Preview() {
+  ExerciseTrackerTheme {
+    ProgressTrackingScreenContent(
+      model = ProgressTrackingTrackedProgressModel(
+        id = 1L,
+        name = "Progress 1",
+        progressType = ProgressTrackingTrackedProgressModel.ProgressType.REPETITION,
+        values = listOf(1, 2, 3),
+        recordUnit = "Reps",
+        countdownTime = null
+      ),
+      stopwatchTimerState = ProgressTrackingScreenViewModel.StopwatchTimerState(),
+      countdownTimerState = ProgressTrackingScreenViewModel.CountdownTimerState(),
+      onEdit = {},
+      onBack = {},
+      onShowRecords = {},
+      onAddValue = { _, _ -> },
+      onStartCountdown = {},
+      onCancelCountdown = {},
+      onStartStopwatch = {},
+      onStopStopwatch = {},
+      onCancelStopwatch = {})
   }
 }

@@ -9,13 +9,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -26,16 +24,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,6 +52,7 @@ import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.fetchT
 import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.saveTrackedProgress
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
+import com.aamo.exercisetracker.ui.components.inputs.HorizontalRadioButton
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
 import com.aamo.exercisetracker.ui.components.inputs.number_field.DurationNumberField
 import com.aamo.exercisetracker.ui.components.inputs.number_field.DurationNumberFieldFields
@@ -63,6 +61,7 @@ import com.aamo.exercisetracker.ui.components.inputs.number_field.NumberField
 import com.aamo.exercisetracker.ui.components.inputs.text_field.borderlessTextFieldColors
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.equalsAny
@@ -205,8 +204,8 @@ fun NavGraphBuilder.trackedProgressFormScreen(
     val formState by viewmodel.formState.collectAsStateWithLifecycle()
 
     LoadingScreen(loading = formState == null) {
-      TrackedProgressFormScreen(
-        uiState = checkNotNull(formState),
+      TrackedProgressFormScreenContent(
+        formState = checkNotNull(formState),
         onBack = onBack,
         onSave = { viewmodel.save() },
         onDelete = { viewmodel.delete() })
@@ -216,61 +215,61 @@ fun NavGraphBuilder.trackedProgressFormScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrackedProgressFormScreen(
-  uiState: TrackedProgressFormViewModel.FormState,
+private fun TrackedProgressFormScreenContent(
+  formState: TrackedProgressFormViewModel.FormState,
   onBack: () -> Unit,
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
   val progressUnitDefault = stringResource(R.string.default_text_reps)
 
-  val unitFieldEnabled by remember(uiState.progressType.value) {
+  val unitFieldEnabled by remember(formState.progressType.value) {
     mutableStateOf(
-      uiState.progressType.value.equalsAny(
+      formState.progressType.value.equalsAny(
         TrackedProgressFormFields.ProgressType.REPETITION,
         TrackedProgressFormFields.ProgressType.TIMER
       )
     )
   }
-  val durationFieldEnabled by remember(uiState.progressType.value) {
+  val durationFieldEnabled by remember(formState.progressType.value) {
     mutableStateOf(
-      uiState.progressType.value.equalsAny(
+      formState.progressType.value.equalsAny(
         TrackedProgressFormFields.ProgressType.TIMER,
       )
     )
   }
   var unitFieldPreviousValue by remember {
-    mutableStateOf(uiState.progressValueUnit.value.letIf(condition = { it.isEmpty() }) { progressUnitDefault })
+    mutableStateOf(formState.progressValueUnit.value.letIf(condition = { it.isEmpty() }) { progressUnitDefault })
   }
-  var durationFieldPreviousValue by remember { mutableStateOf(uiState.timerDuration.value) }
+  var durationFieldPreviousValue by remember { mutableStateOf(formState.timerDuration.value) }
 
   var openDeleteDialog by remember { mutableStateOf(false) }
   var openUnsavedDialog by remember { mutableStateOf(false) }
 
-  LaunchedEffect(uiState.progressValueUnit.value) {
+  LaunchedEffect(formState.progressValueUnit.value) {
     if (unitFieldEnabled) {
-      unitFieldPreviousValue = uiState.progressValueUnit.value
+      unitFieldPreviousValue = formState.progressValueUnit.value
     }
   }
 
-  LaunchedEffect(uiState.timerDuration.value) {
+  LaunchedEffect(formState.timerDuration.value) {
     if (durationFieldEnabled) {
-      durationFieldPreviousValue = uiState.timerDuration.value
+      durationFieldPreviousValue = formState.timerDuration.value
     }
   }
 
   LaunchedEffect(unitFieldEnabled) {
     ifElse(
       condition = unitFieldEnabled,
-      ifTrue = { uiState.progressValueUnit.update(unitFieldPreviousValue) },
-      ifFalse = { uiState.progressValueUnit.update(String.EMPTY) })
+      ifTrue = { formState.progressValueUnit.update(unitFieldPreviousValue) },
+      ifFalse = { formState.progressValueUnit.update(String.EMPTY) })
   }
 
   LaunchedEffect(durationFieldEnabled) {
     ifElse(
       condition = durationFieldEnabled,
-      ifTrue = { uiState.timerDuration.update(durationFieldPreviousValue) },
-      ifFalse = { uiState.timerDuration.update(0.seconds) })
+      ifTrue = { formState.timerDuration.update(durationFieldPreviousValue) },
+      ifFalse = { formState.timerDuration.update(0.seconds) })
   }
 
   UnsavedDialog(
@@ -290,7 +289,7 @@ fun TrackedProgressFormScreen(
       onDelete()
     })
 
-  BackHandler(enabled = uiState.savingState.unsavedChanges) {
+  BackHandler(enabled = formState.savingState.unsavedChanges) {
     openUnsavedDialog = true
   }
 
@@ -298,16 +297,16 @@ fun TrackedProgressFormScreen(
     TopAppBar(title = {
       Text(
         text = ifElse(
-          condition = uiState.isNew,
+          condition = formState.isNew,
           ifTrue = { stringResource(R.string.title_new_tracked_progress) },
           ifFalse = { stringResource(R.string.title_existing_tracked_progress) })
       )
     }, navigationIcon = {
       BackNavigationIconButton(onBack = {
-        if (uiState.savingState.unsavedChanges) openUnsavedDialog = true else onBack()
+        if (formState.savingState.unsavedChanges) openUnsavedDialog = true else onBack()
       })
     }, actions = {
-      if (!uiState.isNew) {
+      if (!formState.isNew) {
         IconButton(onClick = { openDeleteDialog = true }) {
           Icon(
             painter = painterResource(R.drawable.rounded_delete_24),
@@ -317,8 +316,8 @@ fun TrackedProgressFormScreen(
       }
       LoadingIconButton(
         onClick = onSave,
-        isLoading = uiState.savingState.state == SavingState.State.SAVING,
-        enabled = uiState.canSave()
+        isLoading = formState.savingState.state == SavingState.State.SAVING,
+        enabled = formState.canSave()
       ) {
         Icon(
           painter = painterResource(R.drawable.round_done_24),
@@ -334,19 +333,19 @@ fun TrackedProgressFormScreen(
         .padding(8.dp)
     ) {
       TextField(
-        value = uiState.progressName.value,
+        value = formState.progressName.value,
         label = { Text(stringResource(R.string.label_name)) },
         shape = RectangleShape,
         colors = borderlessTextFieldColors(),
-        onValueChange = { uiState.progressName.update(it) },
+        onValueChange = { formState.progressName.update(it) },
         keyboardOptions = KeyboardOptions(
           imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
         ),
         modifier = Modifier.fillMaxWidth()
       )
       NumberField(
-        value = uiState.weeklyInterval.value,
-        onValueChange = { uiState.weeklyInterval.update(it) },
+        value = formState.weeklyInterval.value,
+        onValueChange = { formState.weeklyInterval.update(it) },
         validator = IntFieldValidator,
         label = { Text(stringResource(R.string.label_weekly_interval_optional)) },
         shape = RectangleShape,
@@ -370,18 +369,18 @@ fun TrackedProgressFormScreen(
         ) {
           HorizontalRadioButton(
             title = stringResource(R.string.label_repetitions),
-            selected = uiState.progressType.value == TrackedProgressFormFields.ProgressType.REPETITION,
-            onSelect = { uiState.progressType.update(TrackedProgressFormFields.ProgressType.REPETITION) },
+            selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.REPETITION,
+            onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.REPETITION) },
           )
           HorizontalRadioButton(
             title = stringResource(R.string.label_timer),
-            selected = uiState.progressType.value == TrackedProgressFormFields.ProgressType.TIMER,
-            onSelect = { uiState.progressType.update(TrackedProgressFormFields.ProgressType.TIMER) },
+            selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.TIMER,
+            onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.TIMER) },
           )
           HorizontalRadioButton(
             title = stringResource(R.string.label_stopwatch),
-            selected = uiState.progressType.value == TrackedProgressFormFields.ProgressType.STOPWATCH,
-            onSelect = { uiState.progressType.update(TrackedProgressFormFields.ProgressType.STOPWATCH) },
+            selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.STOPWATCH,
+            onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.STOPWATCH) },
           )
         }
         Column(
@@ -392,11 +391,11 @@ fun TrackedProgressFormScreen(
         ) {
           TextField(
             enabled = unitFieldEnabled,
-            value = uiState.progressValueUnit.value,
+            value = formState.progressValueUnit.value,
             label = { Text(stringResource(R.string.label_progress_unit)) },
             shape = RectangleShape,
             colors = borderlessTextFieldColors(),
-            onValueChange = { uiState.progressValueUnit.update(it) },
+            onValueChange = { formState.progressValueUnit.update(it) },
             keyboardOptions = KeyboardOptions(
               imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
             ),
@@ -405,8 +404,8 @@ fun TrackedProgressFormScreen(
           DurationNumberField(
             enabled = durationFieldEnabled,
             fields = DurationNumberFieldFields(hours = DurationNumberFieldFields.Properties(enabled = false)),
-            value = uiState.timerDuration.value,
-            onValueChange = { uiState.timerDuration.update(it) },
+            value = formState.timerDuration.value,
+            onValueChange = { formState.timerDuration.update(it) },
             shape = RectangleShape,
             colors = borderlessTextFieldColors(),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -418,19 +417,21 @@ fun TrackedProgressFormScreen(
   }
 }
 
+@Suppress("HardCodedStringLiteral")
+@Preview
 @Composable
-private fun HorizontalRadioButton(
-  title: String, selected: Boolean, onSelect: () -> Unit, modifier: Modifier = Modifier
-) {
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-    modifier = modifier
-      .selectable(selected = selected, onClick = onSelect, role = Role.RadioButton)
-      .height(56.dp)
-      .padding(horizontal = 8.dp)
-  ) {
-    RadioButton(selected = selected, onClick = null)
-    Text(text = title)
+private fun Preview() {
+  ExerciseTrackerTheme {
+    TrackedProgressFormScreenContent(
+      formState = TrackedProgressFormViewModel.FormState(
+      fields = TrackedProgressFormFields(
+        name = "Progress 1",
+        weeklyInterval = 2,
+        type = TrackedProgressFormFields.ProgressType.REPETITION,
+        progressValueUnit = "Reps",
+        timerDuration = null
+      )
+    ), onBack = {}, onSave = {}, onDelete = {})
   }
+
 }

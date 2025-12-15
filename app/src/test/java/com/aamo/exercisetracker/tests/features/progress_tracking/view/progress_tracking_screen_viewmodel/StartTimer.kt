@@ -2,7 +2,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.view.progress_
 
 import com.aamo.exercisetracker.features.progress_tracking.view.ProgressTrackingScreenViewModel
 import com.aamo.exercisetracker.features.progress_tracking.view.models.ProgressTrackingTrackedProgressModel
-import com.aamo.exercisetracker.services.ICountDownTimerService
+import com.aamo.exercisetracker.services.ICountdownTimerService
 import com.aamo.exercisetracker.services.IStopwatchTimerService
 import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase.assertEquals
@@ -30,9 +30,9 @@ class StartTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = 4.minutes
+      countdownTime = 4.minutes
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -41,7 +41,7 @@ class StartTimer : UnconfinedTest() {
       viewmodel.model.collect()
     }
 
-    viewmodel.startTimer(countDownTimerService = object : ICountDownTimerService {
+    viewmodel.startCountdown(countdownTimerService = object : ICountdownTimerService {
       override fun start(
         durationMillis: Long,
         onFinished: () -> Unit,
@@ -67,9 +67,9 @@ class StartTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.COUNTDOWN,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = 4.minutes
+      countdownTime = 4.minutes
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -78,21 +78,21 @@ class StartTimer : UnconfinedTest() {
       viewmodel.model.collect()
     }
 
-    val countDownService = object : ICountDownTimerService {
+    val countDownService = object : ICountdownTimerService {
       override fun start(
         durationMillis: Long,
         onFinished: () -> Unit,
         onStart: (() -> Unit)?,
         onCleanUp: (() -> Unit)?
       ) {
-        assertEquals(viewmodel.countDownTimerState.duration.inWholeMilliseconds, durationMillis)
+        assertEquals(viewmodel.countdownTimerState.duration.inWholeMilliseconds, durationMillis)
 
-        onStart!!.invoke().also { assertTrue(viewmodel.countDownTimerState.isActive.value) }
-        onCleanUp!!.invoke().also { assertFalse(viewmodel.countDownTimerState.isActive.value) }
+        onStart!!.invoke().also { assertTrue(viewmodel.countdownTimerState.isActive.value) }
+        onCleanUp!!.invoke().also { assertFalse(viewmodel.countdownTimerState.isActive.value) }
       }
     }
 
-    viewmodel.startTimer(countDownTimerService = countDownService)
+    viewmodel.startCountdown(countdownTimerService = countDownService)
   }
 
   @Test
@@ -103,9 +103,9 @@ class StartTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = null
+      countdownTime = null
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -114,7 +114,7 @@ class StartTimer : UnconfinedTest() {
       viewmodel.model.collect()
     }
 
-    viewmodel.startTimer(stopwatchTimerService = object : IStopwatchTimerService {
+    viewmodel.startStopwatch(stopwatchTimerService = object : IStopwatchTimerService {
       override fun start(
         onStart: (() -> Unit)?, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)?
       ) {
@@ -137,9 +137,9 @@ class StartTimer : UnconfinedTest() {
       id = 1L,
       name = "Progress 1",
       progressType = ProgressTrackingTrackedProgressModel.ProgressType.STOPWATCH,
-      records = emptyList(),
+      values = emptyList(),
       recordUnit = "Unit",
-      countDownTime = null
+      countdownTime = null
     )
     val viewmodel =
       ProgressTrackingScreenViewModel(fetchData = { flow { emit(model) } }, addValue = { fail() })
@@ -161,6 +161,6 @@ class StartTimer : UnconfinedTest() {
       }
     }
 
-    viewmodel.startTimer(stopwatchTimerService = stopwatchService)
+    viewmodel.startStopwatch(stopwatchTimerService = stopwatchService)
   }
 }

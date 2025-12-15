@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -45,6 +46,7 @@ import com.aamo.exercisetracker.features.progress_tracking.records.use_cases.sav
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -53,7 +55,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.sql.Date
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import kotlin.time.Duration.Companion.days
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -100,7 +105,7 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
     val model by viewmodel.model.collectAsStateWithLifecycle()
 
     LoadingScreen(loading = model == null) {
-      TrackedProgressRecordListScreen(
+      TrackedProgressRecordListScreenContent(
         model = checkNotNull(model),
         onBack = onBack,
         onDeleteRecord = { viewmodel.deleteRecord(it) },
@@ -111,7 +116,7 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrackedProgressRecordListScreen(
+private fun TrackedProgressRecordListScreenContent(
   model: TrackedProgressRecordListModel,
   onBack: () -> Unit,
   onDeleteRecord: (TrackedProgressValue) -> Unit,
@@ -205,5 +210,36 @@ private fun TrackedProgressRecordListScreen(
         }
       }
     }
+  }
+}
+
+@Suppress("HardCodedStringLiteral")
+@Preview
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme {
+    TrackedProgressRecordListScreenContent(
+      model = TrackedProgressRecordListModel(
+      progressName = "Progress 1", valueUnit = "Reps", records = listOf(
+        TrackedProgressValue(
+          id = 3L,
+          progressId = 1L,
+          value = 25,
+          addedDate = Date(LocalDate.of(2025, 12, 24).toEpochDay().days.inWholeMilliseconds)
+        ),
+        TrackedProgressValue(
+          id = 2L,
+          progressId = 1L,
+          value = 11,
+          addedDate = Date(LocalDate.of(2025, 12, 1).toEpochDay().days.inWholeMilliseconds)
+        ),
+        TrackedProgressValue(
+          id = 1L,
+          progressId = 1L,
+          value = 3,
+          addedDate = Date(LocalDate.of(2025, 11, 15).toEpochDay().days.inWholeMilliseconds)
+        ),
+      ), valueType = TrackedProgressRecordListModel.ValueType.COUNT
+    ), onBack = {}, onDeleteRecord = {}, onSaveRecord = {})
   }
 }

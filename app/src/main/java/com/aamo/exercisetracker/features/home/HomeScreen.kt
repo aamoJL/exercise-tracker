@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
@@ -31,6 +32,7 @@ import com.aamo.exercisetracker.features.routine.RoutinePage
 import com.aamo.exercisetracker.features.routine.form.RoutineFormScreen
 import com.aamo.exercisetracker.features.routine.list.RoutineListScreen
 import com.aamo.exercisetracker.features.routine.list.routineListScreen
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.navigation.destinationEquals
@@ -136,5 +138,13 @@ fun HomeScreenContent(mainNavController: NavController) {
         }
       }
     }
+  }
+}
+
+@Preview
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme {
+    HomeScreenContent(mainNavController = rememberNavController())
   }
 }
