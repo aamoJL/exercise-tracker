@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.features.routine
+package com.aamo.exercisetracker.features.routine.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,15 +20,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,45 +40,28 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineWithExerciseProgresses
-import com.aamo.exercisetracker.features.routine.use_cases.fetchRoutineWithSetsAndProgressesFlow
+import com.aamo.exercisetracker.features.routine.view.use_cases.fetchRoutineFlow
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
-import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.Serializable
-import java.time.LocalDate
-import java.time.ZoneId
+import java.util.Date
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 @Serializable
 data class RoutineScreen(val id: Long = 0L, val showProgress: Boolean = false)
 
 class RoutineScreenViewModel(fetchData: () -> Flow<RoutineWithExerciseProgresses?>) : ViewModel() {
-  private val _exercises = MutableStateFlow<List<ExerciseWithProgress>>(emptyList())
-  val exercises = _exercises.asStateFlow()
-
-  var routine: Routine? by mutableStateOf(null)
-    private set
-  var isLoading by mutableStateOf(true)
-    private set
-
-  init {
-    viewModelScope.launch {
-      fetchData().collect { item ->
-        isLoading = false
-        item?.also {
-          routine = item.routine
-          _exercises.update { item.exerciseProgresses }
-        }
-      }
-    }
-  }
+  val model = fetchData().stateIn(
+    scope = viewModelScope, started = SharingStarted.Lazily, initialValue = null
+  )
 }
 
 fun NavGraphBuilder.routineScreen(
@@ -94,59 +75,35 @@ fun NavGraphBuilder.routineScreen(
     val dao = RoutineDatabase.getDatabase(LocalContext.current.applicationContext).routineDao()
     val viewmodel: RoutineScreenViewModel = viewModel(factory = viewModelFactory {
       initializer {
-        RoutineScreenViewModel(
-          fetchData = {
-            fetchRoutineWithSetsAndProgressesFlow {
-              dao.getRoutineWithProgressesFlow(routineId)
-            }
-          },
-        )
+        RoutineScreenViewModel(fetchData = { fetchRoutineFlow(dao = dao, routineId = routineId) })
       }
     })
-    val routine = viewmodel.routine
-    val exercises by viewmodel.exercises.collectAsStateWithLifecycle()
+    val model by viewmodel.model.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = viewmodel.isLoading) {
-      if (routine != null) {
-        RoutineScreen(
-          routine = routine,
-          exercises = exercises,
-          showProgress = showProgress,
-          onBack = onBack,
-          onAddExercise = onAddExercise,
-          onSelectExercise = onSelectExercise,
-          onEdit = { onEdit(routineId) })
-      }
+    LoadingScreen(loading = model == null) {
+      RoutineScreenContent(
+        routine = checkNotNull(model?.routine),
+        exercises = checkNotNull(model?.exerciseProgresses),
+        showFinishedIcon = showProgress,
+        onBack = onBack,
+        onAddExercise = onAddExercise,
+        onSelectExercise = onSelectExercise,
+        onEdit = { onEdit(routineId) })
     }
   }
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun RoutineScreen(
+private fun RoutineScreenContent(
   routine: Routine,
   exercises: List<ExerciseWithProgress>,
-  showProgress: Boolean,
+  showFinishedIcon: Boolean,
   onBack: () -> Unit,
   onAddExercise: (routineId: Long) -> Unit,
   onSelectExercise: (id: Long) -> Unit,
   onEdit: () -> Unit
 ) {
-  val dateMillis = remember {
-    LocalDate.now().atStartOfDay().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-  }
-  val sortedExercises = remember(exercises) {
-    exercises.map { (exercise, progress) ->
-      object {
-        val exercise: Exercise = exercise
-        val isFinished: Boolean? = ifElse(
-          condition = showProgress,
-          ifTrue = { progress?.finishedDate?.time?.compareTo(dateMillis)?.let { it > 0 } == true },
-          ifFalse = { null })
-      }
-    }.sortedBy { it.exercise.name }
-  }
-
   Scaffold(topBar = {
     TopAppBar(title = { Text(routine.name) }, navigationIcon = {
       BackNavigationIconButton(onBack = onBack)
@@ -173,7 +130,7 @@ fun RoutineScreen(
           .padding(8.dp)
           .clip(RoundedCornerShape(8.dp))
       ) {
-        items(sortedExercises, key = { it.exercise.id }) { exercise ->
+        items(exercises, key = { it.exercise.id }) { exercise ->
           Box(
             modifier = Modifier
               .fillMaxWidth()
@@ -185,15 +142,18 @@ fun RoutineScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 28.dp)
             ) {
-              Text(
-                text = exercise.exercise.name,
-                fontWeight = FontWeight.Bold,
-              )
-              if (exercise.isFinished == true) {
-                Icon(
-                  painter = painterResource(R.drawable.round_done_24),
-                  contentDescription = stringResource(R.string.cd_done)
-                )
+              Text(text = exercise.exercise.name, fontWeight = FontWeight.Bold)
+
+              if (showFinishedIcon && exercise.progress != null) {
+                val finished =
+                  System.currentTimeMillis().milliseconds.inWholeDays <= exercise.progress.finishedDate.time.milliseconds.inWholeDays
+
+                if (finished) {
+                  Icon(
+                    painter = painterResource(R.drawable.round_done_24),
+                    contentDescription = stringResource(R.string.cd_done)
+                  )
+                }
               }
             }
           }
@@ -201,4 +161,27 @@ fun RoutineScreen(
       }
     }
   }
+}
+
+@Suppress("HardCodedStringLiteral")
+@Preview
+@Composable
+private fun Preview() {
+  RoutineScreenContent(
+    routine = Routine(id = 1L, name = "Routine 1"), exercises = listOf(
+    ExerciseWithProgress(
+      exercise = Exercise(id = 1L, routineId = 1L, name = "Exercise 1"),
+      progress = ExerciseProgress(exerciseId = 1L, finishedDate = Date())
+    ),
+    ExerciseWithProgress(
+      exercise = Exercise(id = 2L, routineId = 1L, name = "Exercise 1"),
+      progress = ExerciseProgress(
+        exerciseId = 2L,
+        finishedDate = Date(System.currentTimeMillis() - 1.days.inWholeMilliseconds)
+      )
+    ),
+    ExerciseWithProgress(
+      exercise = Exercise(id = 3L, routineId = 1L, name = "Exercise 1"), progress = null
+    ),
+  ), showFinishedIcon = true, onBack = {}, onAddExercise = {}, onSelectExercise = {}, onEdit = {})
 }

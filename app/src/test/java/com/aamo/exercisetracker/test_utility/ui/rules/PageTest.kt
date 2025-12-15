@@ -153,4 +153,14 @@ open class PageTest {
       trackedProgress = progressInsert, values = listOf(recordInsert)
     )
   }
+
+  suspend fun toRoutineScreen(routine: Routine): Routine {
+    val routineInsert = toRoutineListScreen(routine)
+    waitForLoading()
+
+    rule.onNodeWithText(routineInsert.name).performClick()
+    rule.onNodeWithContentDescription(getString(R.string.cd_edit_routine)).waitForDisplayed()
+
+    return routineInsert
+  }
 }

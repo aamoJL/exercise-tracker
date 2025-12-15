@@ -2,7 +2,7 @@ package com.aamo.exercisetracker.features.exercise
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
-import com.aamo.exercisetracker.features.routine.RoutineScreen
+import com.aamo.exercisetracker.features.routine.view.RoutineScreen
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 
 fun NavGraphBuilder.exercisePage(navController: NavController) {
