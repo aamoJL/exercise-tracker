@@ -70,8 +70,8 @@ import androidx.navigation.toRoute
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
-import com.aamo.exercisetracker.features.progress_tracking.view.components.DurationRecordDialog
-import com.aamo.exercisetracker.features.progress_tracking.view.components.RepetitionRecordDialog
+import com.aamo.exercisetracker.features.progress_tracking.records.components.DurationRecordDialog
+import com.aamo.exercisetracker.features.progress_tracking.records.components.RepetitionRecordDialog
 import com.aamo.exercisetracker.features.progress_tracking.view.models.ProgressTrackingTrackedProgressModel
 import com.aamo.exercisetracker.features.progress_tracking.view.use_cases.fetchTrackedProgressFlow
 import com.aamo.exercisetracker.features.progress_tracking.view.use_cases.saveTrackedProgressValue
@@ -284,7 +284,7 @@ fun NavGraphBuilder.progressTrackingScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProgressTrackingScreen(
+private fun ProgressTrackingScreen(
   model: ProgressTrackingTrackedProgressModel,
   stopwatchTimerState: ProgressTrackingScreenViewModel.StopwatchTimerState,
   countDownTimerState: ProgressTrackingScreenViewModel.CountDownTimerState,
