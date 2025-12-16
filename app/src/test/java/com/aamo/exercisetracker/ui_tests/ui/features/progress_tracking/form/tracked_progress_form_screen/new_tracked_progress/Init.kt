@@ -39,7 +39,7 @@ class Init : PageTest() {
     rule.onNodeWithText(getString(R.string.label_weekly_interval_optional))
       .assertEditableText(String.EMPTY)
     rule.onNodeWithText(getString(R.string.label_progress_unit))
-      .assertEditableText(getString(R.string.default_text_reps))
+      .assertEditableText(getString(R.string.default_repetitions_unit))
     rule.onNodeWithText(getString(R.string.label_minutes)).assertEditableText(String.EMPTY)
       .assertIsNotEnabled()
     rule.onNodeWithText(getString(R.string.label_seconds)).assertEditableText(String.EMPTY)

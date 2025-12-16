@@ -13,12 +13,16 @@ import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.database.RoutineDatabase
 import com.aamo.exercisetracker.database.dao.RoutineDao
 import com.aamo.exercisetracker.database.dao.TrackedProgressDao
+import com.aamo.exercisetracker.database.entities.Exercise
+import com.aamo.exercisetracker.database.entities.ExerciseSet
+import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.database.entities.TrackedProgressWithValues
+import com.aamo.exercisetracker.features.exercise.form.use_cases.fetchExercise
 import com.aamo.exercisetracker.test_utility.ui.extensions.waitForDisplayed
 import com.aamo.exercisetracker.utility.tags.UITag
 import kotlinx.coroutines.yield
@@ -27,6 +31,7 @@ import org.junit.Before
 import org.junit.Rule
 import java.text.SimpleDateFormat
 
+@Suppress("HardCodedStringLiteral")
 open class PageTest {
   lateinit var routineDao: RoutineDao
   lateinit var trackedProgressDao: TrackedProgressDao
@@ -95,6 +100,16 @@ open class PageTest {
     }
   }
 
+  suspend fun toRoutineScreen(routine: Routine): Routine {
+    val routineInsert = toRoutineListScreen(routine)
+    waitForLoading()
+
+    rule.onNodeWithText(routineInsert.name).performClick()
+    rule.onNodeWithContentDescription(getString(R.string.cd_edit_routine)).waitForDisplayed()
+
+    return routineInsert
+  }
+
   suspend fun toTrackedProgressListScreen(progress: TrackedProgress): TrackedProgress {
     rule.onNodeWithText(getString(R.string.label_progress)).performClick()
     waitForLoading()
@@ -154,13 +169,34 @@ open class PageTest {
     )
   }
 
-  suspend fun toRoutineScreen(routine: Routine): Routine {
-    val routineInsert = toRoutineListScreen(routine)
+  suspend fun toExerciseFormScreen(model: Exercise? = null): ExerciseWithSets {
+    val routine = toRoutineScreen(routine = Routine(name = "Routine 1"))
     waitForLoading()
 
-    rule.onNodeWithText(routineInsert.name).performClick()
-    rule.onNodeWithContentDescription(getString(R.string.cd_edit_routine)).waitForDisplayed()
+    if (model != null) {
+      val id = routineDao.upsert(model.copy(routineId = routine.id))
+      routineDao.upsert(ExerciseSet(exerciseId = id, value = 123, unit = "Unit"))
 
-    return routineInsert
+      rule.onNodeWithText(model.name).waitForDisplayed().performClick()
+      waitForLoading()
+      rule.onNodeWithContentDescription(getString(R.string.cd_edit_exercise)).performClick()
+
+      return fetchExercise(
+        dao = routineDao,
+        exerciseId = id,
+        routineId = routine.id,
+        defaultUnit = getString(R.string.default_repetitions_unit)
+      ) ?: error("exercise is null")
+    }
+    else {
+      rule.onNodeWithContentDescription(getString(R.string.cd_add_exercise)).performClick()
+
+      return fetchExercise(
+        dao = routineDao,
+        exerciseId = 0L,
+        routineId = routine.id,
+        defaultUnit = getString(R.string.default_repetitions_unit)
+      ) ?: error("exercise is null")
+    }
   }
 }

@@ -11,7 +11,7 @@
     <string name="cd_add_new_item">Lisää uusi</string>
     <string name="cd_done">Valmis</string>
     <string name="title_new_exercise">Uusi treeni</string>
-    <string name="title_edit_exercise">Muokkaa treeniä</string>
+    <string name="title_existing_exercise">Muokkaa treeniä</string>
     <string name="cd_delete_exercise">Poista treeni</string>
     <string name="cd_save_exercise">Tallenna treeni</string>
     <string name="label_name">Nimi</string>
@@ -24,7 +24,7 @@
     <string name="dialog_title_delete_exercise">Poista treeni?</string>
     <string name="btn_delete">Poista</string>
     <string name="btn_cancel">Peruuta</string>
-    <string name="default_text_reps">toistoa</string>
+    <string name="default_repetitions_unit">toistoa</string>
     <string name="ph_minutes">minuuttia</string>
     <string name="cd_edit_exercise">Muokkaa treeniä</string>
     <string name="title_rest">Tauko</string>

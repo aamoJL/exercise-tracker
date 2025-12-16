@@ -11,7 +11,7 @@
     <string name="cd_add_new_item">Add new item</string>
     <string name="cd_done">Done</string>
     <string name="title_new_exercise">New Exercise</string>
-    <string name="title_edit_exercise">Edit Exercise</string>
+    <string name="title_existing_exercise">Edit Exercise</string>
     <string name="cd_delete_exercise">Delete exercise</string>
     <string name="cd_save_exercise">Save exercise</string>
     <string name="label_name">Name</string>
@@ -24,7 +24,7 @@
     <string name="dialog_title_delete_exercise">Delete exercise?</string>
     <string name="btn_delete">Delete</string>
     <string name="btn_cancel">Cancel</string>
-    <string name="default_text_reps">reps</string>
+    <string name="default_repetitions_unit">reps</string>
     <string name="ph_minutes">minutes</string>
     <string name="cd_edit_exercise">Edit exercise</string>
     <string name="title_rest">Rest</string>

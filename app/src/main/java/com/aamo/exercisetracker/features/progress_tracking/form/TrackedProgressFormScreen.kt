@@ -183,7 +183,7 @@ fun NavGraphBuilder.trackedProgressFormScreen(
 ) {
   composable<TrackedProgressFormScreen> { navStack ->
     val progressId = navStack.toRoute<TrackedProgressFormScreen>().progressId
-    val defaultUnit = stringResource(R.string.default_text_reps)
+    val defaultUnit = stringResource(R.string.default_repetitions_unit)
     val dao =
       RoutineDatabase.getDatabase(LocalContext.current.applicationContext).trackedProgressDao()
     val viewmodel: TrackedProgressFormViewModel = viewModel(factory = viewModelFactory {
@@ -221,7 +221,7 @@ private fun TrackedProgressFormScreenContent(
   onSave: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  val progressUnitDefault = stringResource(R.string.default_text_reps)
+  val progressUnitDefault = stringResource(R.string.default_repetitions_unit)
 
   val unitFieldEnabled by remember(formState.progressType.value) {
     mutableStateOf(
@@ -408,7 +408,7 @@ private fun TrackedProgressFormScreenContent(
             onValueChange = { formState.timerDuration.update(it) },
             shape = RectangleShape,
             colors = borderlessTextFieldColors(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            lastImeAction = ImeAction.Done,
             modifier = Modifier.fillMaxWidth()
           )
         }

@@ -1,4 +1,4 @@
-package com.aamo.exercisetracker.ui_tests.ui.features.routine.view.routine_screen_viewmodel
+package com.aamo.exercisetracker.ui_tests.ui.features.routine.view.routine_screen
 
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText

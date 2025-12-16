@@ -83,7 +83,7 @@ class RoutineFormViewModel(
   class FormState(fields: RoutineFormFields) {
     val routineName = ViewModelState(fields.name).onChange { onUnsavedChanges() }
     val selectedDays = ViewModelStateList(fields.days).unique().onChange { onUnsavedChanges() }
-    var isNew by mutableStateOf(fields.name.isEmpty())
+    val isNew = fields.name.isEmpty()
     var savingState by mutableStateOf(SavingState())
 
     fun canSave(): Boolean {

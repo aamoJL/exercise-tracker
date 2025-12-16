@@ -9,6 +9,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.util.Date
 
+// TODO: remove
 class SaveExerciseProgress {
   @Test
   fun `saves correctly when new`() {

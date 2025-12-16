@@ -57,7 +57,7 @@ fun DurationNumberField(
   hideZeroOnDisabled: Boolean = true,
   shape: Shape = TextFieldDefaults.shape,
   colors: TextFieldColors = TextFieldDefaults.colors(),
-  keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+  lastImeAction: ImeAction = ImeAction.Default,
   divider: @Composable (() -> Unit) = {
     Text(
       text = ":",
@@ -98,9 +98,7 @@ fun DurationNumberField(
     }
   }
 
-  Row(
-    verticalAlignment = Alignment.CenterVertically, modifier = modifier
-  ) {
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
     if (hours.enabled) {
       NumberField(
         enabled = enabled,
@@ -121,7 +119,9 @@ fun DurationNumberField(
         },
         visualTransformation = visualTransformation,
         colors = colors,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(
+          imeAction = if (minutes.enabled || seconds.enabled) ImeAction.Next else lastImeAction
+        ),
         modifier = Modifier.weight(1f)
       )
       if (minutes.enabled || seconds.enabled) {
@@ -148,7 +148,9 @@ fun DurationNumberField(
         },
         visualTransformation = visualTransformation,
         colors = colors,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(
+          imeAction = if (seconds.enabled) ImeAction.Next else lastImeAction
+        ),
         modifier = Modifier.weight(1f)
       )
       if (seconds.enabled) {
@@ -175,7 +177,7 @@ fun DurationNumberField(
         },
         visualTransformation = visualTransformation,
         colors = colors,
-        keyboardOptions = keyboardOptions,
+        keyboardOptions = KeyboardOptions(imeAction = lastImeAction),
         modifier = Modifier.weight(1f)
       )
     }

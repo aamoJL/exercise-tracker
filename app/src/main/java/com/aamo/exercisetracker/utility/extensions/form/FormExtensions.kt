@@ -5,6 +5,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
+import java.util.UUID
 import kotlin.math.min
 
 val VisualTransformation.Companion.HideZero: VisualTransformation
@@ -24,3 +25,12 @@ val VisualTransformation.Companion.HideZero: VisualTransformation
         })
     }
   }
+
+fun getNewUUID(used: List<UUID>): UUID {
+  var uuid: UUID?
+
+  do uuid = UUID.randomUUID()
+  while (used.contains(uuid))
+
+  return uuid
+}
