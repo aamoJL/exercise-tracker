@@ -96,7 +96,10 @@ class RoutineListScreenViewModel(
     if (routines.isEmpty()) return
 
     viewModelScope.launch {
-      runCatching { deleteData(routines) }
+      runCatching {
+        deleteData(routines)
+        _selections.update { emptyList() }
+      }
     }
   }
 }

@@ -95,7 +95,10 @@ class TrackedProgressListScreenViewModel(
     if (progresses.isEmpty()) return
 
     viewModelScope.launch {
-      runCatching { deleteData(progresses) }
+      runCatching {
+        deleteData(progresses)
+        _selections.update { emptyList() }
+      }
     }
   }
 }
