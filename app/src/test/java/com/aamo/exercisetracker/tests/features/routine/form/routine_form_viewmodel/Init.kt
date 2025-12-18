@@ -63,8 +63,8 @@ class Init {
       viewmodel.formState.collect()
     }
 
-    val uiState = checkNotNull(viewmodel.formState.value)
-    assertEquals(data.routine.name, uiState.routineName.value)
-    assertEquals(data.schedule!!.asListOfDays(), uiState.selectedDays.values)
+    val formState = checkNotNull(viewmodel.formState.value)
+    assertEquals(data.routine.name, formState.routineName.value)
+    assertEquals(data.schedule!!.asListOfDays(), formState.selectedDays.value)
   }
 }

@@ -63,7 +63,6 @@ import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.viewmodels.SavingState
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
-import com.aamo.exercisetracker.utility.viewmodels.ViewModelStateList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
@@ -82,7 +81,7 @@ class RoutineFormViewModel(
 ) : ViewModel() {
   class FormState(fields: RoutineFormFields) {
     val routineName = ViewModelState(fields.name).onChange { onUnsavedChanges() }
-    val selectedDays = ViewModelStateList(fields.days).unique().onChange { onUnsavedChanges() }
+    val selectedDays = ViewModelState(fields.days).onChange { onUnsavedChanges() }
     val isNew = fields.name.isEmpty()
     var savingState by mutableStateOf(SavingState())
 
@@ -135,13 +134,13 @@ class RoutineFormViewModel(
             model.copy(
               routine = model.routine.copy(name = s.routineName.value),
               schedule = (model.schedule ?: RoutineSchedule(routineId = model.routine.id)).copy(
-                sunday = s.selectedDays.values.contains(Day.SUNDAY),
-                monday = s.selectedDays.values.contains(Day.MONDAY),
-                tuesday = s.selectedDays.values.contains(Day.TUESDAY),
-                wednesday = s.selectedDays.values.contains(Day.WEDNESDAY),
-                thursday = s.selectedDays.values.contains(Day.THURSDAY),
-                friday = s.selectedDays.values.contains(Day.FRIDAY),
-                saturday = s.selectedDays.values.contains(Day.SATURDAY),
+                sunday = s.selectedDays.value.contains(Day.SUNDAY),
+                monday = s.selectedDays.value.contains(Day.MONDAY),
+                tuesday = s.selectedDays.value.contains(Day.TUESDAY),
+                wednesday = s.selectedDays.value.contains(Day.WEDNESDAY),
+                thursday = s.selectedDays.value.contains(Day.THURSDAY),
+                friday = s.selectedDays.value.contains(Day.FRIDAY),
+                saturday = s.selectedDays.value.contains(Day.SATURDAY),
               )
             )
           }
@@ -297,9 +296,8 @@ private fun RoutineFormScreenContent(
         )
         Card(shape = RoundedCornerShape(50), modifier = Modifier.padding(horizontal = 4.dp)) {
           ScheduleInput(
-            selections = formState.selectedDays.values,
-            onAdd = { formState.selectedDays.remove(it) },
-            onRemove = { formState.selectedDays.remove(it) },
+            selections = formState.selectedDays.value,
+            onChange = { formState.selectedDays.update(it) },
             modifier = Modifier.padding(4.dp)
           )
         }

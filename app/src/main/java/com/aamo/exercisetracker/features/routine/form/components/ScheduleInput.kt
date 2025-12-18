@@ -20,10 +20,7 @@ import java.util.Calendar
 
 @Composable
 fun ScheduleInput(
-  selections: List<Day>,
-  onAdd: (Day) -> Unit,
-  onRemove: (Day) -> Unit,
-  modifier: Modifier = Modifier
+  selections: List<Day>, onChange: (List<Day>) -> Unit, modifier: Modifier = Modifier
 ) {
   val days = remember { Calendar.getInstance().getLocalDayOrder() }
 
@@ -40,8 +37,8 @@ fun ScheduleInput(
             checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             contentColor = MaterialTheme.colorScheme.outline,
           ), checked = isSelected, onCheckedChange = { selection ->
-            if (selection) onAdd(day)
-            else onRemove(day)
+            if (selection && !selections.contains(day)) onChange(selections.plus(day))
+            else onChange(selections.minus(day))
           }) {
           Text(stringResource(day.nameResourceKey).take(2))
         }
@@ -53,5 +50,5 @@ fun ScheduleInput(
 @Preview(showBackground = true)
 @Composable
 private fun Preview() {
-  ScheduleInput(selections = listOf(Day.WEDNESDAY, Day.SATURDAY), onAdd = {}, onRemove = {})
+  ScheduleInput(selections = listOf(Day.WEDNESDAY, Day.SATURDAY), onChange = {})
 }

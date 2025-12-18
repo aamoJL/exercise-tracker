@@ -36,8 +36,10 @@ class Save {
     }
 
     val newName = "New name"
-    viewmodel.formState.value!!.routineName.update(newName)
-    viewmodel.formState.value!!.selectedDays.add(Day.SATURDAY)
+    checkNotNull(viewmodel.formState.value).also {
+      it.routineName.update(newName)
+      it.selectedDays.update(it.selectedDays.value.plus(Day.SATURDAY))
+    }
 
     val expected = data.copy(
       routine = data.routine.copy(name = newName), schedule = data.schedule!!.copy(saturday = true)
