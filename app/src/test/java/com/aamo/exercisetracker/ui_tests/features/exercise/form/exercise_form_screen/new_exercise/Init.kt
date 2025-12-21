@@ -31,8 +31,9 @@ class Init : PageTest() {
   @Test
   fun `form fields`() {
     rule.onNodeWithText(getString(R.string.label_name)).assertEditableText(String.EMPTY)
-    rule.onNodeWithText(getString(R.string.label_rest_duration_optional))
-      .assertEditableText(String.EMPTY)
+    rule.onNodeWithText(getString(R.string.label_rest_duration)).assertIsOff()
+    rule.onNodeWithText(getString(R.string.label_minutes)).assertEditableText(String.EMPTY)
+    rule.onNodeWithText(getString(R.string.label_seconds)).assertEditableText(String.EMPTY)
     rule.onNodeWithText(getString(R.string.label_set_unit))
       .assertEditableText(getString(R.string.default_repetitions_unit))
     rule.onNodeWithText(getString(R.string.label_timer)).assertExists().assertIsOff()

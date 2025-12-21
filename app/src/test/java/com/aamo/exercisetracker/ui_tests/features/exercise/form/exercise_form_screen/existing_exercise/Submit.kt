@@ -44,8 +44,7 @@ class Submit : PageTest() {
 
     val newName = "New Name"
     rule.onNodeWithText(getString(R.string.label_name)).performTextReplacement(newName)
-    rule.onNodeWithText(getString(R.string.label_rest_duration_optional))
-      .performTextReplacement("10")
+    rule.onNodeWithText(getString(R.string.label_minutes)).performTextReplacement("10")
 
     rule.onNodeWithContentDescription(getString(R.string.cd_add_new_item)).assertExists()
       .performClick()

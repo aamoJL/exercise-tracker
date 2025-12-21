@@ -1,6 +1,7 @@
 package com.aamo.exercisetracker.ui_tests.features.exercise.form.exercise_form_screen.existing_exercise
 
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import com.aamo.exercisetracker.R
@@ -28,7 +29,7 @@ class Init : PageTest() {
   override fun setup() = runTest {
     super.setup()
     toExerciseFormScreen(
-      model = Exercise(routineId = 0L, name = "Exercise 1", restDuration = 3.minutes)
+      model = Exercise(routineId = 0L, name = "Exercise 1", restDuration = 33.minutes)
     ).also {
       exercise = it.exercise
       set = it.sets.first()
@@ -44,7 +45,8 @@ class Init : PageTest() {
   @Test
   fun `form fields`() {
     rule.onNodeWithText(getString(R.string.label_name)).assertEditableText(exercise.name)
-    rule.onNodeWithText(getString(R.string.label_rest_duration_optional))
+    rule.onNodeWithText(getString(R.string.label_rest_duration)).assertIsOn()
+    rule.onNodeWithText(getString(R.string.label_minutes))
       .assertEditableText(exercise.restDuration.inWholeMinutes.toInt().toString())
     rule.onNodeWithText(getString(R.string.label_set_unit)).assertEditableText(set.unit)
     rule.onNodeWithText(getString(R.string.label_timer)).assertExists().assertIsOff()

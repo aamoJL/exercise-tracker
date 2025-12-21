@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("HardCodedStringLiteral")
@@ -78,5 +79,6 @@ class Init : UnconfinedTest() {
     assertEquals(
       data.sets.first().valueType == ExerciseSet.ValueType.COUNTDOWN, formState.hasTimer.value
     )
+    assertEquals(data.exercise.restDuration > 0.seconds, formState.hasRest.value)
   }
 }

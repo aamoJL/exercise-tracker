@@ -3,8 +3,10 @@ package com.aamo.exercisetracker.features.exercise.form
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,7 +34,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -50,6 +51,7 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.features.exercise.form.components.ExerciseSetSwipeToDismissBox
+import com.aamo.exercisetracker.features.exercise.form.models.ExerciseFormFields
 import com.aamo.exercisetracker.features.exercise.form.use_cases.deleteExercise
 import com.aamo.exercisetracker.features.exercise.form.use_cases.fetchExercise
 import com.aamo.exercisetracker.features.exercise.form.use_cases.saveExercise
@@ -58,13 +60,12 @@ import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.LabelledCheckBox
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
-import com.aamo.exercisetracker.ui.components.inputs.number_field.IntFieldValidator
-import com.aamo.exercisetracker.ui.components.inputs.number_field.NumberField
+import com.aamo.exercisetracker.ui.components.inputs.number_field.DurationNumberField
+import com.aamo.exercisetracker.ui.components.inputs.number_field.DurationNumberFieldFields
 import com.aamo.exercisetracker.ui.components.inputs.text_field.borderlessTextFieldColors
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.components.modals.UnsavedDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
-import com.aamo.exercisetracker.utility.extensions.form.HideZero
 import com.aamo.exercisetracker.utility.extensions.form.getNewUUID
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
@@ -79,20 +80,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.UUID
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @Serializable
 data class ExerciseFormScreen(val exerciseId: Long, val routineId: Long)
-
-data class ExerciseFormFields(
-  val name: String,
-  val restDuration: Duration,
-  val unit: String,
-  val setValues: List<Int>,
-  val hasTimer: Boolean
-)
 
 class ExerciseFormViewModel(
   private val fetchData: suspend () -> ExerciseWithSets?,
@@ -111,6 +103,7 @@ class ExerciseFormViewModel(
     val setUnit = ViewModelState(fields.unit).onChange { onUnsavedChanges() }
     val setValues = ViewModelStateList<SetValue>().onChange { onUnsavedChanges() }
     var hasTimer = ViewModelState(fields.hasTimer).onChange { onUnsavedChanges() }
+    var hasRest = ViewModelState(fields.hasRest).onChange { onUnsavedChanges() }
     val isNew = fields.name.isEmpty()
     var savingState by mutableStateOf(SavingState())
 
@@ -132,14 +125,13 @@ class ExerciseFormViewModel(
     }
 
     fun canSave(): Boolean {
-      return when {
-        savingState.state == SavingState.State.SAVING -> false
-        exerciseName.value.isEmpty() -> false
-        !hasTimer.value && setUnit.value.isEmpty() -> false
-        setValues.values.isEmpty() -> false
-        setValues.values.any { it.value.value == 0 } -> false
-        else -> true
-      }
+      if (savingState.state == SavingState.State.SAVING) return false
+      if (exerciseName.value.isEmpty()) return false
+      if (!hasTimer.value && setUnit.value.isEmpty()) return false
+      if (setValues.values.isEmpty()) return false
+      if (setValues.values.any { it.value.value == 0 }) return false
+      if (hasRest.value && restDuration.value <= 0.seconds) return false
+      return true
     }
   }
 
@@ -156,7 +148,7 @@ class ExerciseFormViewModel(
           restDuration = exercise.restDuration,
           unit = sets.firstOrNull()?.unit ?: String.EMPTY,
           setValues = sets.map { it.value },
-          hasTimer = sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN
+          hasTimer = sets.firstOrNull()?.valueType == ExerciseSet.ValueType.COUNTDOWN,
         )
       )
     )
@@ -261,6 +253,12 @@ private fun ExerciseFormScreenContent(
     }
   }
 
+  LaunchedEffect(formState.hasRest.value) {
+    if (!formState.hasRest.value) {
+      formState.restDuration.update(0.seconds)
+    }
+  }
+
   UnsavedDialog(
     open = openUnsavedDialog, onDismiss = { openUnsavedDialog = false },
     onConfirm = {
@@ -331,39 +329,55 @@ private fun ExerciseFormScreenContent(
         ),
         modifier = Modifier.fillMaxWidth()
       )
-      // TODO: change to duration field
-      NumberField(
-        value = formState.restDuration.value.inWholeMinutes.toInt(),
-        onValueChange = { formState.restDuration.update(it.minutes) },
-        validator = IntFieldValidator,
-        label = { Text(stringResource(R.string.label_rest_duration_optional)) },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        suffix = { Text(stringResource(R.string.suffix_minutes)) },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-        visualTransformation = VisualTransformation.HideZero,
-        modifier = Modifier.fillMaxWidth()
-      )
+
       Row(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.height(IntrinsicSize.Min)
       ) {
-        LabelledCheckBox(checked = formState.hasTimer.value, onCheckedChange = {
-          formState.hasTimer.update(it)
-        }, label = { Text(stringResource(R.string.label_timer)) })
-        TextField(
-          enabled = !formState.hasTimer.value,
-          value = formState.setUnit.value,
-          label = { Text(stringResource(R.string.label_set_unit)) },
-          shape = RectangleShape,
-          colors = borderlessTextFieldColors(),
-          onValueChange = { formState.setUnit.update(it) },
-          keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
-          ),
-          modifier = Modifier.fillMaxWidth()
-        )
+        Column(
+          verticalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.CenterVertically),
+          modifier = Modifier.fillMaxHeight()
+        ) {
+          LabelledCheckBox(
+            checked = formState.hasRest.value,
+            onCheckedChange = { formState.hasRest.update(it) },
+            label = { Text(stringResource(R.string.label_rest_duration)) },
+            modifier = Modifier.weight(1f)
+          )
+          LabelledCheckBox(
+            checked = formState.hasTimer.value,
+            onCheckedChange = { formState.hasTimer.update(it) },
+            label = { Text(stringResource(R.string.label_timer)) },
+            modifier = Modifier.weight(1f)
+          )
+        }
+        Column(
+          verticalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.CenterVertically),
+          modifier = Modifier.fillMaxHeight()
+        ) {
+          DurationNumberField(
+            enabled = formState.hasRest.value,
+            value = formState.restDuration.value,
+            onValueChange = { formState.restDuration.update(it) },
+            hideZeroOnDisabled = true,
+            fields = DurationNumberFieldFields(
+              hours = DurationNumberFieldFields.Properties(enabled = false)
+            ),
+            shape = RectangleShape,
+            colors = borderlessTextFieldColors(),
+          )
+          TextField(
+            enabled = !formState.hasTimer.value,
+            value = formState.setUnit.value,
+            label = { Text(stringResource(R.string.label_set_unit)) },
+            shape = RectangleShape,
+            colors = borderlessTextFieldColors(),
+            onValueChange = { formState.setUnit.update(it) },
+            keyboardOptions = KeyboardOptions(
+              imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
+            ),
+          )
+        }
       }
       Spacer(modifier = Modifier.height(8.dp))
       FormList(
@@ -401,10 +415,10 @@ private fun PreviewRepetitions() {
       formState = ExerciseFormViewModel.FormState(
       fields = ExerciseFormFields(
         name = "Exercise 1",
-        restDuration = 3.minutes,
+        restDuration = 0.minutes,
         unit = "Reps",
         setValues = listOf(1, 2, 3),
-        hasTimer = false
+        hasTimer = false,
       )
     ), onBack = {}, onSave = {}, onDelete = {})
   }

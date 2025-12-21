@@ -1,7 +1,7 @@
 package com.aamo.exercisetracker.tests.features.exercise.form.exercise_form_viewmodel
 
-import com.aamo.exercisetracker.features.exercise.form.ExerciseFormFields
 import com.aamo.exercisetracker.features.exercise.form.ExerciseFormViewModel
+import com.aamo.exercisetracker.features.exercise.form.models.ExerciseFormFields
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
@@ -33,10 +33,12 @@ class FormState {
       ExerciseFormViewModel.FormState(fields = fields.copy(name = String.EMPTY)),
       ExerciseFormViewModel.FormState(fields = fields.copy(hasTimer = false, unit = String.EMPTY)),
       ExerciseFormViewModel.FormState(fields = fields.copy(setValues = emptyList())),
+      ExerciseFormViewModel.FormState(fields = fields.copy(restDuration = 0.minutes))
+        .apply { hasRest.update(true) },
       ExerciseFormViewModel.FormState(fields = fields)
         .apply { savingState = savingState.getAsSaving() },
-    ).forEach {
-      assertFalse(it.canSave())
+    ).forEachIndexed { i, fields ->
+      assertFalse(i.toString(), fields.canSave())
     }
   }
 
@@ -60,6 +62,7 @@ class FormState {
       ExerciseFormViewModel.FormState(fields = fields)
         .apply { setValues.values.first().value.update(10) },
       ExerciseFormViewModel.FormState(fields = fields).apply { hasTimer.update(true) },
+      ExerciseFormViewModel.FormState(fields = fields).apply { hasRest.update(false) },
     ).forEach {
       assertTrue(it.savingState.unsavedChanges)
     }

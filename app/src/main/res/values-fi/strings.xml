@@ -15,7 +15,7 @@
     <string name="cd_delete_exercise">Poista treeni</string>
     <string name="cd_save_exercise">Tallenna treeni</string>
     <string name="label_name">Nimi</string>
-    <string name="label_rest_duration_optional">Lepoaika (vapaaehtoinen)</string>
+    <string name="label_rest_duration">Lepo</string>
     <string name="suffix_minutes">minuuttia</string>
     <string name="label_timer">Ajastin</string>
     <string name="label_set_unit">Sarjan yksikkö</string>

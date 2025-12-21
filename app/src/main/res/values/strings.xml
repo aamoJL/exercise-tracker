@@ -15,7 +15,6 @@
     <string name="cd_delete_exercise">Delete exercise</string>
     <string name="cd_save_exercise">Save exercise</string>
     <string name="label_name">Name</string>
-    <string name="label_rest_duration_optional">Rest duration (optional)</string>
     <string name="suffix_minutes">minutes</string>
     <string name="label_timer">Timer</string>
     <string name="label_set_unit">Set unit</string>
@@ -101,4 +100,5 @@
     <string name="x_hours_short">"%1$dh "</string>
     <string name="x_minutes_short">"%1$dm "</string>
     <string name="x_seconds_short">"%1$ds "</string>
+    <string name="label_rest_duration">Rest</string>
 </resources>
