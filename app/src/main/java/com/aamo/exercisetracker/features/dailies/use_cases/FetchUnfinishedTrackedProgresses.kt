@@ -1,15 +1,15 @@
 package com.aamo.exercisetracker.features.dailies.use_cases
 
+import com.aamo.exercisetracker.database.dao.TrackedProgressDao
 import com.aamo.exercisetracker.database.entities.TrackedProgress
-import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.utility.extensions.date.weeks
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 fun fetchUnfinishedTrackedProgressesFlow(
-  currentTimeMillis: Long, getDataFlow: () -> Flow<Map<TrackedProgress, List<TrackedProgressValue>>>
+  dao: TrackedProgressDao, currentTimeMillis: Long
 ): Flow<List<TrackedProgress>> {
-  return getDataFlow().map { map ->
+  return dao.getProgressesWithValuesFlow().map { map ->
     map.filter { (progress, values) ->
       if (progress.intervalWeeks == 0) false
       else {

@@ -3,6 +3,12 @@ package com.aamo.exercisetracker.features.progress_tracking
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.navigation
+import com.aamo.exercisetracker.features.progress_tracking.form.TrackedProgressFormScreen
+import com.aamo.exercisetracker.features.progress_tracking.form.trackedProgressFormScreen
+import com.aamo.exercisetracker.features.progress_tracking.records.TrackedProgressRecordListScreen
+import com.aamo.exercisetracker.features.progress_tracking.records.trackedProgressRecordListScreen
+import com.aamo.exercisetracker.features.progress_tracking.view.ProgressTrackingScreen
+import com.aamo.exercisetracker.features.progress_tracking.view.progressTrackingScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -23,7 +29,6 @@ fun NavGraphBuilder.progressTrackingPage(navController: NavController) {
         navController.navigateUp()
       }
     }, onDeleted = { navController.popBackStack<ProgressTrackingPage>(inclusive = true) })
-    trackedProgressRecordListScreen(
-      onBack = { navController.navigateUp() })
+    trackedProgressRecordListScreen(onBack = { navController.navigateUp() })
   }
 }

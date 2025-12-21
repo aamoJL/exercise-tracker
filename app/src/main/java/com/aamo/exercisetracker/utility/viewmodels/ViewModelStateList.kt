@@ -4,12 +4,13 @@ import androidx.compose.runtime.mutableStateListOf
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.extensions.general.onNotNull
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
+import java.util.Collections
 
-class ViewModelStateList<T> {
+class ViewModelStateList<T>(items: List<T> = emptyList()) {
   private var validationPredicate: ((T) -> T?)? = null
   private var onChange: (() -> Unit)? = null
 
-  private val _values = mutableStateListOf<T>()
+  private val _values = mutableStateListOf<T>().apply { addAll(items) }
   val values: List<T> = _values
 
   fun add(vararg items: T) {
@@ -26,13 +27,32 @@ class ViewModelStateList<T> {
       }
     }
 
-    changed.onTrue { onChange?.invoke() }
+    if (changed) {
+      onChange?.invoke()
+    }
   }
 
   fun remove(vararg items: T) {
-    _values.removeAll(items).onTrue {
+    _values.removeAll(items.toSet()).onTrue {
       onChange?.invoke()
     }
+  }
+
+  fun replaceAt(index: Int, item: T) {
+    val validation = validationPredicate
+    val value = if (validation != null) validation(item) else item
+
+    if (value != null) {
+      _values[index] = item
+      onChange?.invoke()
+    }
+  }
+
+  fun swapAt(indexA: Int, indexB: Int) {
+    if (indexA == indexB) return
+
+    Collections.swap(_values, indexA, indexB)
+    onChange?.invoke()
   }
 
   fun clear() {

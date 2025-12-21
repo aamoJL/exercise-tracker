@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.aamo.exercisetracker.features.home.HomePage
-import com.aamo.exercisetracker.services.CountDownTimerService
+import com.aamo.exercisetracker.services.CountdownTimerService
 import com.aamo.exercisetracker.services.StopwatchTimerService
 import com.aamo.exercisetracker.services.TimerServiceProperties
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
     TimerServiceProperties.createNotificationChannel(context = applicationContext, activity = this)
     // Timer services must be started here because the onTaskRemoved does not get
     //  invoked on binding
-    startService(Intent(this, CountDownTimerService::class.java))
+    startService(Intent(this, CountdownTimerService::class.java))
     startService(Intent(this, StopwatchTimerService::class.java))
   }
 

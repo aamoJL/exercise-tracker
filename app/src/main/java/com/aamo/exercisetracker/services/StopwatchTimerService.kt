@@ -12,25 +12,20 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
-import com.aamo.exercisetracker.utility.tags.ERROR_TAG
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
+import com.aamo.exercisetracker.utility.tags.DebugTag
 
-class StopwatchTimerService() : Service() {
-  /**
-   * @param onFinished Will be called when the timer has been stopped
-   * @param onCleanUp Will be called when the timer has been stopped or cancelled
-   */
-  private data class TimerState(
-    val onFinished: (Duration) -> Unit,
-    val onCleanUp: (() -> Unit)?,
-    val startTime: Long,
-  )
+interface IStopwatchTimerService {
+  fun start(startTime: Long) {}
+  fun cancel() {}
+}
+
+class StopwatchTimerService() : Service(), IStopwatchTimerService {
+  private data class Properties(val startTime: Long)
 
   private val binder = BinderHelper()
-  private var state: TimerState? = null
+  private var properties: Properties? = null
 
-  override fun onBind(p0: Intent?): IBinder? {
+  override fun onBind(p0: Intent?): IBinder {
     return binder
   }
 
@@ -42,39 +37,18 @@ class StopwatchTimerService() : Service() {
     stopSelf()
   }
 
-  fun start(
-    onStart: (() -> Unit)? = null, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)? = null
-  ) {
+  override fun start(startTime: Long) {
     cancel()
-    state = TimerState(
-      onFinished = onFinished,
-      onCleanUp = onCleanUp,
-      startTime = System.currentTimeMillis(),
-    )
-    onStart?.invoke()
+    properties = Properties(startTime = startTime)
   }
 
-  fun stop() {
-    state?.also {
-      // Cancel before invoking so the onFinished can start a new timer
-      cancel()
-      it.onFinished.invoke((System.currentTimeMillis() - it.startTime).milliseconds)
-    }
-  }
-
-  fun cancel() {
-    state?.apply {
-      onCleanUp?.invoke()
-    }
-
-    state = null
+  override fun cancel() {
+    properties = null
     hideNotification()
   }
 
   fun showNotification(title: String) {
-    if (state == null) return
-
-    state?.also {
+    properties?.also {
       sendNotification(title = title, startTime = it.startTime)
     }
   }
@@ -104,7 +78,7 @@ class StopwatchTimerService() : Service() {
     return (ActivityCompat.checkSelfPermission(
       this, Manifest.permission.POST_NOTIFICATIONS
     ) != PackageManager.PERMISSION_DENIED).onFalse {
-      Log.e(ERROR_TAG, "Permission denied")
+      Log.e(DebugTag.ERROR.name, "Permission denied")
     }
   }
 

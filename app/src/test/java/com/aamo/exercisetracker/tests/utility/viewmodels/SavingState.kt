@@ -6,32 +6,29 @@ import org.junit.Test
 
 class SavingState {
   @Test
-  fun `getAsSaving test`() {
-    val state = SavingState(canSave = { false }, unsavedChanges = true)
+  fun getAsSaving() {
+    val state = SavingState(unsavedChanges = true)
 
-    state.getAsSaving().also {
-      assertEquals(state.copy(state = SavingState.State.SAVING), it)
-    }
+    assertEquals(state.copy(state = SavingState.State.SAVING), state.getAsSaving())
   }
 
   @Test
-  fun `getAsSaved test`() {
-    val state = SavingState(canSave = { false }, unsavedChanges = true, error = Error())
+  fun getAsSaved() {
+    val state = SavingState(unsavedChanges = true, error = Error())
 
-    state.getAsSaved().also {
-      assertEquals(
-        state.copy(state = SavingState.State.SAVED, unsavedChanges = false, error = null), it
-      )
-    }
+    assertEquals(
+      state.copy(state = SavingState.State.SAVED, unsavedChanges = false, error = null),
+      state.getAsSaved()
+    )
   }
 
   @Test
-  fun `getAsError test`() {
-    val state = SavingState(canSave = { false }, unsavedChanges = true)
+  fun getAsError() {
+    val state = SavingState(unsavedChanges = true)
     val error = Error()
 
-    state.getAsError(error).also {
-      assertEquals(state.copy(state = SavingState.State.ERROR, error = error), it)
-    }
+    assertEquals(
+      state.copy(state = SavingState.State.ERROR, error = error), state.getAsError(error)
+    )
   }
 }

@@ -11,7 +11,7 @@
     <string name="cd_add_new_item">Add new item</string>
     <string name="cd_done">Done</string>
     <string name="title_new_exercise">New Exercise</string>
-    <string name="title_edit_exercise">Edit Exercise</string>
+    <string name="title_existing_exercise">Edit Exercise</string>
     <string name="cd_delete_exercise">Delete exercise</string>
     <string name="cd_save_exercise">Save exercise</string>
     <string name="label_name">Name</string>
@@ -24,7 +24,7 @@
     <string name="dialog_title_delete_exercise">Delete exercise?</string>
     <string name="btn_delete">Delete</string>
     <string name="btn_cancel">Cancel</string>
-    <string name="ph_reps">reps</string>
+    <string name="default_repetitions_unit">reps</string>
     <string name="ph_minutes">minutes</string>
     <string name="cd_edit_exercise">Edit exercise</string>
     <string name="title_rest">Rest</string>
@@ -44,7 +44,7 @@
     <string name="cd_routines_tab">Routines tab</string>
     <string name="label_routines">Routines</string>
     <string name="title_new_routine">New Routine</string>
-    <string name="title_edit_routine">Edit Routine</string>
+    <string name="title_existing_routine">Edit Routine</string>
     <string name="cd_delete_routine">Delete routine</string>
     <string name="cd_save_routine">Save routine</string>
     <string name="label_schedule">Schedule</string>
@@ -68,7 +68,7 @@
     <string name="dialog_title_delete_tracked_progress">Delete tracked progress?</string>
     <string name="dialog_title_delete_tracked_progresses">Delete tracked progresses?</string>
     <string name="title_new_tracked_progress">New Tracked Progress</string>
-    <string name="title_edit_tracked_progress">Edit Tracked Progress</string>
+    <string name="title_existing_tracked_progress">Edit Tracked Progress</string>
     <string name="cd_delete_tracked_progress">Delete tracked progress</string>
     <string name="cd_save_tracked_progress">Save tracked progress</string>
     <string name="label_weekly_interval_optional">Weekly interval (optional)</string>
@@ -91,11 +91,14 @@
     <string name="label_seconds">Seconds</string>
     <string name="label_stopwatch">Stopwatch</string>
     <string name="label_time">Time</string>
-    <string name="title_repetitions">Repetitions</string>
+    <string name="label_repetitions">Repetitions</string>
     <string name="cd_timer">Timer</string>
     <string name="title_timer">Timer</string>
     <string name="title_stopwatch">Stopwatch</string>
     <string name="title_scheduled_trackers">Scheduled trackers</string>
     <string name="x_count_selected">%1$d selected</string>
     <string name="cd_show_unfinished_tracked_progresses">Show unfinished tracked progresses</string>
+    <string name="x_hours_short">"%1$dh "</string>
+    <string name="x_minutes_short">"%1$dm "</string>
+    <string name="x_seconds_short">"%1$ds "</string>
 </resources>

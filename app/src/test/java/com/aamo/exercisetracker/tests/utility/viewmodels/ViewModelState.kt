@@ -1,6 +1,5 @@
 package com.aamo.exercisetracker.tests.utility.viewmodels
 
-import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
@@ -9,7 +8,7 @@ import org.junit.Test
 
 class ViewModelState {
   @Test
-  fun `update test`() {
+  fun update() {
     ViewModelState(0).apply {
       update(1)
     }.also {
@@ -18,7 +17,7 @@ class ViewModelState {
   }
 
   @Test
-  fun `onChange changes test`() {
+  fun `onChange changes`() {
     var value = false
     ViewModelState(0).apply {
       onChange { value = true }
@@ -29,7 +28,7 @@ class ViewModelState {
   }
 
   @Test
-  fun `onChange no changes test`() {
+  fun `onChange no changes`() {
     var value = false
 
     ViewModelState(0).apply {
@@ -41,22 +40,32 @@ class ViewModelState {
   }
 
   @Test
-  fun `validation valid test`() {
+  fun transformation() {
     ViewModelState(0).apply {
-      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
+      transformation { it + 1 }
       update(3)
     }.also {
-      assertEquals(3, it.value)
+      assertEquals(4, it.value)
     }
   }
 
   @Test
-  fun `validation invalid test`() {
+  fun validation_invalid() {
     ViewModelState(0).apply {
-      validation { ifElse(condition = it > 2, ifTrue = { it }, ifFalse = { null }) }
-      update(1)
+      validation { it > 3 }
+      update(3)
     }.also {
       assertEquals(0, it.value)
+    }
+  }
+
+  @Test
+  fun validation_valid() {
+    ViewModelState(0).apply {
+      validation { it > 3 }
+      update(4)
+    }.also {
+      assertEquals(4, it.value)
     }
   }
 }
