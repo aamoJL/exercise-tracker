@@ -24,6 +24,7 @@ import com.aamo.exercisetracker.database.entities.TrackedProgressValue
 import com.aamo.exercisetracker.database.entities.TrackedProgressWithValues
 import com.aamo.exercisetracker.features.exercise.form.use_cases.fetchExercise
 import com.aamo.exercisetracker.test_utility.ui.extensions.waitForDisplayed
+import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import com.aamo.exercisetracker.utility.tags.UITag
 import kotlinx.coroutines.yield
 import org.junit.After
@@ -198,5 +199,28 @@ open class PageTest {
         defaultUnit = getString(R.string.default_repetitions_unit)
       ) ?: error("exercise is null")
     }
+  }
+
+  suspend fun toExerciseScreen(exercise: Exercise, sets: List<ExerciseSet>): ExerciseWithSets {
+    val routine = toRoutineScreen(routine = Routine(name = "Routine 1"))
+    waitForLoading()
+
+    val exerciseInsert = exercise.copy(routineId = routine.id).let {
+      routineDao.upsert(it).let { id -> it.copy(id = id) }
+    }
+    sets.forEach { set ->
+      routineDao.upsert(set.copy(exerciseId = exerciseInsert.id))
+    }
+
+    rule.onNodeWithText(exerciseInsert.name).waitForDisplayed().performClick()
+    waitForLoading()
+    rule.onNodeWithContentDescription(getString(R.string.cd_edit_exercise)).waitForDisplayed()
+
+    return fetchExercise(
+      dao = routineDao,
+      exerciseId = exerciseInsert.id,
+      routineId = routine.id,
+      defaultUnit = String.EMPTY
+    ) ?: error("Model is null")
   }
 }

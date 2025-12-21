@@ -4,6 +4,7 @@ import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.form.RoutineFormViewModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
@@ -14,13 +15,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
-class Init {
+class Init : UnconfinedTest() {
   @Test
   fun `is new`() = runTest(UnconfinedTestDispatcher()) {
     val data = RoutineWithSchedule(routine = Routine(), schedule = null)

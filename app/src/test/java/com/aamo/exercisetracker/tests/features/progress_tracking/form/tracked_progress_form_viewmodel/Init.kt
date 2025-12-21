@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.form.tracked_p
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.form.TrackedProgressFormViewModel
 import com.aamo.exercisetracker.features.progress_tracking.form.models.TrackedProgressFormFields
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
@@ -13,15 +14,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
-class Init {
+class Init : UnconfinedTest() {
   @Test
   fun `is new`() = runTest(UnconfinedTestDispatcher()) {
     val data = TrackedProgress()

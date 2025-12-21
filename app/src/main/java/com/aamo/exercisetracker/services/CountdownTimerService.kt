@@ -17,34 +17,22 @@ import androidx.core.app.NotificationManagerCompat
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.extensions.general.onTrue
 import com.aamo.exercisetracker.utility.tags.DebugTag
-import java.util.Timer
-import kotlin.concurrent.timerTask
+import kotlin.time.Duration
 
 interface ICountdownTimerService {
-  fun start(
-    durationMillis: Long, onFinished: () -> Unit, onStart: (() -> Unit)?, onCleanUp: (() -> Unit)?
-  ) {
-  }
-
-  fun stop() {}
+  fun start(duration: Duration) {}
+  fun finish() {}
   fun cancel() {}
 }
 
-class CountdownTimerService() : Service(), ICountdownTimerService {
-  /**
-   * @param onFinished Will be called when the timer has been stopped
-   * @param onCleanUp Will be called when the timer has been stopped or cancelled
-   */
-  private data class TimerState(
-    val timer: Timer,
-    val onFinished: () -> Unit,
-    val onCleanUp: (() -> Unit)?,
+open class CountdownTimerService() : Service(), ICountdownTimerService {
+  private data class TimerProperties(
     val startTime: Long,
-    val durationMillis: Long,
+    val duration: Duration,
   )
 
   private val binder = BinderHelper()
-  private var state: TimerState? = null
+  private var properties: TimerProperties? = null
 
   override fun onBind(p0: Intent?): IBinder {
     return binder
@@ -58,52 +46,26 @@ class CountdownTimerService() : Service(), ICountdownTimerService {
     stopSelf()
   }
 
-  override fun start(
-    durationMillis: Long, onFinished: () -> Unit, onStart: (() -> Unit)?, onCleanUp: (() -> Unit)?
-  ) {
+  override fun start(duration: Duration) {
     cancel()
-    state = TimerState(
-      timer = Timer(true).apply {
-        schedule(timerTask {
-          // OnFinished and onCleanUp will be invoked in the stop() function
-          vibrate()
-          stop()
-        }, durationMillis)
-      },
-      onFinished = onFinished,
-      onCleanUp = onCleanUp,
-      startTime = System.currentTimeMillis(),
-      durationMillis = durationMillis
-    )
-    onStart?.invoke()
+    properties = TimerProperties(startTime = System.currentTimeMillis(), duration = duration)
   }
 
-  override fun stop() {
-    state?.onFinished.let {
-      // Cancel before invoking so the onFinished can start a new timer
-      cancel()
-      it?.invoke()
-    }
+  override fun finish() {
+    vibrate()
+    cancel()
   }
 
   override fun cancel() {
-    state?.apply {
-      timer.cancel()
-      timer.purge()
-      onCleanUp?.invoke()
-    }
-
-    state = null
+    properties = null
     hideNotification()
   }
 
   fun showNotification(title: String) {
-    if (state == null) return
-
-    state?.let {
+    properties?.also {
       sendNotification(
         title = title,
-        durationMillis = it.durationMillis - (System.currentTimeMillis() - it.startTime)
+        durationMillis = it.duration.inWholeMilliseconds - (System.currentTimeMillis() - it.startTime)
       )
     }
   }

@@ -203,9 +203,9 @@ fun NavGraphBuilder.trackedProgressFormScreen(
     })
     val formState by viewmodel.formState.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = formState == null) {
+    LoadingScreen(model = formState) {
       TrackedProgressFormScreenContent(
-        formState = checkNotNull(formState),
+        formState = it,
         onBack = onBack,
         onSave = { viewmodel.save() },
         onDelete = { viewmodel.delete() })

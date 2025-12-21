@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.tests.features.routine.list.routine_list_screen
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.list.RoutineListScreenViewModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
@@ -15,13 +16,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
-class Init {
-  @OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
+class Init : UnconfinedTest() {
   @Test
   fun `filtered routines set`() = runTest(UnconfinedTestDispatcher()) {
     val dataFlow = MutableSharedFlow<List<RoutineWithSchedule>>()

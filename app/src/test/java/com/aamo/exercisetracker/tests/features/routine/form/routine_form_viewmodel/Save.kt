@@ -4,6 +4,7 @@ import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.form.RoutineFormViewModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import junit.framework.TestCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,12 +13,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
-class Save {
+class Save : UnconfinedTest() {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `saveData called`() = runTest(UnconfinedTestDispatcher()) {

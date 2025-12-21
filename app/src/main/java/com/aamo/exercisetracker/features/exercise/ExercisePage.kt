@@ -4,6 +4,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import com.aamo.exercisetracker.features.exercise.form.ExerciseFormScreen
 import com.aamo.exercisetracker.features.exercise.form.exerciseFormScreen
+import com.aamo.exercisetracker.features.exercise.view.ExerciseScreen
+import com.aamo.exercisetracker.features.exercise.view.exerciseScreen
 import com.aamo.exercisetracker.features.routine.view.RoutineScreen
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 

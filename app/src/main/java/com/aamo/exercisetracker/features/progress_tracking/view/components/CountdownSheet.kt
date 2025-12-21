@@ -26,6 +26,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -38,10 +39,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.ui.components.modals.GesturelessModalBottomSheet
+import com.aamo.exercisetracker.ui.preview.BooleanPreviewParameterProvider
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import kotlin.concurrent.timer
 import kotlin.time.Duration
@@ -60,30 +61,38 @@ fun CountdownSheet(
   onStart: () -> Unit,
   onCancel: () -> Unit,
 ) {
-  val startTime = rememberSaveable(active) { System.currentTimeMillis() }
-  var remainingMillis by rememberSaveable(duration) { mutableLongStateOf(duration.inWholeMilliseconds) }
-  val progress = remember {
-    if (duration.inWholeMilliseconds <= 0) Animatable(1f)
-    else Animatable(initialValue = ((System.currentTimeMillis() - startTime).toFloat() / duration.inWholeMilliseconds.toFloat()))
-  }
+  var startTime by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+  var remainingMillis by rememberSaveable { mutableLongStateOf(duration.inWholeMilliseconds) }
+  var animatableProgress by remember { mutableStateOf(Animatable(initialValue = 0f)) }
 
-  LaunchedEffect(active) {
-    // Animate progress indicator
-    if (active) {
-      val remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
-
-      progress.animateTo(
-        targetValue = 1f, animationSpec = tween(
-          durationMillis = remainingMillis.toInt(), easing = LinearEasing
-        )
-      )
+  LaunchedEffect(show) {
+    if (show) {
+      remainingMillis = duration.inWholeMilliseconds
+      animatableProgress = Animatable(initialValue = 0f)
     }
   }
 
-  DisposableEffect(active) {
-    // Update clock text
-    val timer = if (active) timer(period = 1.seconds.inWholeMilliseconds) {
-      remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
+  LaunchedEffect(active) {
+    if (active) {
+      // Animate progress indicator
+      animatableProgress = Animatable(initialValue = 0f)
+      animatableProgress.animateTo(
+        targetValue = 1f, animationSpec = tween(
+          durationMillis = duration.inWholeMilliseconds.toInt(), easing = LinearEasing
+        )
+      )
+    }
+    else animatableProgress.stop()
+  }
+
+  DisposableEffect(active, show) {
+    val timer = if (active && show) {
+      startTime = System.currentTimeMillis()
+
+      timer(period = 1.seconds.inWholeMilliseconds) {
+        // Update clock text
+        remainingMillis = duration.inWholeMilliseconds - (System.currentTimeMillis() - startTime)
+      }
     }
     else null
 
@@ -98,7 +107,7 @@ fun CountdownSheet(
     title = title,
     active = active,
     clockText = remainingMillis.milliseconds.toClockString(),
-    progressPercent = progress.value,
+    progressPercent = animatableProgress.value,
     onDismissRequest = onDismissRequest,
     onStart = onStart,
     onCancel = onCancel,
@@ -189,7 +198,7 @@ private fun Content(
 @Suppress("HardCodedStringLiteral")
 @Preview(showBackground = true)
 @Composable
-private fun Preview(@PreviewParameter(CountdownSheetActiveProvider::class) active: Boolean) {
+private fun Preview(@PreviewParameter(BooleanPreviewParameterProvider::class) active: Boolean) {
   CountdownSheet(
     show = true,
     title = "Title",
@@ -199,7 +208,3 @@ private fun Preview(@PreviewParameter(CountdownSheetActiveProvider::class) activ
     onStart = {},
     onCancel = {})
 }
-
-class CountdownSheetActiveProvider(
-  override val values: Sequence<Boolean> = sequenceOf(false, true)
-) : PreviewParameterProvider<Boolean>

@@ -2,6 +2,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.list.tracked_p
 
 import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.list.TrackedProgressListScreenViewModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import com.aamo.exercisetracker.utility.extensions.general.EMPTY
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
@@ -14,12 +15,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
-class Init {
+class Init : UnconfinedTest() {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `filtered progresses set`() = runTest(UnconfinedTestDispatcher()) {

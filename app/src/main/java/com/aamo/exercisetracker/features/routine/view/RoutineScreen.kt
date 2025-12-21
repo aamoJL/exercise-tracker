@@ -80,10 +80,10 @@ fun NavGraphBuilder.routineScreen(
     })
     val model by viewmodel.model.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = model == null) {
+    LoadingScreen(model = model) {
       RoutineScreenContent(
-        routine = checkNotNull(model?.routine),
-        exercises = checkNotNull(model?.exerciseProgresses),
+        routine = it.routine,
+        exercises = it.exerciseProgresses,
         showFinishedIcon = showProgress,
         onBack = onBack,
         onAddExercise = onAddExercise,

@@ -13,28 +13,17 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aamo.exercisetracker.utility.extensions.general.onFalse
 import com.aamo.exercisetracker.utility.tags.DebugTag
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 interface IStopwatchTimerService {
-  fun start(onStart: (() -> Unit)?, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)?) {}
+  fun start(startTime: Long) {}
   fun cancel() {}
-  fun stop() {}
 }
 
 class StopwatchTimerService() : Service(), IStopwatchTimerService {
-  /**
-   * @param onFinished Will be called when the timer has been stopped
-   * @param onCleanUp Will be called when the timer has been stopped or cancelled
-   */
-  private data class TimerState(
-    val onFinished: (Duration) -> Unit,
-    val onCleanUp: (() -> Unit)?,
-    val startTime: Long,
-  )
+  private data class Properties(val startTime: Long)
 
   private val binder = BinderHelper()
-  private var state: TimerState? = null
+  private var properties: Properties? = null
 
   override fun onBind(p0: Intent?): IBinder {
     return binder
@@ -48,39 +37,18 @@ class StopwatchTimerService() : Service(), IStopwatchTimerService {
     stopSelf()
   }
 
-  override fun start(
-    onStart: (() -> Unit)?, onFinished: (Duration) -> Unit, onCleanUp: (() -> Unit)?
-  ) {
+  override fun start(startTime: Long) {
     cancel()
-    state = TimerState(
-      onFinished = onFinished,
-      onCleanUp = onCleanUp,
-      startTime = System.currentTimeMillis(),
-    )
-    onStart?.invoke()
-  }
-
-  override fun stop() {
-    state?.also {
-      // Cancel before invoking so the onFinished can start a new timer
-      cancel()
-      it.onFinished.invoke((System.currentTimeMillis() - it.startTime).milliseconds)
-    }
+    properties = Properties(startTime = startTime)
   }
 
   override fun cancel() {
-    state?.apply {
-      onCleanUp?.invoke()
-    }
-
-    state = null
+    properties = null
     hideNotification()
   }
 
   fun showNotification(title: String) {
-    if (state == null) return
-
-    state?.also {
+    properties?.also {
       sendNotification(title = title, startTime = it.startTime)
     }
   }

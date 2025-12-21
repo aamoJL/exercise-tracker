@@ -5,6 +5,7 @@ import com.aamo.exercisetracker.database.entities.TrackedProgress
 import com.aamo.exercisetracker.features.dailies.DailiesScreenViewModel
 import com.aamo.exercisetracker.features.dailies.WeeklySchedule
 import com.aamo.exercisetracker.features.dailies.models.DailiesRoutineModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,12 +16,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
-class Init {
+class Init : UnconfinedTest() {
   @Test
   fun `weekly schedule set`() = runTest(UnconfinedTestDispatcher()) {
     val dataFlow = MutableSharedFlow<WeeklySchedule>()

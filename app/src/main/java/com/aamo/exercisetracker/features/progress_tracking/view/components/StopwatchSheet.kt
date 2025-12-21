@@ -33,10 +33,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.ui.components.modals.GesturelessModalBottomSheet
+import com.aamo.exercisetracker.ui.preview.BooleanPreviewParameterProvider
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlin.concurrent.timer
@@ -163,7 +163,7 @@ fun StopwatchSheet(
 @Suppress("HardCodedStringLiteral")
 @Preview
 @Composable
-private fun Preview(@PreviewParameter(StopwatchSheetActiveProvider::class) active: Boolean) {
+private fun Preview(@PreviewParameter(BooleanPreviewParameterProvider::class) active: Boolean) {
   StopwatchSheet(
     show = true,
     active = active,
@@ -173,7 +173,3 @@ private fun Preview(@PreviewParameter(StopwatchSheetActiveProvider::class) activ
     onStop = {},
     onCancel = {})
 }
-
-class StopwatchSheetActiveProvider(
-  override val values: Sequence<Boolean> = sequenceOf(false, true)
-) : PreviewParameterProvider<Boolean>

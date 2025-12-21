@@ -2,6 +2,7 @@ package com.aamo.exercisetracker.tests.features.progress_tracking.records.tracke
 
 import com.aamo.exercisetracker.features.progress_tracking.records.TrackedProgressRecordListScreenViewModel
 import com.aamo.exercisetracker.features.progress_tracking.records.models.TrackedProgressRecordListModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,13 +12,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @Suppress("HardCodedStringLiteral")
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
-class Init {
+class Init : UnconfinedTest() {
   @Test
   fun `model set`() = runTest(UnconfinedTestDispatcher()) {
     val dataFlow = MutableSharedFlow<TrackedProgressRecordListModel>()

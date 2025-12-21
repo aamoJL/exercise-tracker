@@ -11,11 +11,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
 class Filter : UnconfinedTest() {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test

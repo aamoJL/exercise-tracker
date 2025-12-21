@@ -234,9 +234,9 @@ fun NavGraphBuilder.exerciseFormScreen(
     })
     val formState by viewmodel.formState.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = formState == null) {
+    LoadingScreen(model = formState) {
       ExerciseFormScreenContent(
-        formState = checkNotNull(formState),
+        formState = it,
         onBack = onBack,
         onSave = { viewmodel.save() },
         onDelete = { viewmodel.delete() })
@@ -331,6 +331,7 @@ private fun ExerciseFormScreenContent(
         ),
         modifier = Modifier.fillMaxWidth()
       )
+      // TODO: change to duration field
       NumberField(
         value = formState.restDuration.value.inWholeMinutes.toInt(),
         onValueChange = { formState.restDuration.update(it.minutes) },

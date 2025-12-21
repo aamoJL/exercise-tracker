@@ -104,12 +104,12 @@ fun NavGraphBuilder.trackedProgressRecordListScreen(onBack: () -> Unit) {
     })
     val model by viewmodel.model.collectAsStateWithLifecycle()
 
-    LoadingScreen(loading = model == null) {
+    LoadingScreen(model = model) {
       TrackedProgressRecordListScreenContent(
-        model = checkNotNull(model),
+        model = it,
         onBack = onBack,
-        onDeleteRecord = { viewmodel.deleteRecord(it) },
-        onSaveRecord = { viewmodel.saveRecord(it) })
+        onDeleteRecord = { record -> viewmodel.deleteRecord(record) },
+        onSaveRecord = { record -> viewmodel.saveRecord(record) })
     }
   }
 }

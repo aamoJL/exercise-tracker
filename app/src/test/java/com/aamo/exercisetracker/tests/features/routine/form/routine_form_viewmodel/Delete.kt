@@ -3,6 +3,7 @@ package com.aamo.exercisetracker.tests.features.routine.form.routine_form_viewmo
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.form.RoutineFormViewModel
+import com.aamo.exercisetracker.test_utility.ui.rules.UnconfinedTest
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,12 +12,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @Suppress("HardCodedStringLiteral")
-@RunWith(RobolectricTestRunner::class)
-class Delete {
+class Delete : UnconfinedTest() {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `deleteData called`() = runTest(UnconfinedTestDispatcher()) {

@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +63,12 @@ import com.aamo.exercisetracker.services.StopwatchTimerService
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
+import com.aamo.exercisetracker.utility.viewmodels.BasicClock
+import com.aamo.exercisetracker.utility.viewmodels.BasicTimer
+import com.aamo.exercisetracker.utility.viewmodels.CountdownTimer
+import com.aamo.exercisetracker.utility.viewmodels.IClock
+import com.aamo.exercisetracker.utility.viewmodels.ITimer
+import com.aamo.exercisetracker.utility.viewmodels.StopwatchTimer
 import com.aamo.exercisetracker.utility.viewmodels.ViewModelState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -81,6 +88,8 @@ data class ProgressTrackingScreen(val progressId: Long)
 class ProgressTrackingScreenViewModel(
   fetchData: () -> Flow<ProgressTrackingTrackedProgressModel>,
   private val addValue: suspend (TrackedProgressValue) -> Unit,
+  timer: ITimer = BasicTimer(),
+  clock: IClock = BasicClock(),
 ) : ViewModel() {
   class CountdownTimerState {
     var duration by mutableStateOf(0.seconds)
@@ -91,6 +100,9 @@ class ProgressTrackingScreenViewModel(
     val isActive = ViewModelState(false)
     val finalDuration = ViewModelState(0.milliseconds)
   }
+
+  private val _countdownTimer = CountdownTimer(timer)
+  private val _stopwatchTimer = StopwatchTimer(clock)
 
   val model = fetchData().catch { }.onEach {
     it.countdownTime?.also { duration -> countdownTimerState.duration = duration }
@@ -111,40 +123,41 @@ class ProgressTrackingScreenViewModel(
     }
   }
 
-  fun startCountdown(countdownTimerService: ICountdownTimerService) {
-    countdownTimerService.cancel()
-
+  fun startCountdown(backgroundService: ICountdownTimerService? = null) {
     countdownTimerState.also { timerState ->
-      val duration = timerState.duration
+      if (timerState.duration <= 0.seconds) return
 
-      if (duration <= 0.seconds) return
-
-      countdownTimerService.start(
-        durationMillis = duration.inWholeMilliseconds,
+      _countdownTimer.start(
+        duration = timerState.duration,
         onStart = { timerState.isActive.update(true) },
-        onFinished = { /* Nothing here */ },
-        onCleanUp = { timerState.isActive.update(false) })
+        onFinished = {/* Nothing here */ },
+        onCleanUp = { timerState.isActive.update(false) },
+        backgroundService = backgroundService
+      )
     }
   }
 
-  fun cancelCountdown(countdownTimerService: ICountdownTimerService) {
-    countdownTimerService.cancel()
+  fun cancelCountdown() {
+    _countdownTimer.cancel()
   }
 
-  fun startStopwatch(stopwatchTimerService: IStopwatchTimerService) {
-    stopwatchTimerService.cancel()
-    stopwatchTimerService.start(
-      onStart = { stopwatchTimerState.isActive.update(true) },
-      onFinished = { stopwatchTimerState.finalDuration.update(it) },
-      onCleanUp = { stopwatchTimerState.isActive.update(false) })
+  fun startStopwatch(backgroundService: IStopwatchTimerService? = null) {
+    stopwatchTimerState.also { timerState ->
+      _stopwatchTimer.start(
+        onStart = { timerState.isActive.update(true) },
+        onFinished = { timerState.finalDuration.update(it) },
+        onCleanUp = { timerState.isActive.update(false) },
+        backgroundService = backgroundService
+      )
+    }
   }
 
-  fun stopStopwatch(stopwatchTimerService: IStopwatchTimerService) {
-    stopwatchTimerService.stop()
+  fun stopStopwatch() {
+    _stopwatchTimer.stop()
   }
 
-  fun cancelStopwatch(stopwatchTimerService: IStopwatchTimerService) {
-    stopwatchTimerService.cancel()
+  fun cancelStopwatch() {
+    _stopwatchTimer.cancel()
   }
 }
 
@@ -221,25 +234,23 @@ fun NavGraphBuilder.progressTrackingScreen(
         }
       }
 
-      onDispose {
-        runCatching { context.unbindService(timerConnection) }
-      }
+      onDispose { runCatching { context.unbindService(timerConnection) } }
     }
 
-    LoadingScreen(loading = model == null) {
+    LoadingScreen(model = model) {
       ProgressTrackingScreenContent(
-        model = checkNotNull(model),
+        model = it,
         stopwatchTimerState = viewmodel.stopwatchTimerState,
         countdownTimerState = viewmodel.countdownTimerState,
         onEdit = { onEdit(progressId) },
         onBack = onBack,
         onShowRecords = { onShowRecords(progressId) },
         onAddValue = { value, date -> viewmodel.addNewValue(value, date) },
-        onStartCountdown = { countDownService?.also { viewmodel.startCountdown(it) } },
-        onCancelCountdown = { countDownService?.also { viewmodel.cancelCountdown(it) } },
-        onStartStopwatch = { stopwatchService?.also { viewmodel.startStopwatch(it) } },
-        onStopStopwatch = { stopwatchService?.also { viewmodel.stopStopwatch(it) } },
-        onCancelStopwatch = { stopwatchService?.also { viewmodel.cancelStopwatch(it) } },
+        onStartCountdown = { viewmodel.startCountdown(countDownService) },
+        onCancelCountdown = { viewmodel.cancelCountdown() },
+        onStartStopwatch = { viewmodel.startStopwatch(stopwatchService) },
+        onStopStopwatch = { viewmodel.stopStopwatch() },
+        onCancelStopwatch = { viewmodel.cancelStopwatch() },
       )
     }
   }
@@ -291,6 +302,13 @@ private fun ProgressTrackingScreenContent(
         },
         onDismiss = { showNewRecordDialog = false },
       )
+    }
+  }
+
+  LaunchedEffect(countdownTimerState.isActive.value) {
+    if (!countdownTimerState.isActive.value && showTimerModal) {
+      showTimerModal = false
+      showNewRecordDialog = true
     }
   }
 

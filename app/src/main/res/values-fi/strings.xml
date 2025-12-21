@@ -98,4 +98,7 @@
     <string name="title_scheduled_trackers">Ajastetut seurannat</string>
     <string name="x_count_selected">%1$d valittu</string>
     <string name="cd_show_unfinished_tracked_progresses">Näytä tekemättömät ajastetut seurannat</string>
+    <string name="x_hours_short">%1$dt</string>
+    <string name="x_minutes_short">"%1$dm "</string>
+    <string name="x_seconds_short">"%1$ds "</string>
 </resources>
