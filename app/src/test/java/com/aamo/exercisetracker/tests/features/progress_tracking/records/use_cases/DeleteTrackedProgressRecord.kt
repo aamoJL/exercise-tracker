@@ -30,7 +30,8 @@ class DeleteTrackedProgressRecord : DatabaseTest() {
 
     deleteTrackedProgressRecord(dao = trackedProgressDao, record = records.first())
     TestCase.assertEquals(
-      records.drop(1), trackedProgressDao.getProgressValuesFlow(progressId = progress.id).first()
+      records.drop(1),
+      trackedProgressDao.getProgressWithValuesFlow(progressId = progress.id).first()?.values
     )
   }
 }

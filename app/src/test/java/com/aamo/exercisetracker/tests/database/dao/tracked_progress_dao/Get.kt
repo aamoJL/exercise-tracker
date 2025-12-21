@@ -64,40 +64,6 @@ class Get : DatabaseTest() {
   }
 
   @Test
-  fun getProgressValuesFlow() = runTest {
-    val progressId = trackedProgressDao.upsert(TrackedProgress())
-
-    val values = listOf(
-      TrackedProgressValue(progressId = progressId, addedDate = Date()),
-      TrackedProgressValue(progressId = progressId, addedDate = Date()),
-      TrackedProgressValue(progressId = progressId, addedDate = Date()),
-    )
-
-    values.forEach {
-      trackedProgressDao.upsert(it)
-    }
-
-    val expected = values.mapIndexed { i, progress -> progress.copy(id = i + 1L) }
-    val actual = trackedProgressDao.getProgressValuesFlow(progressId).first()
-
-    assertEquals(expected, actual)
-  }
-
-  @Test
-  fun getProgressValueById() = runTest {
-    val progressId = trackedProgressDao.upsert(TrackedProgress())
-
-    val value = TrackedProgressValue(progressId = progressId, addedDate = Date())
-
-    trackedProgressDao.upsert(value).also { valueId ->
-      val expected = value.copy(id = valueId)
-      val actual = trackedProgressDao.getProgressValueById(valueId)
-
-      assertEquals(expected, actual)
-    }
-  }
-
-  @Test
   fun getProgressesWithValuesFlow() = runTest {
     val progress = TrackedProgress()
 

@@ -11,7 +11,6 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
-import com.aamo.exercisetracker.database.entities.ExerciseWithProgressAndSets
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
@@ -23,18 +22,11 @@ import kotlinx.coroutines.flow.Flow
 
 data class RoutineScheduleIds(val routineId: Long, val scheduleId: Long?)
 
-// TODO: remove unused
 @Dao
 interface RoutineDao {
   // region GET
-  @Query("SELECT * FROM routine WHERE id = :routineId")
-  suspend fun getRoutine(routineId: Long): Routine?
-
   @Query("SELECT * FROM routine_schedule WHERE routine_id = :routineId")
   suspend fun getScheduleByRoutineId(routineId: Long): RoutineSchedule?
-
-  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
-  suspend fun getExercise(exerciseId: Long): Exercise?
 
   @Query("SELECT * FROM exercise_set WHERE exercise_id = :exerciseId")
   suspend fun getExerciseSets(exerciseId: Long): List<ExerciseSet>
@@ -69,10 +61,6 @@ interface RoutineDao {
   """
   )
   fun getRoutineSchedulesWithProgressesFlow(): Flow<Map<RoutineWithSchedule, List<ExerciseWithProgress>>>
-
-  @Transaction
-  @Query("SELECT * FROM exercise WHERE id = :exerciseId")
-  suspend fun getExerciseWithProgressAndSets(exerciseId: Long): ExerciseWithProgressAndSets?
   // endregion
 
   // region UPSERT

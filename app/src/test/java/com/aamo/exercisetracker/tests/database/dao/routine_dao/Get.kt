@@ -4,7 +4,6 @@ import com.aamo.exercisetracker.database.entities.Exercise
 import com.aamo.exercisetracker.database.entities.ExerciseProgress
 import com.aamo.exercisetracker.database.entities.ExerciseSet
 import com.aamo.exercisetracker.database.entities.ExerciseWithProgress
-import com.aamo.exercisetracker.database.entities.ExerciseWithProgressAndSets
 import com.aamo.exercisetracker.database.entities.ExerciseWithSets
 import com.aamo.exercisetracker.database.entities.Routine
 import com.aamo.exercisetracker.database.entities.RoutineSchedule
@@ -12,7 +11,6 @@ import com.aamo.exercisetracker.database.entities.RoutineWithExerciseProgresses
 import com.aamo.exercisetracker.database.entities.RoutineWithSchedule
 import com.aamo.exercisetracker.test_utility.database.DatabaseTest
 import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
@@ -25,20 +23,6 @@ import java.util.Calendar
 @RunWith(RobolectricTestRunner::class)
 class Get : DatabaseTest() {
   @Test
-  fun getRoutine() = runTest {
-    val routine = Routine()
-
-    routineDao.upsert(routine).also { id ->
-      val expected = routine.copy(id = id)
-      val actual = routineDao.getRoutine(id)
-
-      assertEquals(expected, actual)
-    }
-
-    assertNull(routineDao.getRoutine(0))
-  }
-
-  @Test
   fun getScheduleByRoutineId() = runTest {
     routineDao.upsert(Routine()).also { routineId ->
       val schedule = RoutineSchedule(routineId = routineId, monday = true)
@@ -46,20 +30,6 @@ class Get : DatabaseTest() {
       routineDao.upsert(schedule).also { scheduleId ->
         val expected = schedule.copy(id = scheduleId)
         val actual = routineDao.getScheduleByRoutineId(routineId)
-
-        assertEquals(expected, actual)
-      }
-    }
-  }
-
-  @Test
-  fun getExercise() = runTest {
-    routineDao.upsert(Routine()).also { routineId ->
-      val exercise = Exercise(routineId = routineId, name = "Name")
-
-      routineDao.upsert(exercise).also { exerciseId ->
-        val expected = exercise.copy(id = exerciseId)
-        val actual = routineDao.getExercise(exerciseId)
 
         assertEquals(expected, actual)
       }
@@ -191,34 +161,6 @@ class Get : DatabaseTest() {
           )
 
           assertEquals(expected, actual)
-        }
-      }
-    }
-  }
-
-  @Test
-  fun getExerciseWithProgressAndSets() = runTest {
-    routineDao.upsert(Routine()).also { routineId ->
-      val exercise = Exercise(routineId = routineId)
-
-      routineDao.upsert(exercise).also { exerciseId ->
-        val progress = ExerciseProgress(
-          exerciseId = exerciseId, finishedDate = Calendar.getInstance().time
-        )
-
-        routineDao.upsert(progress).also { progressId ->
-          val set = ExerciseSet(exerciseId = exerciseId)
-
-          routineDao.upsert(set).also {
-            val expected = ExerciseWithProgressAndSets(
-              exercise = exercise.copy(id = exerciseId),
-              sets = listOf(set.copy(id = 1L)),
-              progress = progress.copy(id = progressId)
-            )
-            val actual = routineDao.getExerciseWithProgressAndSets(exerciseId = exerciseId)
-
-            assertEquals(expected, actual)
-          }
         }
       }
     }

@@ -19,9 +19,9 @@ class DeleteExercise : DatabaseTest() {
       routineDao.upsert(it).let { id -> it.copy(id = id) }
     }
 
-    assertEquals(model, routineDao.getExercise(model.id))
+    assertEquals(model, routineDao.getExerciseWithSets(model.id)?.exercise)
 
     deleteExercise(dao = routineDao, model = model)
-    assertEquals(null, routineDao.getExercise(model.id))
+    assertEquals(null, routineDao.getExerciseWithSets(model.id)?.exercise)
   }
 }

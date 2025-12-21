@@ -18,9 +18,9 @@ class DeleteRoutine : DatabaseTest() {
       routineDao.upsert(it).let { id -> it.copy(id = id) }
     }
 
-    assertEquals(routine, routineDao.getRoutine(routine.id))
+    assertEquals(routine, routineDao.getRoutineWithSchedule(routine.id)?.routine)
 
     deleteRoutine(dao = routineDao, model = routine)
-    assertEquals(null, routineDao.getRoutine(routine.id))
+    assertEquals(null, routineDao.getRoutineWithSchedule(routine.id)?.routine)
   }
 }

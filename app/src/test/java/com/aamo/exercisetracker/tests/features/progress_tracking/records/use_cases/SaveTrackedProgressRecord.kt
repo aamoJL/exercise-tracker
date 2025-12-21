@@ -25,7 +25,7 @@ class SaveTrackedProgressRecord : DatabaseTest() {
     saveTrackedProgressRecord(dao = trackedProgressDao, record = record)
     TestCase.assertEquals(
       listOf(record.copy(id = 1L)),
-      trackedProgressDao.getProgressValuesFlow(progressId = progress.id).first()
+      trackedProgressDao.getProgressWithValuesFlow(progressId = progress.id).first()?.values
     )
   }
 }

@@ -25,7 +25,7 @@ class SaveTrackedProgressValue : DatabaseTest() {
 
     saveTrackedProgressValue(dao = trackedProgressDao, value = value)
 
-    val result = trackedProgressDao.getProgressValuesFlow(progressId = model.id).first()
+    val result = trackedProgressDao.getProgressWithValuesFlow(progressId = model.id).first()?.values
 
     assertEquals(listOf(value.copy(id = 1L)), result)
   }

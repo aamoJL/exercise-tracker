@@ -54,10 +54,10 @@ class AddRecord : PageTest() {
     rule.onNodeWithText(getString(R.string.dialog_title_add_new_record)).waitForNotDisplayed()
       .assertDoesNotExist()
 
-    val result = trackedProgressDao.getProgressValuesFlow(progress.id).first()
+    val result = trackedProgressDao.getProgressWithValuesFlow(progress.id).first()?.values
     assertEquals(
       listOf((1.hours + 1.minutes + 1.seconds).inWholeMilliseconds.toInt()),
-      result.map { it.value })
+      result?.map { it.value })
   }
 
   @Test
@@ -67,7 +67,8 @@ class AddRecord : PageTest() {
     rule.onNodeWithText(getString(R.string.dialog_title_add_new_record)).assertExists()
     rule.onNodeWithText(getString(R.string.btn_cancel)).performClick()
 
-    val result = trackedProgressDao.getProgressValuesFlow(progress.id).first()
+    val result = trackedProgressDao.getProgressWithValuesFlow(progress.id).first()?.values
+    checkNotNull(result)
     assertTrue(result.isEmpty())
   }
 }
