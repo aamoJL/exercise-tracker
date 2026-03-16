@@ -101,4 +101,5 @@
     <string name="x_hours_short">%1$dt</string>
     <string name="x_minutes_short">"%1$dm "</string>
     <string name="x_seconds_short">"%1$ds "</string>
+    <string name="cd_change_app_theme">Vaihda teemaa</string>
 </resources>

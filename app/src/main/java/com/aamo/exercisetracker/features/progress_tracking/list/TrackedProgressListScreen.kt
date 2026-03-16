@@ -1,7 +1,6 @@
 package com.aamo.exercisetracker.features.progress_tracking.list
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,7 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +46,7 @@ import com.aamo.exercisetracker.features.progress_tracking.list.components.Inter
 import com.aamo.exercisetracker.features.progress_tracking.list.components.TrackedProgressListScreenTopBar
 import com.aamo.exercisetracker.features.progress_tracking.list.use_cases.deleteTrackedProgresses
 import com.aamo.exercisetracker.features.progress_tracking.list.use_cases.fetchTrackedProgressesFlow
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -162,12 +162,8 @@ private fun TrackedProgressListScreenContent(
     onSwitchSelection(progresses, false)
   }
 
-  Surface {
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .imePadding()
-    ) {
+  BackgroundSurface {
+    Column(modifier = Modifier.imePadding()) {
       TrackedProgressListScreenTopBar(
         selectionCount = selections.size,
         filterWord = filterWord,
@@ -175,45 +171,51 @@ private fun TrackedProgressListScreenContent(
         onFilterChanged = onFilterChanged,
         onAdd = onAdd
       )
-      LoadingScreen(loading = isLoading) {
-        LazyColumn(
-          userScrollEnabled = true,
-          verticalArrangement = Arrangement.spacedBy(4.dp),
-          modifier = Modifier
-            .padding(top = 4.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
-            .clip(RoundedCornerShape(8.dp))
-        ) {
-          items(progresses) { model ->
-            val selected = selections.contains(model)
+      Box(modifier = Modifier.fillMaxSize()) {
+        LoadingScreen(loading = isLoading) {
+          LazyColumn(
+            userScrollEnabled = true,
+            modifier = Modifier
+              .padding(8.dp)
+              .clip(MaterialTheme.shapes.small)
+          ) {
+            itemsIndexed(progresses) { i, model ->
+              val selected = selections.contains(model)
 
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .background(color = MaterialTheme.colorScheme.surfaceVariant)
-                .combinedClickable(onClick = {
-                  if (selections.isEmpty()) onSelectProgress(model.id)
-                  else onSwitchSelection(listOf(model), !selected)
-                }, onLongClick = {
-                  if (selections.isEmpty()) onSwitchSelection(listOf(model), true)
-                })
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
-              ) {
-                if (selections.isNotEmpty()) {
-                  Checkbox(checked = selected, onCheckedChange = null)
+              Column {
+                Surface(
+                  color = MaterialTheme.colorScheme.surfaceVariant,
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(onClick = {
+                      if (selections.isEmpty()) onSelectProgress(model.id)
+                      else onSwitchSelection(listOf(model), !selected)
+                    }, onLongClick = {
+                      if (selections.isEmpty()) onSwitchSelection(listOf(model), true)
+                    })
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
+                  ) {
+                    if (selections.isNotEmpty()) {
+                      Checkbox(checked = selected, onCheckedChange = null)
+                    }
+                    Text(text = model.name, fontWeight = FontWeight.Bold)
+                  }
+                  Box(
+                    contentAlignment = Alignment.TopEnd,
+                    modifier = Modifier
+                      .fillMaxSize()
+                      .padding(horizontal = 12.dp, vertical = 8.dp)
+                  ) {
+                    IntervalTrailing(intervalWeeks = model.intervalWeeks)
+                  }
                 }
-                Text(text = model.name, fontWeight = FontWeight.Bold)
-              }
-              Box(
-                contentAlignment = Alignment.TopEnd,
-                modifier = Modifier
-                  .fillMaxSize()
-                  .padding(horizontal = 12.dp, vertical = 8.dp)
-              ) {
-                IntervalTrailing(intervalWeeks = model.intervalWeeks)
+                if (i < progresses.size - 1) HorizontalDivider(
+                  color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .5f)
+                )
               }
             }
           }
@@ -224,10 +226,10 @@ private fun TrackedProgressListScreenContent(
 }
 
 @Suppress("HardCodedStringLiteral")
-@Preview
+@PreviewLightDark
 @Composable
 private fun Preview() {
-  ExerciseTrackerTheme(darkTheme = true) {
+  ExerciseTrackerTheme {
     TrackedProgressListScreenContent(
       progresses = listOf(
       TrackedProgress(id = 1, name = "Progress 1"),
