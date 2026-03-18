@@ -101,4 +101,10 @@
     <string name="x_minutes_short">"%1$dm "</string>
     <string name="x_seconds_short">"%1$ds "</string>
     <string name="label_rest_duration">Rest</string>
+    <string name="cd_change_app_theme">Change app theme</string>
+    <string name="label_routine">Routine</string>
+    <string name="label_progresses">Progresses</string>
+    <string name="label_exercises">Exercises</string>
+    <string name="label_exercise">Exercise</string>
+    <string name="btn_complete">Complete</string>
 </resources>

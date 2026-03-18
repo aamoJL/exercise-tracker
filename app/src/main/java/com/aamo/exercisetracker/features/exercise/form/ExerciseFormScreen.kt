@@ -3,23 +3,26 @@ package com.aamo.exercisetracker.features.exercise.form
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +37,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,7 +58,9 @@ import com.aamo.exercisetracker.features.exercise.form.models.ExerciseFormFields
 import com.aamo.exercisetracker.features.exercise.form.use_cases.deleteExercise
 import com.aamo.exercisetracker.features.exercise.form.use_cases.fetchExercise
 import com.aamo.exercisetracker.features.exercise.form.use_cases.saveExercise
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
 import com.aamo.exercisetracker.ui.components.FormList
+import com.aamo.exercisetracker.ui.components.HorizontalDividerLabel
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.LabelledCheckBox
@@ -312,59 +317,87 @@ private fun ExerciseFormScreenContent(
       }
     })
   }) { innerPadding ->
-    Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier
-        .padding(innerPadding)
-        .padding(8.dp)
-    ) {
-      TextField(
-        value = formState.exerciseName.value,
-        label = { Text(stringResource(R.string.label_name)) },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        onValueChange = { formState.exerciseName.update(it) },
-        keyboardOptions = KeyboardOptions(
-          imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
-        ),
-        modifier = Modifier.fillMaxWidth()
-      )
-
-      Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.height(IntrinsicSize.Min)
+    BackgroundSurface(modifier = Modifier.fillMaxSize()) {
+      Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+          .padding(innerPadding)
+          .padding(8.dp)
       ) {
-        Column(
-          verticalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.CenterVertically),
-          modifier = Modifier.fillMaxHeight()
+        ExerciseInfo(formState = formState)
+        FormList(
+          title = stringResource(R.string.title_sets),
+          actions = {
+            OutlinedIconButton(onClick = { formState.addSetValue() }) {
+              Icon(
+                painter = painterResource(R.drawable.rounded_add_24),
+                contentDescription = stringResource(R.string.cd_add_new_item),
+              )
+            }
+          },
+          modifier = Modifier.fillMaxWidth(),
         ) {
-          LabelledCheckBox(
-            checked = formState.hasRest.value,
-            onCheckedChange = { formState.hasRest.update(it) },
-            label = { Text(stringResource(R.string.label_rest_duration)) },
-            modifier = Modifier.weight(1f)
-          )
+          LazyColumn {
+            itemsIndexed(
+              items = formState.setValues.values, key = { _, set -> set.uuid }) { i, set ->
+              Column(modifier = Modifier.animateItem()) {
+                ExerciseSetSwipeToDismissBox(
+                  value = set.value.value,
+                  isDuration = formState.hasTimer.value,
+                  suffix = formState.setUnit.value,
+                  imeAction = ifElse(
+                    condition = i < formState.setValues.values.size - 1,
+                    ifTrue = { ImeAction.Next },
+                    ifFalse = { ImeAction.Done }),
+                  onChange = { set.value.update(it) },
+                  onRemove = { formState.setValues.remove(set) },
+                )
+                if (i != formState.setValues.values.size - 1) {
+                  HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHighest)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun ExerciseInfo(
+  formState: ExerciseFormViewModel.FormState, modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier) {
+    HorizontalDividerLabel(
+      label = stringResource(R.string.label_exercise), modifier = Modifier.padding(12.dp)
+    )
+    ElevatedCard(shape = MaterialTheme.shapes.small) {
+      Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+          .padding(8.dp)
+          .fillMaxWidth()
+      ) {
+        TextField(
+          value = formState.exerciseName.value,
+          label = { Text(stringResource(R.string.label_name)) },
+          shape = RectangleShape,
+          colors = borderlessTextFieldColors(),
+          onValueChange = { formState.exerciseName.update(it) },
+          keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
+          ),
+          modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
           LabelledCheckBox(
             checked = formState.hasTimer.value,
             onCheckedChange = { formState.hasTimer.update(it) },
             label = { Text(stringResource(R.string.label_timer)) },
-            modifier = Modifier.weight(1f)
-          )
-        }
-        Column(
-          verticalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.CenterVertically),
-          modifier = Modifier.fillMaxHeight()
-        ) {
-          DurationNumberField(
-            enabled = formState.hasRest.value,
-            value = formState.restDuration.value,
-            onValueChange = { formState.restDuration.update(it) },
-            hideZeroOnDisabled = true,
-            fields = DurationNumberFieldFields(
-              hours = DurationNumberFieldFields.Properties(enabled = false)
-            ),
-            shape = RectangleShape,
-            colors = borderlessTextFieldColors(),
           )
           TextField(
             enabled = !formState.hasTimer.value,
@@ -378,26 +411,31 @@ private fun ExerciseFormScreenContent(
             ),
           )
         }
-      }
-      Spacer(modifier = Modifier.height(8.dp))
-      FormList(
-        title = stringResource(R.string.title_sets),
-        onAdd = { formState.addSetValue() },
-        modifier = Modifier.fillMaxWidth()
-      ) {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-          itemsIndexed(items = formState.setValues.values, key = { _, set -> set.uuid }) { i, set ->
-            ExerciseSetSwipeToDismissBox(
-              value = set.value.value,
-              isDuration = formState.hasTimer.value,
-              suffix = formState.setUnit.value,
-              imeAction = ifElse(
-                condition = i < formState.setValues.values.size - 1,
-                ifTrue = { ImeAction.Next },
-                ifFalse = { ImeAction.Done }),
-              onChange = { set.value.update(it) },
-              onRemove = { formState.setValues.remove(set) },
-              modifier = Modifier.animateItem()
+        Surface(
+          color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+          shape = MaterialTheme.shapes.extraSmall,
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+          ) {
+            LabelledCheckBox(
+              checked = formState.hasRest.value,
+              onCheckedChange = { formState.hasRest.update(it) },
+              label = { Text(stringResource(R.string.label_rest_duration)) },
+              modifier = Modifier
+            )
+            DurationNumberField(
+              enabled = formState.hasRest.value,
+              value = formState.restDuration.value,
+              onValueChange = { formState.restDuration.update(it) },
+              hideZeroOnDisabled = true,
+              fields = DurationNumberFieldFields(
+                hours = DurationNumberFieldFields.Properties(enabled = false)
+              ),
+              shape = RectangleShape,
+              colors = borderlessTextFieldColors(),
+              modifier = Modifier.padding(4.dp)
             )
           }
         }
@@ -407,10 +445,10 @@ private fun ExerciseFormScreenContent(
 }
 
 @Suppress("HardCodedStringLiteral")
-@Preview
+@PreviewLightDark
 @Composable
 private fun PreviewRepetitions() {
-  ExerciseTrackerTheme(darkTheme = true) {
+  ExerciseTrackerTheme {
     ExerciseFormScreenContent(
       formState = ExerciseFormViewModel.FormState(
       fields = ExerciseFormFields(
@@ -425,10 +463,10 @@ private fun PreviewRepetitions() {
 }
 
 @Suppress("HardCodedStringLiteral")
-@Preview
+@PreviewLightDark
 @Composable
 private fun PreviewTimer() {
-  ExerciseTrackerTheme(darkTheme = true) {
+  ExerciseTrackerTheme {
     ExerciseFormScreenContent(
       formState = ExerciseFormViewModel.FormState(
       fields = ExerciseFormFields(

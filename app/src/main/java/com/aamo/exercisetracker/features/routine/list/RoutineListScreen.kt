@@ -1,7 +1,6 @@
 package com.aamo.exercisetracker.features.routine.list
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,11 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +46,8 @@ import com.aamo.exercisetracker.features.progress_tracking.list.components.Routi
 import com.aamo.exercisetracker.features.routine.list.components.ScheduleTrailing
 import com.aamo.exercisetracker.features.routine.list.use_cases.deleteRoutines
 import com.aamo.exercisetracker.features.routine.list.use_cases.fetchRoutinesFlow
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
+import com.aamo.exercisetracker.ui.components.HorizontalDividerLabel
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -164,58 +164,66 @@ private fun RoutineListScreenContent(
     onSwitchSelection(routines.map { it.routine }, false)
   }
 
-  Surface {
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .imePadding()
-    ) {
+  BackgroundSurface {
+    Column(modifier = Modifier.imePadding()) {
       RoutineListScreenTopBar(
         selectionCount = selections.size,
         filterWord = filterWord,
         onFilterChanged = onFilterChanged,
         onAdd = onAdd,
         onDeleteSelected = { openDeleteDialog = true })
-      LoadingScreen(loading = isLoading) {
-        LazyColumn(
-          userScrollEnabled = true,
-          verticalArrangement = Arrangement.spacedBy(4.dp),
-          modifier = Modifier
-            .padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
-            .clip(RoundedCornerShape(8.dp))
-        ) {
-          items(routines) { model ->
-            val selected = selections.contains(model.routine)
+      HorizontalDividerLabel(
+        label = stringResource(R.string.label_routines),
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+      )
+      Box(modifier = Modifier.fillMaxSize()) {
+        LoadingScreen(loading = isLoading) {
+          Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.medium,
+            shadowElevation = 1.dp,
+            modifier = Modifier.padding(8.dp),
+          ) {
+            LazyColumn(userScrollEnabled = true) {
+              itemsIndexed(routines) { i, model ->
+                val selected = selections.contains(model.routine)
 
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .background(color = MaterialTheme.colorScheme.surfaceVariant)
-                .combinedClickable(onClick = {
-                  if (selections.isEmpty()) onSelectRoutine(model.routine.id)
-                  else onSwitchSelection(listOf(model.routine), !selected)
-                }, onLongClick = {
-                  if (selections.isEmpty()) onSwitchSelection(listOf(model.routine), true)
-                })
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
-              ) {
-                if (selections.isNotEmpty()) {
-                  Checkbox(checked = selected, onCheckedChange = null)
-                }
-                Text(text = model.routine.name, fontWeight = FontWeight.Bold)
-              }
-              if (model.schedule != null) {
-                Box(
-                  contentAlignment = Alignment.TopEnd,
-                  modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                  ScheduleTrailing(schedule = model.schedule)
+                Column {
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .combinedClickable(onClick = {
+                        if (selections.isEmpty()) onSelectRoutine(model.routine.id)
+                        else onSwitchSelection(listOf(model.routine), !selected)
+                      }, onLongClick = {
+                        if (selections.isEmpty()) onSwitchSelection(listOf(model.routine), true)
+                      })
+                  ) {
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(8.dp),
+                      modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
+                    ) {
+                      if (selections.isNotEmpty()) {
+                        Checkbox(checked = selected, onCheckedChange = null)
+                      }
+                      Text(text = model.routine.name, fontWeight = FontWeight.Bold)
+                    }
+                    if (model.schedule != null) {
+                      Box(
+                        contentAlignment = Alignment.TopEnd,
+                        modifier = Modifier
+                          .fillMaxSize()
+                          .padding(horizontal = 12.dp, vertical = 8.dp)
+                      ) {
+                        ScheduleTrailing(schedule = model.schedule)
+                      }
+                    }
+                  }
+                  if (i < routines.size - 1) HorizontalDivider(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                  )
                 }
               }
             }
@@ -227,10 +235,10 @@ private fun RoutineListScreenContent(
 }
 
 @Suppress("HardCodedStringLiteral")
-@Preview
+@PreviewLightDark
 @Composable
 private fun Preview() {
-  ExerciseTrackerTheme(darkTheme = true) {
+  ExerciseTrackerTheme {
     RoutineListScreenContent(
       routines = listOf(
         RoutineWithSchedule(

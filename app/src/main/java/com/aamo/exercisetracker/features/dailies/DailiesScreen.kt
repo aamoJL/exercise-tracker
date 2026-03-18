@@ -1,37 +1,37 @@
 package com.aamo.exercisetracker.features.dailies
 
 import android.annotation.SuppressLint
+import android.app.UiModeManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,14 +41,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -66,11 +68,13 @@ import com.aamo.exercisetracker.features.dailies.components.UnfinishedTrackedPro
 import com.aamo.exercisetracker.features.dailies.models.DailiesRoutineModel
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchUnfinishedTrackedProgressesFlow
 import com.aamo.exercisetracker.features.dailies.use_cases.fetchWeeklyRoutineScheduleFlow
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.Day
 import com.aamo.exercisetracker.utility.extensions.date.getLocalDayOrder
 import com.aamo.exercisetracker.utility.extensions.general.applyIf
+import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -134,7 +138,6 @@ fun NavGraphBuilder.dailiesScreen(
       initialDay = initialDay,
       onRoutineSelected = onSelectRoutine,
       onTrackedProgressSelected = onTrackedProgressSelected,
-      modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
     )
   }
 }
@@ -148,8 +151,9 @@ private fun DailiesScreenContent(
   initialDay: Day,
   onRoutineSelected: (routineId: Long) -> Unit,
   onTrackedProgressSelected: (progressId: Long) -> Unit,
-  modifier: Modifier = Modifier,
 ) {
+  val context = LocalContext.current
+  val configuration = LocalConfiguration.current
   val days = Calendar.getInstance().getLocalDayOrder()
   val todayIndex = days.indexOf(Day.today())
   val pagerState =
@@ -157,13 +161,35 @@ private fun DailiesScreenContent(
 
   var showTrackedProgressSheet by remember { mutableStateOf(false) }
 
-  Surface(modifier = modifier) {
+  BackgroundSurface(modifier = Modifier) {
     Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
       modifier = Modifier
         .fillMaxSize()
-        .padding(vertical = 8.dp)
+        .padding(bottom = 8.dp)
     ) {
+      CenterAlignedTopAppBar(
+        title = { Text(stringResource(R.string.label_dailies)) },
+        actions = {
+          IconButton(
+            onClick = {
+              context.getSystemService<UiModeManager>()?.also { manager ->
+                manager.setApplicationNightMode(
+                  if (configuration.isNightModeActive) UiModeManager.MODE_NIGHT_NO
+                  else UiModeManager.MODE_NIGHT_YES
+                )
+              }
+            }) {
+            Icon(
+              painter = ifElse(
+                condition = configuration.isNightModeActive,
+                ifTrue = { painterResource(R.drawable.rounded_light_mode_24) },
+                ifFalse = { painterResource(R.drawable.dark_mode_24px) }),
+              contentDescription = stringResource(R.string.cd_change_app_theme)
+            )
+          }
+        },
+      )
       HorizontalPager(
         pageSize = PageSize.Fill,
         state = pagerState,
@@ -188,9 +214,9 @@ private fun DailiesScreenContent(
           ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
 
         Surface(
-          border = applyIf(isToday) { BorderStroke(2.dp, MaterialTheme.colorScheme.primary) },
+          border = applyIf(isToday) { BorderStroke(1.dp, MaterialTheme.colorScheme.primary) },
           shape = CardDefaults.outlinedShape,
-          tonalElevation = 1.dp,
+          color = MaterialTheme.colorScheme.surfaceContainer,
           modifier = Modifier
             .fillMaxSize()
             .padding(vertical = (16 * (pageOffset.coerceIn(0f, 1f))).dp)
@@ -200,39 +226,53 @@ private fun DailiesScreenContent(
           Column {
             Text(
               text = stringResource(days[(pageIndex).mod(7)].nameResourceKey),
-              style = MaterialTheme.typography.headlineLarge,
+              style = MaterialTheme.typography.displaySmall,
               textAlign = TextAlign.Center,
               modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 28.dp)
+                .padding(vertical = 32.dp)
             )
             LoadingScreen(loading = isLoading, modifier = Modifier.padding(bottom = 56.dp)) {
               LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(horizontal = 8.dp)
               ) {
                 items(dayRoutines, key = { it.routine.id }) { routine ->
                   val isFinished = routine.progress.finishedCount == routine.progress.totalCount
+                  val unfinishedColor = MaterialTheme.colorScheme.primaryContainer
+                  val finishedColor = MaterialTheme.colorScheme.surfaceVariant
 
-                  Button(
+                  // Button will be disabled if the page is not active
+                  //  so the user does not accidentally press it when changing page
+                  OutlinedButton(
                     enabled = pagerState.currentPage == pageIndex,
                     onClick = { onRoutineSelected(routine.routine.id) },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = if (isFinished) ButtonDefaults.buttonColors(
-                      containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                      contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                      disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                      disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    shape = MaterialTheme.shapes.extraSmall,
+                    colors = if (isFinished) ButtonDefaults.outlinedButtonColors(
+                      containerColor = finishedColor,
+                      contentColor = MaterialTheme.colorScheme.contentColorFor(finishedColor),
+                      disabledContainerColor = finishedColor,
+                      disabledContentColor = MaterialTheme.colorScheme.contentColorFor(
+                        finishedColor
+                      )
                     )
-                    else ButtonDefaults.buttonColors(
-                      containerColor = MaterialTheme.colorScheme.secondary,
-                      contentColor = MaterialTheme.colorScheme.onSecondary,
-                      disabledContainerColor = MaterialTheme.colorScheme.secondary,
-                      disabledContentColor = MaterialTheme.colorScheme.onSecondary
+                    else ButtonDefaults.outlinedButtonColors(
+                      containerColor = unfinishedColor,
+                      contentColor = MaterialTheme.colorScheme.contentColorFor(unfinishedColor),
+                      disabledContainerColor = unfinishedColor,
+                      disabledContentColor = MaterialTheme.colorScheme.contentColorFor(
+                        unfinishedColor
+                      )
                     ),
+                    border = if (isFinished) BorderStroke(
+                      1.dp, MaterialTheme.colorScheme.outlineVariant
+                    )
+                    else BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .25f)),
                     modifier = Modifier.fillMaxWidth()
                   ) {
                     Row(
                       horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically,
                       modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -245,10 +285,14 @@ private fun DailiesScreenContent(
                         )
                       }
                       else {
-                        Text(
-                          text = "${routine.progress.finishedCount}/${routine.progress.totalCount}",
-                          fontWeight = FontWeight.Normal
-                        )
+                        Box(
+                          contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp)
+                        ) {
+                          Text(
+                            text = "${routine.progress.finishedCount}/${routine.progress.totalCount}",
+                            fontWeight = FontWeight.Normal,
+                          )
+                        }
                       }
                     }
                   }
@@ -258,11 +302,13 @@ private fun DailiesScreenContent(
           }
 
           if (isToday && trackedProgresses.isNotEmpty()) {
-            Box(contentAlignment = Alignment.BottomEnd, modifier = Modifier.padding(16.dp)) {
+            Box(contentAlignment = Alignment.BottomEnd) {
               FloatingActionButton(
                 onClick = { showTrackedProgressSheet = true },
                 containerColor = ButtonDefaults.buttonColors().containerColor,
-                modifier = Modifier.minimumInteractiveComponentSize()
+                modifier = Modifier
+                  .padding(16.dp)
+                  .minimumInteractiveComponentSize()
               ) {
                 BadgedBox(
                   badge = {
@@ -292,35 +338,37 @@ private fun DailiesScreenContent(
 }
 
 @Suppress("HardCodedStringLiteral")
-@Preview(showSystemUi = true)
+@PreviewLightDark
 @Composable
 private fun Preview() {
-  ExerciseTrackerTheme(darkTheme = true) {
-    Scaffold { paddingValues ->
-      DailiesScreenContent(
-        initialDay = Day.MONDAY,
-        weeklySchedule = listOf(
-          listOf(
-            DailiesRoutineModel(
-              routine = Routine(id = 0, name = "Routine 1"),
-              progress = DailiesRoutineModel.Progress(
-                finishedCount = 2, totalCount = 2
-              )
+  ExerciseTrackerTheme {
+    DailiesScreenContent(
+      initialDay = Day.MONDAY,
+      weeklySchedule = listOf(
+        listOf(
+          DailiesRoutineModel(
+            routine = Routine(id = 3, name = "Routine 3"), progress = DailiesRoutineModel.Progress(
+              finishedCount = 0, totalCount = 2
+            )
+          ), DailiesRoutineModel(
+            routine = Routine(id = 1, name = "Routine 1"), progress = DailiesRoutineModel.Progress(
+              finishedCount = 2, totalCount = 2
+            )
+          ), DailiesRoutineModel(
+            routine = Routine(id = 2, name = "Routine 2"), progress = DailiesRoutineModel.Progress(
+              finishedCount = 1, totalCount = 2
             )
           )
-        ),
-        trackedProgresses = listOf(
-          TrackedProgress(id = 0, name = "Progress 1"),
-          TrackedProgress(id = 1, name = "Progress 2"),
-          TrackedProgress(id = 2, name = "Progress 3"),
-        ),
-        isLoading = false,
-        onRoutineSelected = {},
-        onTrackedProgressSelected = {},
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(paddingValues)
-      )
-    }
+        )
+      ),
+      trackedProgresses = listOf(
+        TrackedProgress(id = 0, name = "Progress 1"),
+        TrackedProgress(id = 1, name = "Progress 2"),
+        TrackedProgress(id = 2, name = "Progress 3"),
+      ),
+      isLoading = false,
+      onRoutineSelected = {},
+      onTrackedProgressSelected = {},
+    )
   }
 }

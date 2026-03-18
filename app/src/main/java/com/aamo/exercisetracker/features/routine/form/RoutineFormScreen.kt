@@ -3,14 +3,12 @@ package com.aamo.exercisetracker.features.routine.form
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
@@ -31,7 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,6 +51,7 @@ import com.aamo.exercisetracker.features.routine.form.models.RoutineFormFields
 import com.aamo.exercisetracker.features.routine.form.use_cases.deleteRoutine
 import com.aamo.exercisetracker.features.routine.form.use_cases.fetchRoutineWithSchedule
 import com.aamo.exercisetracker.features.routine.form.use_cases.saveRoutine
+import com.aamo.exercisetracker.ui.components.HorizontalDividerLabel
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.LoadingIconButton
@@ -237,64 +237,78 @@ private fun RoutineFormScreenContent(
     openUnsavedDialog = true
   }
 
-  Scaffold(topBar = {
-    TopAppBar(title = {
-      Text(
-        text = ifElse(
-          condition = formState.isNew,
-          ifTrue = { stringResource(R.string.title_new_routine) },
-          ifFalse = { stringResource(R.string.title_existing_routine) })
-      )
-    }, navigationIcon = {
-      BackNavigationIconButton(onBack = {
-        if (unsavedChanges) openUnsavedDialog = true else onBack()
-      })
-    }, actions = {
-      if (!formState.isNew) {
-        IconButton(onClick = { openDeleteDialog = true }) {
+  Scaffold(
+    topBar = {
+      TopAppBar(title = {
+        Text(
+          text = ifElse(
+            condition = formState.isNew,
+            ifTrue = { stringResource(R.string.title_new_routine) },
+            ifFalse = { stringResource(R.string.title_existing_routine) })
+        )
+      }, navigationIcon = {
+        BackNavigationIconButton(onBack = {
+          if (unsavedChanges) openUnsavedDialog = true else onBack()
+        })
+      }, actions = {
+        if (!formState.isNew) {
+          IconButton(onClick = { openDeleteDialog = true }) {
+            Icon(
+              painter = painterResource(R.drawable.rounded_delete_24),
+              contentDescription = stringResource(R.string.cd_delete_routine)
+            )
+          }
+        }
+        LoadingIconButton(
+          onClick = onSave,
+          isLoading = formState.savingState.state == SavingState.State.SAVING,
+          enabled = formState.canSave()
+        ) {
           Icon(
-            painter = painterResource(R.drawable.rounded_delete_24),
-            contentDescription = stringResource(R.string.cd_delete_routine)
+            painter = painterResource(R.drawable.round_done_24),
+            contentDescription = stringResource(R.string.cd_save_routine)
           )
         }
-      }
-      LoadingIconButton(
-        onClick = onSave,
-        isLoading = formState.savingState.state == SavingState.State.SAVING,
-        enabled = formState.canSave()
-      ) {
-        Icon(
-          painter = painterResource(R.drawable.round_done_24),
-          contentDescription = stringResource(R.string.cd_save_routine)
-        )
-      }
-    })
-  }, modifier = Modifier.imePadding()) { innerPadding ->
+      })
+    }, modifier = Modifier.imePadding()
+  ) { innerPadding ->
     Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(16.dp),
       modifier = Modifier
         .padding(innerPadding)
         .padding(8.dp)
     ) {
-      TextField(
-        value = formState.routineName.value,
-        label = { Text(stringResource(R.string.label_name)) },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        onValueChange = { formState.routineName.update(it) },
-        keyboardOptions = KeyboardOptions(
-          imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
-        ),
-        modifier = Modifier.fillMaxWidth()
-      )
-      Spacer(modifier = Modifier.height(8.dp))
-      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-          text = stringResource(R.string.label_schedule),
-          style = MaterialTheme.typography.bodySmall,
-          modifier = Modifier.padding(horizontal = 16.dp)
+      Column {
+        HorizontalDividerLabel(
+          label = stringResource(R.string.label_routine), modifier = Modifier.padding(12.dp)
         )
-        Card(shape = RoundedCornerShape(50), modifier = Modifier.padding(horizontal = 4.dp)) {
+        ElevatedCard(shape = MaterialTheme.shapes.small) {
+          Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+              .padding(8.dp)
+              .padding(bottom = 4.dp)
+              .fillMaxWidth()
+          ) {
+            TextField(
+              value = formState.routineName.value,
+              label = { Text(stringResource(R.string.label_name)) },
+              shape = RectangleShape,
+              colors = borderlessTextFieldColors(),
+              onValueChange = { formState.routineName.update(it) },
+              keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        }
+      }
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        HorizontalDividerLabel(
+          label = stringResource(R.string.label_schedule), modifier = Modifier.padding(12.dp)
+        )
+        ElevatedCard(shape = RoundedCornerShape(50), modifier = Modifier) {
           ScheduleInput(
             selections = formState.selectedDays.value,
             onChange = { formState.selectedDays.update(it) },
@@ -307,7 +321,7 @@ private fun RoutineFormScreenContent(
 }
 
 @Suppress("HardCodedStringLiteral")
-@Preview
+@PreviewLightDark
 @Composable
 private fun Preview() {
   ExerciseTrackerTheme {

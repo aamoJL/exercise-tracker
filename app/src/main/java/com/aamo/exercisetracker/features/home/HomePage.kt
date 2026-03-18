@@ -1,8 +1,6 @@
 package com.aamo.exercisetracker.features.home
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -11,12 +9,13 @@ import com.aamo.exercisetracker.features.exercise.exercisePage
 import com.aamo.exercisetracker.features.exercise.view.ExerciseScreen
 import com.aamo.exercisetracker.features.progress_tracking.progressTrackingPage
 import com.aamo.exercisetracker.features.routine.routinePage
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
 
 @Composable
 fun HomePage() {
   val navController = rememberNavController()
 
-  Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+  BackgroundSurface(modifier = Modifier.fillMaxSize()) {
     NavHost(navController = navController, startDestination = HomeScreen) {
       homeScreen(navController = navController)
       routinePage(

@@ -61,7 +61,7 @@ class SetProgress : PageTest() {
     rule.onNodeWithText(getString(R.string.title_completed)).assertDoesNotExist()
     rule.onNodeWithText(getString(R.string.title_set)).assertExists()
 
-    sets.forEachIndexed { i, set ->
+    sets.forEachIndexed { i, _ ->
       rule.onNodeWithText("${i + 1}/${sets.size}").assertExists()
       rule.onNodeWithText(getString(R.string.btn_start)).assertIsDisplayed().performClick()
 
@@ -74,7 +74,7 @@ class SetProgress : PageTest() {
 
   @Test
   fun `current set info`() = runTest {
-    sets.forEachIndexed { i, set ->
+    sets.forEachIndexed { _, set ->
       rule.onNodeWithText(getString(R.string.title_current_set)).assertExists()
       rule.onNodeWithText(
         getString(R.string.x_minutes_short, set.value.milliseconds.inWholeMinutes.toInt())
@@ -90,7 +90,7 @@ class SetProgress : PageTest() {
 
   @Test
   fun `finish exercise`() = runTest {
-    sets.forEachIndexed { i, set ->
+    sets.forEachIndexed { _, _ ->
       rule.onNodeWithText(getString(R.string.btn_start)).performClick()
 
       rule.onNodeWithText(getString(R.string.title_set_timer)).assertExists()
@@ -98,7 +98,7 @@ class SetProgress : PageTest() {
     }
 
     rule.onNodeWithText(getString(R.string.title_completed)).assertExists()
-    rule.onNodeWithText(getString(R.string.btn_done)).performClick()
+    rule.onNodeWithText(getString(R.string.btn_complete)).performClick()
     waitForLoading()
     rule.onNodeWithContentDescription(getString(R.string.cd_edit_routine)).waitForDisplayed()
       .assertExists()

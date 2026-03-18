@@ -5,19 +5,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +54,8 @@ import com.aamo.exercisetracker.features.progress_tracking.form.models.TrackedPr
 import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.deleteTrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.fetchTrackedProgress
 import com.aamo.exercisetracker.features.progress_tracking.form.use_cases.saveTrackedProgress
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
+import com.aamo.exercisetracker.ui.components.HorizontalDividerLabel
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.inputs.BackNavigationIconButton
 import com.aamo.exercisetracker.ui.components.inputs.HorizontalRadioButton
@@ -326,94 +332,114 @@ private fun TrackedProgressFormScreenContent(
       }
     })
   }) { innerPadding ->
-    Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier
-        .padding(innerPadding)
-        .padding(8.dp)
-    ) {
-      TextField(
-        value = formState.progressName.value,
-        label = { Text(stringResource(R.string.label_name)) },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        onValueChange = { formState.progressName.update(it) },
-        keyboardOptions = KeyboardOptions(
-          imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
-        ),
-        modifier = Modifier.fillMaxWidth()
-      )
-      NumberField(
-        value = formState.weeklyInterval.value,
-        onValueChange = { formState.weeklyInterval.update(it) },
-        validator = IntFieldValidator,
-        label = { Text(stringResource(R.string.label_weekly_interval_optional)) },
-        shape = RectangleShape,
-        colors = borderlessTextFieldColors(),
-        suffix = { Text(stringResource(R.string.suffix_weeks)) },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-        visualTransformation = VisualTransformation.HideZero,
-        modifier = Modifier.fillMaxWidth()
-      )
-      Row(
+    BackgroundSurface(modifier = Modifier.fillMaxSize()) {
+      Column(
         modifier = Modifier
-          .fillMaxWidth()
-          .height(intrinsicSize = IntrinsicSize.Max)
+          .padding(innerPadding)
+          .padding(8.dp)
       ) {
-        Column(
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-          modifier = Modifier
-            .selectableGroup()
-            .weight(1f)
-            .fillMaxHeight()
-        ) {
-          HorizontalRadioButton(
-            title = stringResource(R.string.label_repetitions),
-            selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.REPETITION,
-            onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.REPETITION) },
-          )
-          HorizontalRadioButton(
-            title = stringResource(R.string.label_timer),
-            selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.TIMER,
-            onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.TIMER) },
-          )
-          HorizontalRadioButton(
-            title = stringResource(R.string.label_stopwatch),
-            selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.STOPWATCH,
-            onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.STOPWATCH) },
-          )
-        }
-        Column(
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-          modifier = Modifier
-            .fillMaxHeight()
-            .weight(1f)
-        ) {
-          TextField(
-            enabled = unitFieldEnabled,
-            value = formState.progressValueUnit.value,
-            label = { Text(stringResource(R.string.label_progress_unit)) },
-            shape = RectangleShape,
-            colors = borderlessTextFieldColors(),
-            onValueChange = { formState.progressValueUnit.update(it) },
-            keyboardOptions = KeyboardOptions(
-              imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
-            ),
-            modifier = Modifier.fillMaxWidth()
-          )
-          DurationNumberField(
-            enabled = durationFieldEnabled,
-            fields = DurationNumberFieldFields(hours = DurationNumberFieldFields.Properties(enabled = false)),
-            value = formState.timerDuration.value,
-            onValueChange = { formState.timerDuration.update(it) },
-            shape = RectangleShape,
-            colors = borderlessTextFieldColors(),
-            lastImeAction = ImeAction.Done,
-            modifier = Modifier.fillMaxWidth()
-          )
+        HorizontalDividerLabel(
+          label = stringResource(R.string.label_progress), modifier = Modifier.padding(12.dp)
+        )
+        ElevatedCard(shape = MaterialTheme.shapes.small) {
+          Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+              .padding(8.dp)
+              .fillMaxWidth()
+          ) {
+            TextField(
+              value = formState.progressName.value,
+              label = { Text(stringResource(R.string.label_name)) },
+              shape = RectangleShape,
+              colors = borderlessTextFieldColors(),
+              onValueChange = { formState.progressName.update(it) },
+              keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.Sentences
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+            NumberField(
+              value = formState.weeklyInterval.value,
+              onValueChange = { formState.weeklyInterval.update(it) },
+              validator = IntFieldValidator,
+              label = { Text(stringResource(R.string.label_weekly_interval_optional)) },
+              shape = RectangleShape,
+              colors = borderlessTextFieldColors(),
+              suffix = { Text(stringResource(R.string.suffix_weeks)) },
+              keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+              visualTransformation = VisualTransformation.HideZero,
+              modifier = Modifier.fillMaxWidth()
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              Column {
+                Surface(
+                  color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                  shape = MaterialTheme.shapes.extraSmall,
+                ) {
+                  ProgressTypeRadios(
+                    formState = formState,
+                    modifier = Modifier.width(intrinsicSize = IntrinsicSize.Max)
+                  )
+                }
+              }
+              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(
+                  enabled = unitFieldEnabled,
+                  value = formState.progressValueUnit.value,
+                  label = { Text(stringResource(R.string.label_progress_unit)) },
+                  shape = RectangleShape,
+                  colors = borderlessTextFieldColors(),
+                  onValueChange = { formState.progressValueUnit.update(it) },
+                  keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next, capitalization = KeyboardCapitalization.None
+                  ),
+                  modifier = Modifier.fillMaxWidth()
+                )
+                DurationNumberField(
+                  enabled = durationFieldEnabled,
+                  fields = DurationNumberFieldFields(
+                    hours = DurationNumberFieldFields.Properties(enabled = false)
+                  ),
+                  value = formState.timerDuration.value,
+                  onValueChange = { formState.timerDuration.update(it) },
+                  shape = RectangleShape,
+                  colors = borderlessTextFieldColors(),
+                  lastImeAction = ImeAction.Done,
+                  modifier = Modifier.fillMaxWidth()
+                )
+              }
+            }
+          }
         }
       }
     }
+  }
+}
+
+@Composable
+fun ProgressTypeRadios(
+  formState: TrackedProgressFormViewModel.FormState, modifier: Modifier = Modifier
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.selectableGroup()) {
+    HorizontalRadioButton(
+      title = stringResource(R.string.label_repetitions),
+      selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.REPETITION,
+      onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.REPETITION) },
+      modifier = Modifier.fillMaxWidth()
+    )
+    HorizontalRadioButton(
+      title = stringResource(R.string.label_timer),
+      selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.TIMER,
+      onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.TIMER) },
+      modifier = Modifier.fillMaxWidth()
+    )
+    HorizontalRadioButton(
+      title = stringResource(R.string.label_stopwatch),
+      selected = formState.progressType.value == TrackedProgressFormFields.ProgressType.STOPWATCH,
+      onSelect = { formState.progressType.update(TrackedProgressFormFields.ProgressType.STOPWATCH) },
+      modifier = Modifier.fillMaxWidth()
+    )
   }
 }
 
