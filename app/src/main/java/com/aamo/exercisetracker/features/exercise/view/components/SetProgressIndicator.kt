@@ -20,9 +20,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
+import com.aamo.exercisetracker.ui.components.BackgroundSurface
 import com.aamo.exercisetracker.ui.components.SegmentedCircularProgressIndicator
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlin.math.min
 
@@ -63,6 +66,16 @@ fun SetProgressIndicator(currentSetNumber: Int, totalSets: Int, modifier: Modifi
         // Centers the text inside the progress indicator
         MaterialTheme.typography.titleMedium.lineHeight.toDp()
       }))
+    }
+  }
+}
+
+@PreviewLightDark
+@Composable
+private fun Preview() {
+  ExerciseTrackerTheme {
+    BackgroundSurface {
+      SetProgressIndicator(currentSetNumber = 3, totalSets = 6)
     }
   }
 }
