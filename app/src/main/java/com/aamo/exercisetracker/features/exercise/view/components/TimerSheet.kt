@@ -15,10 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -42,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.aamo.exercisetracker.R
 import com.aamo.exercisetracker.ui.components.modals.GesturelessModalBottomSheet
+import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.aamo.exercisetracker.utility.extensions.date.toClockString
 import kotlin.concurrent.timer
 import kotlin.time.Duration
@@ -64,32 +67,47 @@ fun SetTimerSheet(
     duration = duration,
     onDismissRequest = onDismissRequest
   ) {
-    IconButton(
-      onClick = onCancelSet, colors = IconButtonDefaults.iconButtonColors(
-        containerColor = MaterialTheme.colorScheme.error,
-        contentColor = MaterialTheme.colorScheme.onError,
-      ), modifier = Modifier.size(64.dp)
-    ) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_cancel_24),
-        contentDescription = stringResource(R.string.btn_cancel),
-        modifier = Modifier.size(48.dp)
-      )
-    }
-    IconButton(
-      onClick = onStopSetTimer, colors = IconButtonDefaults.iconButtonColors(
-        containerColor = MaterialTheme.colorScheme.secondary,
-        contentColor = MaterialTheme.colorScheme.onSecondary,
-        disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = .38f),
-        disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = .38f),
-      ), modifier = Modifier.size(64.dp)
-    ) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_stop_circle_24),
-        contentDescription = stringResource(R.string.btn_stop),
-        modifier = Modifier.size(48.dp)
-      )
-    }
+    SetTimerSheetButtons(onCancelSet = onCancelSet, onStopSetTimer = onStopSetTimer)
+  }
+}
+
+@Composable
+private fun SetTimerSheetButtons(
+  onCancelSet: () -> Unit, onStopSetTimer: () -> Unit,
+) {
+  FilledIconButton(
+    onClick = onCancelSet,
+    colors = IconButtonDefaults.filledIconButtonColors(
+      containerColor = MaterialTheme.colorScheme.error,
+      contentColor = MaterialTheme.colorScheme.onError,
+    ),
+    modifier = Modifier
+      .size(64.dp)
+      .shadow(elevation = 2.dp, CircleShape),
+  ) {
+    Icon(
+      painter = painterResource(R.drawable.rounded_cancel_24),
+      contentDescription = stringResource(R.string.btn_cancel),
+      modifier = Modifier.size(48.dp)
+    )
+  }
+  FilledIconButton(
+    onClick = onStopSetTimer,
+    colors = IconButtonDefaults.filledIconButtonColors(
+      containerColor = MaterialTheme.colorScheme.secondary,
+      contentColor = MaterialTheme.colorScheme.onSecondary,
+      disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = .38f),
+      disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = .38f),
+    ),
+    modifier = Modifier
+      .size(64.dp)
+      .shadow(elevation = 2.dp, CircleShape),
+  ) {
+    Icon(
+      painter = painterResource(R.drawable.rounded_stop_circle_24),
+      contentDescription = stringResource(R.string.btn_stop),
+      modifier = Modifier.size(48.dp)
+    )
   }
 }
 
@@ -104,20 +122,29 @@ fun RestTimerSheet(
     duration = duration,
     onDismissRequest = onDismissRequest
   ) {
-    IconButton(
-      onClick = onStopRest, colors = IconButtonDefaults.iconButtonColors(
-        containerColor = MaterialTheme.colorScheme.secondary,
-        contentColor = MaterialTheme.colorScheme.onSecondary,
-        disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = .38f),
-        disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = .38f),
-      ), modifier = Modifier.size(64.dp)
-    ) {
-      Icon(
-        painter = painterResource(R.drawable.rounded_stop_circle_24),
-        contentDescription = stringResource(R.string.btn_stop),
-        modifier = Modifier.size(48.dp)
-      )
-    }
+    RestTimerSheetButtons(onStopRest = onStopRest)
+  }
+}
+
+@Composable
+private fun RestTimerSheetButtons(onStopRest: () -> Unit) {
+  FilledIconButton(
+    onClick = onStopRest,
+    colors = IconButtonDefaults.filledIconButtonColors(
+      containerColor = MaterialTheme.colorScheme.secondary,
+      contentColor = MaterialTheme.colorScheme.onSecondary,
+      disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = .38f),
+      disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = .38f),
+    ),
+    modifier = Modifier
+      .size(64.dp)
+      .shadow(elevation = 2.dp, CircleShape),
+  ) {
+    Icon(
+      painter = painterResource(R.drawable.rounded_stop_circle_24),
+      contentDescription = stringResource(R.string.btn_stop),
+      modifier = Modifier.size(48.dp)
+    )
   }
 }
 
@@ -173,16 +200,31 @@ private fun TimerSheet(
   }
 
   GesturelessModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
-    Box(
-      contentAlignment = Alignment.BottomCenter, modifier = Modifier
-        .fillMaxWidth(.7f)
-        .weight(3f)
-    ) {
+    TimerSheetContent(
+      title = title,
+      progress = animatableProgress.value,
+      remainingMillis = remainingMillis,
+      content = content,
+      modifier = Modifier.fillMaxWidth(.7f),
+    )
+  }
+}
+
+@Composable
+private fun TimerSheetContent(
+  title: String,
+  progress: Float,
+  remainingMillis: Long,
+  modifier: Modifier = Modifier,
+  content: @Composable RowScope.() -> Unit,
+) {
+  Column(modifier = modifier) {
+    Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(3f)) {
       Box(
         contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)
       ) {
         CircularProgressIndicator(
-          progress = { animatableProgress.value },
+          progress = { progress },
           strokeWidth = 20.dp,
           gapSize = 0.dp,
           strokeCap = StrokeCap.Butt,
@@ -215,21 +257,36 @@ private fun TimerSheet(
   }
 }
 
-@Preview
+@Suppress("HardCodedStringLiteral")
+@Preview(showBackground = true)
 @Composable
 private fun RestTimerSheetPreview(
 ) {
-  RestTimerSheet(show = true, duration = 3.minutes, onDismissRequest = {}, onStopRest = {})
+  ExerciseTrackerTheme {
+    TimerSheetContent(
+      title = "Title",
+      progress = .3f,
+      remainingMillis = 4.minutes.inWholeMilliseconds,
+      content = {
+        RestTimerSheetButtons(onStopRest = {})
+      },
+    )
+  }
 }
 
-@Preview
+@Suppress("HardCodedStringLiteral")
+@Preview(showBackground = true)
 @Composable
 private fun SetTimerSheetPreview(
 ) {
-  SetTimerSheet(
-    show = true,
-    duration = 3.minutes,
-    onDismissRequest = {},
-    onStopSetTimer = {},
-    onCancelSet = {})
+  ExerciseTrackerTheme {
+    TimerSheetContent(
+      title = "Title",
+      progress = .5f,
+      remainingMillis = 4.minutes.inWholeMilliseconds,
+      content = {
+        SetTimerSheetButtons(onCancelSet = {}, onStopSetTimer = {})
+      },
+    )
+  }
 }

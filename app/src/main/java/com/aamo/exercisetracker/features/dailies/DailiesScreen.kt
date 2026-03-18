@@ -168,25 +168,28 @@ private fun DailiesScreenContent(
         .fillMaxSize()
         .padding(bottom = 8.dp)
     ) {
-      CenterAlignedTopAppBar(title = { Text(stringResource(R.string.app_name)) }, actions = {
-        IconButton(
-          onClick = {
-            context.getSystemService<UiModeManager>()?.also { manager ->
-              manager.setApplicationNightMode(
-                if (configuration.isNightModeActive) UiModeManager.MODE_NIGHT_NO
-                else UiModeManager.MODE_NIGHT_YES
-              )
-            }
-          }) {
-          Icon(
-            painter = ifElse(
-              condition = configuration.isNightModeActive,
-              ifTrue = { painterResource(R.drawable.rounded_light_mode_24) },
-              ifFalse = { painterResource(R.drawable.dark_mode_24px) }),
-            contentDescription = stringResource(R.string.cd_change_app_theme)
-          )
-        }
-      })
+      CenterAlignedTopAppBar(
+        title = { Text(stringResource(R.string.label_dailies)) },
+        actions = {
+          IconButton(
+            onClick = {
+              context.getSystemService<UiModeManager>()?.also { manager ->
+                manager.setApplicationNightMode(
+                  if (configuration.isNightModeActive) UiModeManager.MODE_NIGHT_NO
+                  else UiModeManager.MODE_NIGHT_YES
+                )
+              }
+            }) {
+            Icon(
+              painter = ifElse(
+                condition = configuration.isNightModeActive,
+                ifTrue = { painterResource(R.drawable.rounded_light_mode_24) },
+                ifFalse = { painterResource(R.drawable.dark_mode_24px) }),
+              contentDescription = stringResource(R.string.cd_change_app_theme)
+            )
+          }
+        },
+      )
       HorizontalPager(
         pageSize = PageSize.Fill,
         state = pagerState,
@@ -223,7 +226,7 @@ private fun DailiesScreenContent(
           Column {
             Text(
               text = stringResource(days[(pageIndex).mod(7)].nameResourceKey),
-              style = MaterialTheme.typography.headlineLarge,
+              style = MaterialTheme.typography.displaySmall,
               textAlign = TextAlign.Center,
               modifier = Modifier
                 .fillMaxWidth()

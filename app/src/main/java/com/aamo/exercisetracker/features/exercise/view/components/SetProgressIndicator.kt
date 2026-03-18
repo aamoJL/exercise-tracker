@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -28,7 +27,7 @@ import com.aamo.exercisetracker.utility.extensions.general.ifElse
 import kotlin.math.min
 
 @Composable
-fun SetProgressIndicator(currentSetNumber: Int, totalSets: Int) {
+fun SetProgressIndicator(currentSetNumber: Int, totalSets: Int, modifier: Modifier = Modifier) {
   val progress by remember(currentSetNumber) {
     mutableFloatStateOf(
       if (totalSets == 0) 0f else (currentSetNumber.toFloat() - 1) / totalSets.toFloat()
@@ -38,11 +37,7 @@ fun SetProgressIndicator(currentSetNumber: Int, totalSets: Int) {
     targetValue = progress, animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
   )
 
-  Box(
-    contentAlignment = Alignment.Center, modifier = Modifier
-      .fillMaxWidth(.7f)
-      .aspectRatio(1f)
-  ) {
+  Box(contentAlignment = Alignment.Center, modifier = modifier.aspectRatio(1f)) {
     SegmentedCircularProgressIndicator(
       progress = { animatedProgress },
       segments = totalSets,

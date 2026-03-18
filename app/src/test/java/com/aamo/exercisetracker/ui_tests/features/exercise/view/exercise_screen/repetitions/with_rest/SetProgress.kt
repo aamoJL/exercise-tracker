@@ -71,7 +71,7 @@ class SetProgress : PageTest() {
 
   @Test
   fun `current set info`() = runTest {
-    sets.forEachIndexed { i, set ->
+    sets.forEachIndexed { _, set ->
       rule.onNodeWithText(getString(R.string.title_current_set)).assertExists()
       rule.onNodeWithText("${set.value} ${set.unit}").assertExists()
       rule.onNodeWithText(getString(R.string.btn_done)).assertIsDisplayed().performClick()
@@ -91,7 +91,7 @@ class SetProgress : PageTest() {
 
   @Test
   fun `finish exercise`() = runTest {
-    sets.forEachIndexed { i, set ->
+    sets.forEachIndexed { _, set ->
       rule.onNodeWithText(getString(R.string.btn_done)).performClick()
 
       if (set != sets.last()) {
@@ -105,7 +105,7 @@ class SetProgress : PageTest() {
     }
 
     rule.onNodeWithText(getString(R.string.title_completed)).assertExists()
-    rule.onNodeWithText(getString(R.string.btn_done)).performClick()
+    rule.onNodeWithText(getString(R.string.btn_complete)).performClick()
     waitForLoading()
     rule.onNodeWithContentDescription(getString(R.string.cd_edit_routine)).waitForDisplayed()
       .assertExists()

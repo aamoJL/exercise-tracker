@@ -2,9 +2,7 @@ package com.aamo.exercisetracker.features.routine.form.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
@@ -25,10 +23,8 @@ fun ScheduleInput(
   val days = remember { Calendar.getInstance().getLocalDayOrder() }
 
   Column(modifier = modifier) {
-    LazyRow(
-      horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()
-    ) {
-      items(days) { day ->
+    Row(horizontalArrangement = Arrangement.Center) {
+      days.forEach { day ->
         val isSelected = selections.contains(day)
 
         IconToggleButton(
@@ -36,10 +32,13 @@ fun ScheduleInput(
             checkedContainerColor = MaterialTheme.colorScheme.inversePrimary,
             checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             contentColor = MaterialTheme.colorScheme.outline,
-          ), checked = isSelected, onCheckedChange = { selection ->
+          ),
+          checked = isSelected,
+          onCheckedChange = { selection ->
             if (selection && !selections.contains(day)) onChange(selections.plus(day))
             else onChange(selections.minus(day))
-          }) {
+          },
+        ) {
           Text(stringResource(day.nameResourceKey).take(2))
         }
       }

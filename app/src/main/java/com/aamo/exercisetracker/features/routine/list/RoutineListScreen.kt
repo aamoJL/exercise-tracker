@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +47,7 @@ import com.aamo.exercisetracker.features.routine.list.components.ScheduleTrailin
 import com.aamo.exercisetracker.features.routine.list.use_cases.deleteRoutines
 import com.aamo.exercisetracker.features.routine.list.use_cases.fetchRoutinesFlow
 import com.aamo.exercisetracker.ui.components.BackgroundSurface
+import com.aamo.exercisetracker.ui.components.HorizontalDividerLabel
 import com.aamo.exercisetracker.ui.components.LoadingScreen
 import com.aamo.exercisetracker.ui.components.modals.DeleteDialog
 import com.aamo.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -172,53 +172,59 @@ private fun RoutineListScreenContent(
         onFilterChanged = onFilterChanged,
         onAdd = onAdd,
         onDeleteSelected = { openDeleteDialog = true })
+      HorizontalDividerLabel(
+        label = stringResource(R.string.label_routines),
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+      )
       Box(modifier = Modifier.fillMaxSize()) {
         LoadingScreen(loading = isLoading) {
-          LazyColumn(
-            userScrollEnabled = true,
-            modifier = Modifier
-              .padding(8.dp)
-              .clip(MaterialTheme.shapes.small)
+          Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.medium,
+            shadowElevation = 1.dp,
+            modifier = Modifier.padding(8.dp),
           ) {
-            itemsIndexed(routines) { i, model ->
-              val selected = selections.contains(model.routine)
+            LazyColumn(userScrollEnabled = true) {
+              itemsIndexed(routines) { i, model ->
+                val selected = selections.contains(model.routine)
 
-              Column {
-                Surface(
-                  color = MaterialTheme.colorScheme.surfaceVariant,
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(onClick = {
-                      if (selections.isEmpty()) onSelectRoutine(model.routine.id)
-                      else onSwitchSelection(listOf(model.routine), !selected)
-                    }, onLongClick = {
-                      if (selections.isEmpty()) onSwitchSelection(listOf(model.routine), true)
-                    })
-                ) {
-                  Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
+                Column {
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .combinedClickable(onClick = {
+                        if (selections.isEmpty()) onSelectRoutine(model.routine.id)
+                        else onSwitchSelection(listOf(model.routine), !selected)
+                      }, onLongClick = {
+                        if (selections.isEmpty()) onSwitchSelection(listOf(model.routine), true)
+                      })
                   ) {
-                    if (selections.isNotEmpty()) {
-                      Checkbox(checked = selected, onCheckedChange = null)
-                    }
-                    Text(text = model.routine.name, fontWeight = FontWeight.Bold)
-                  }
-                  if (model.schedule != null) {
-                    Box(
-                      contentAlignment = Alignment.TopEnd,
-                      modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(8.dp),
+                      modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
                     ) {
-                      ScheduleTrailing(schedule = model.schedule)
+                      if (selections.isNotEmpty()) {
+                        Checkbox(checked = selected, onCheckedChange = null)
+                      }
+                      Text(text = model.routine.name, fontWeight = FontWeight.Bold)
+                    }
+                    if (model.schedule != null) {
+                      Box(
+                        contentAlignment = Alignment.TopEnd,
+                        modifier = Modifier
+                          .fillMaxSize()
+                          .padding(horizontal = 12.dp, vertical = 8.dp)
+                      ) {
+                        ScheduleTrailing(schedule = model.schedule)
+                      }
                     }
                   }
+                  if (i < routines.size - 1) HorizontalDivider(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                  )
                 }
-                if (i < routines.size - 1) HorizontalDivider(
-                  color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .5f)
-                )
               }
             }
           }
