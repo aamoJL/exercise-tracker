@@ -13,4 +13,4 @@ Fitness application to schedule workout routines and track performance progress.
 |Timers|Timers for sets and rests between the sets|
 
 # Screenshots
-![exercise-tracker-thumbnail](https://github.com/user-attachments/assets/a908cb3b-f09f-4d47-8013-46c7463df6f5)
+![exercise-tracker-thumbnail](https://github.com/user-attachments/assets/c2afbcea-2309-4477-8c57-04b92117fe07)
